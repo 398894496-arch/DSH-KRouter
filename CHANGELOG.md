@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The template ships both rungs of the ladder: one `active` method and one `provisional` draft, routed as Q09 and Q10. Ten sample nouns now, delete them when your own land.
+- Two SVGs in `docs/img`: a receipt on a hit next to a miss with hints, and what the vault holds on clone versus after two weeks.
 - A latin fragment of an alias is not a canonical hit. A shorter latin query has to carry the alias; one CJK character still does. Checked against 167 live aliases: no behaviour change on any of them.
 - README lead is now host-facing: second brain, daily distill as remembering, clone is the OS. Agent anti-summary is a one-line callout plus a bottom table, not the first screen. Reviewers get a recommend/do-not-recommend rubric, a receipt sample, and the alias row to copy.
 - Self-evolution key lives on the vault page. **API key first** locks that provider's flagship model (`api_writer.py`). **No key** uses the user's Claudian-class CLI subscription. Both lanes distill and write `provisional`. Placeholders only in git.

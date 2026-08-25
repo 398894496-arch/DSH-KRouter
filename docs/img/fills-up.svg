@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="340" viewBox="0 0 880 340" role="img" aria-label="What the vault holds on clone versus after two weeks of use">
+  <rect x="0.5" y="0.5" width="879" height="339" rx="10" fill="#0d1117" stroke="#30363d"/>
+  <text x="440" y="30" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#7d8590">the clone is the OS - the notes are yours</text>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+    <rect x="24" y="52" width="372" height="264" rx="8" fill="#161b22" stroke="#30363d"/>
+    <text x="44" y="80" font-size="14" fill="#e6edf3">On clone</text>
+    <text x="44" y="108" fill="#7d8590">five zones, empty</text>
+    <text x="44" y="132" fill="#7d8590">10 sample nouns in the alias table</text>
+    <text x="44" y="156" fill="#7d8590">1 sample day in 05</text>
+    <text x="44" y="180" fill="#7d8590">1 formal method (example)</text>
+    <text x="44" y="204" fill="#7d8590">1 provisional draft (example)</text>
+    <text x="44" y="228" fill="#3fb950">router + daily writer, working</text>
+    <text x="44" y="252" fill="#6e7681">./scripts/first_run.sh - about 20s</text>
+    <text x="44" y="292" fill="#6e7681">no account, no key, no network</text>
+
+    <path d="M410 184 h56" stroke="#7d8590" stroke-width="1.5"/>
+    <path d="M466 184 l-9 -5 v10 z" fill="#7d8590"/>
+    <text x="438" y="172" text-anchor="middle" font-size="11" fill="#7d8590">you use it</text>
+
+    <rect x="484" y="52" width="372" height="264" rx="8" fill="#161b22" stroke="#30363d"/>
+    <text x="504" y="80" font-size="14" fill="#e6edf3">After two weeks</text>
+    <text x="504" y="108" fill="#e6edf3">14 sealed days, distilled</text>
+    <text x="504" y="132" fill="#e6edf3">your nouns in the alias table</text>
+    <text x="504" y="156" fill="#e6edf3">drafts written the day gates passed</text>
+    <text x="504" y="180" fill="#e6edf3">the ones you adopted, now formal</text>
+    <text x="504" y="204" fill="#e6edf3">corrections that outrank old notes</text>
+    <text x="504" y="228" fill="#3fb950">same router, same receipt</text>
+    <text x="504" y="252" fill="#6e7681">the timer did this while you worked</text>
+    <text x="504" y="292" fill="#6e7681">nothing to re-index, nothing to expire</text>
+  </g>
+</svg>

@@ -7,3 +7,5 @@ Q05|correction;conflict;supersedes;latest correction;纠错;最新纠正|90 系�
 Q06|promotion;provisional;when can a method enter;晋升;准经验|02 经验与方法/经验与方法.md|Only verified methods enter this folder
 Q07|high trust;action basis;reliable memory;memory;memory index;高可信记忆|90 系统文件/Agent记忆/可靠记忆索引.md|High-trust: may be used as action basis
 Q08|daily evolution health;automation status;日更健康|90 系统文件/自动化/日更健康.md|Health on this page is authoritative
+Q09|sealed;seal the day;did yesterday get sealed;封账|02 经验与方法/Automation/Seal the day from the log file.md|The log file is the answer, not the runner receipt
+Q10|timer fired;did the job run;scheduled job;定时任务跑了没|02 经验与方法/准经验/A timer that fired is not a product.md|A draft: a live scheduler is not a delivered file

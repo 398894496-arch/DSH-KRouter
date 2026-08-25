@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="392" viewBox="0 0 880 392" role="img" aria-label="Terminal showing a canonical-match receipt and a miss with hints">
+  <rect x="0.5" y="0.5" width="879" height="391" rx="10" fill="#0d1117" stroke="#30363d"/>
+  <rect x="0.5" y="0.5" width="879" height="36" rx="10" fill="#161b22"/>
+  <rect x="0.5" y="26" width="879" height="11" fill="#161b22"/>
+  <line x1="0.5" y1="36.5" x2="879.5" y2="36.5" stroke="#30363d"/>
+  <circle cx="22" cy="18" r="5" fill="#f85149"/>
+  <circle cx="40" cy="18" r="5" fill="#d29922"/>
+  <circle cx="58" cy="18" r="5" fill="#3fb950"/>
+  <text x="440" y="23" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#7d8590">one short noun, one page, one receipt</text>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13.5">
+    <text x="24" y="70" fill="#7d8590">$ <tspan fill="#e6edf3">krouter search sealed</tspan></text>
+
+    <text x="24" y="98" fill="#7d8590">retrieval_status: <tspan fill="#3fb950"> canonical-match</tspan></text>
+    <text x="24" y="120" fill="#7d8590">canonical_source: <tspan fill="#e6edf3"> /YourVault/.../Automation/Seal the day from the log file.md</tspan></text>
+    <text x="24" y="142" fill="#7d8590">canonical_id: <tspan fill="#e6edf3"> Q09</tspan></text>
+    <text x="24" y="164" fill="#7d8590">source_status: <tspan fill="#e6edf3"> active</tspan></text>
+    <text x="24" y="186" fill="#7d8590">source_verified_at: <tspan fill="#e6edf3"> 2026-01-01</tspan></text>
+    <text x="24" y="208" fill="#7d8590">source_sha256: <tspan fill="#a371f7"> d8c1d5afbcf86d89411ae7a0e5f22f6c1e12ca6687a61ee46f73d118e9a2f87c</tspan></text>
+    <text x="24" y="230" fill="#7d8590">canonical_map_sha256: <tspan fill="#a371f7"> c55b8715b83aff9ecdd40297dc0f138bc017944d15983a9710cda5439</tspan></text>
+    <text x="24" y="252" fill="#7d8590">canonical_match: <tspan fill="#3fb950"> true</tspan></text>
+
+    <text x="24" y="298" fill="#7d8590">$ <tspan fill="#e6edf3">krouter search "how to deploy"</tspan></text>
+    <text x="24" y="326" fill="#7d8590">canonical_match: <tspan fill="#f85149"> false</tspan></text>
+    <text x="24" y="348" fill="#7d8590">suggestions: <tspan fill="#d29922"> Q09 sealed, Q10 timer fired</tspan><tspan fill="#7d8590"> (hints, not hits)</tspan></text>
+    <text x="24" y="372" fill="#6e7681">a wrong noun gets a miss, never a plausible neighbour</text>
+  </g>
+</svg>
