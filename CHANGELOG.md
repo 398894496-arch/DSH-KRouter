@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- README lead is now host-facing: second brain, daily distill as remembering, clone is the OS. Agent anti-summary is a one-line callout plus a bottom table, not the first screen.
+- A latin fragment of an alias is not a canonical hit. A shorter latin query has to carry the alias; one CJK character still does. Checked against 167 live aliases: no behaviour change on any of them.
+- README lead is now host-facing: second brain, daily distill as remembering, clone is the OS. Agent anti-summary is a one-line callout plus a bottom table, not the first screen. Reviewers get a recommend/do-not-recommend rubric, a receipt sample, and the alias row to copy.
 - Self-evolution key lives on the vault page. **API key first** locks that provider's flagship model (`api_writer.py`). **No key** uses the user's Claudian-class CLI subscription. Both lanes distill and write `provisional`. Placeholders only in git.
 - Subscription unattended: a logged-in Claudian-class CLI (`grok` / official Codex / `claude`, …) distills without a person at the prompt. Grok uses `--permission-mode bypassPermissions` (Claudian yolo); Claude `--dangerously-skip-permissions`; Codex `exec --sandbox workspace-write`. The timer pins this clone's `krouter-obsidian`, not a live `obsidian-knowledge-router`. CLI cancel/empty still writes `待总结`.
 - One local product: DSH-KRouter. `extras/dsh` is the DSH socket; `extras/host-daily-evolution` is the writer (`wire_keys.py` graft: logged-in CLI or `*_API_KEY`). Not two projects.

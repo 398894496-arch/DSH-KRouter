@@ -35,6 +35,17 @@ def load_rows(path: Path) -> list[tuple[str, list[str], str, str]]:
     return rows
 
 
+def stands_in_for(q: str, a: str) -> bool:
+    """A query shorter than the alias may stand in for it only when it is most of it.
+
+    `how` sits inside `how to handle clippings` without meaning it, so a latin
+    fragment has to carry the alias. One CJK character already carries a word.
+    """
+    if all(ord(char) < 128 for char in q):
+        return len(q) >= 4 and len(q) * 2 >= len(a)
+    return len(q) >= 2
+
+
 def alias_score(query: str, alias: str) -> int:
     q = normalize(query)
     a = normalize(alias)
@@ -44,7 +55,7 @@ def alias_score(query: str, alias: str) -> int:
         return 1000 + len(a)
     if a in q:
         return 500 + len(a)
-    if len(q) >= 2 and q in a:
+    if q in a and stands_in_for(q, a):
         return 100 + len(q)
     return 0
 
