@@ -2,8 +2,10 @@
 """Mechanical check of a canonical map against a vault.
 
 Every alias must unique-hit its row. Every source file must exist and be in
-force. This is the clone-reproducible analogue of the author’s 26/26 · N/N
-alias pass. It does not score LLM answers.
+force. Exhaustive on that map — not a sample, not a claim the ranker is smart.
+
+Any host can run this on their own files. It does not verify the historical
+claim that the author’s live map was 26/26 · 156/156.
 """
 from __future__ import annotations
 

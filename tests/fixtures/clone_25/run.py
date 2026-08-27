@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Clone-reproducible analogue of the author’s filled-table 25.
+"""Implementation check on template/: exhaustive map + rewrite invariants.
 
-Mechanical: every alias unique-hits. Rewrite: the paraphrase must miss;
-the listed short noun must hit the gold page. Not an LLM session. Not the
-author’s private 25 questions.
+Not an LLM session. Not the author’s private 25. Not a comparison to cosine.
+Mechanical 25/25 is table consistency. Rewrite 25/25 is “code matches protocol.”
 """
 from __future__ import annotations
 

@@ -6,7 +6,7 @@ This is the protocol detail. README is the entry; [`PROTOCOL.md`](../PROTOCOL.md
 
 KRouter splits knowledge into **four write-up maturity layers** and **five spatial zones**. Layers answer how far this claim can be trusted. Zones answer where the file lives. Agents must read the vault through layer 4. Chat memory and vector indexes are not a second source of truth.
 
-**What this clone can prove** lives in [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md) and [`tests/fixtures/lock_vs_neighbor/`](../tests/fixtures/lock_vs_neighbor/). Two claims, do not merge: expired pages vanish because of `invalid_at` + the map (Claim A, closed); after that information, lexical TF-IDF still will not refuse the way the lock does (Claim B, this fixture). Author-vault scores below are a self-report. The notes they were measured on are not in this repository.
+**What this clone can prove** is three layers, do not merge. Full split: [`VERIFY.md`](VERIFY.md). (1) Implementation: `clone_25` — the lock does what this page says. (2) Comparison: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md) — after the same metadata, refuse vs unthresholded lexical TF-IDF. (3) Field self-report below: not in this repository.
 
 Vault folder names stay in Chinese. That is the on-disk layout.
 
@@ -185,9 +185,21 @@ New semantic search, vector layers, graph databases, or auto-injection must firs
 
 ---
 
-## Clone-reproducible: lock vs neighbor
+## What has been run (three layers)
 
-This is the protocol’s public evidence. Run it without the author’s notes:
+Do not merge. [`VERIFY.md`](VERIFY.md).
+
+### 1. Implementation
+
+`clone_25` on `template/`: exhaustive **25/25** topics, **39/39** aliases, 0 conflicts (table consistency, not a smart ranker). Rewrite: **25/25** paraphrases miss; **25/25** nouns hit. That is “the code matches the protocol,” not five LLM sessions. `template/` is a clean floor, not live-vault difficulty.
+
+```bash
+python3 tests/fixtures/clone_25/run.py
+```
+
+`verify_canonical_map.py` checks a host’s own map. It does **not** replay the author’s 26/26 · 156/156.
+
+### 2. Comparison
 
 ```bash
 python3 tests/fixtures/lock_vs_neighbor/run.py
@@ -198,15 +210,11 @@ python3 -m pytest -q tests/test_lock_vs_neighbor.py
 
 **Claim B (lexical TF-IDF on this fixture):** unthresholded `tfidf_map` still returns a page on every negative. The lock misses. A TF-IDF floor sweep, including leave-one-out on 6 CJK rewrite hits and 12 negatives, finds no operating point that matches the lock. That is not a claim about similarity retrieval. Dense retrieval is untested.
 
-Full protocol, N=36, what would falsify it: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md). Fixture: [`tests/fixtures/lock_vs_neighbor/`](../tests/fixtures/lock_vs_neighbor/).
+Full protocol: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md). Fixture: [`tests/fixtures/lock_vs_neighbor/`](../tests/fixtures/lock_vs_neighbor/).
 
-The filled-table analogue (25 topics on `template/`, not the author’s LLM sessions): [`VERIFY.md`](VERIFY.md) · [`tests/fixtures/clone_25/`](../tests/fixtures/clone_25/).
+### 3. Field self-report (not in this clone)
 
----
-
-## Author vault (not in this clone)
-
-These numbers are from the author’s private vault. **This repository does not contain the materials to reproduce them.** They are a self-report, not a receipt.
+These numbers are from the author’s private vault. **This repository does not contain the materials to reproduce them.** They are a self-report, not a receipt. To measure *your* table, run `verify_canonical_map.py` on *your* files. To count *your* sealed days, run `verify_sealed_days.py` on *your* `05 时间日志/`. Neither replays the author’s 26/26 or 72 days.
 
 Home page `verified_at: 2026-08-21`.
 
@@ -219,7 +227,7 @@ Home page `verified_at: 2026-08-21`.
 | Execution gate | Passed. Pre-action recall in effect; Clippings mutate/move/delete and Obsidian restart are hard-blocked |
 | Host daily evolution | Running. Writer is a pinned local CLI |
 
-**Retrieval:** one short noun, one page, dual SHA receipt. The agent must cite `canonical_source`. Experience is retrieved. The 25/25 row above is the author’s filled table. Do not cite it as clone evidence. The public neighbor test is [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md).
+**Retrieval:** one short noun, one page, dual SHA receipt. The agent must cite `canonical_source`. Experience is retrieved. The 25/25 row above is layer 3 (self-report). Layer 1 is [`VERIFY.md`](VERIFY.md). Layer 2 is [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md).
 
 **Corrections:** written to canonical pages (`supersedes` / quasi-correction → formal correction). The next similar task hits the new page through L4. Old wording is not current rule. Provisional methods become `active` after adopt + accept. The vault gets sharper; the agent gets steadier.
 
