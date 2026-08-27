@@ -1,0 +1,7 @@
+# id|aliases separated by ;|Vault-relative source|evidence anchor
+Q01|home;homepage;only entrance|Agent第二大脑.md|The only home page
+Q02|clippings;clippings originals;how to handle clippings;preference|02 经验与方法/Agent/用户偏好与工作约束.md|Do not move Clippings originals
+Q09|sealed;seal the day;封账|02 经验与方法/Automation/Seal the day from the log file.md|The log file is the answer
+Q10|timer fired;did the job run;scheduled job|02 经验与方法/准经验/A timer that fired is not a product.md|A live scheduler is not a delivered file
+Q11|deploy;ship from main;feature branch|02 经验与方法/Deploy/Ship from main only.md|Ship from main only
+Q05|correction;supersedes;latest correction|90 系统文件/Agent记忆/纠错与取代记录.md|Latest correction wins

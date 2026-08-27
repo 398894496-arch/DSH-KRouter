@@ -1,0 +1,22 @@
+{"id": "H01", "slice": "hit", "query": "home", "gold": "Agent第二大脑.md"}
+{"id": "H02", "slice": "hit", "query": "homepage", "gold": "Agent第二大脑.md"}
+{"id": "H03", "slice": "hit", "query": "sealed", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
+{"id": "H04", "slice": "hit", "query": "seal the day", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
+{"id": "H05", "slice": "hit", "query": "封账", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
+{"id": "H06", "slice": "hit", "query": "clippings", "gold": "02 经验与方法/Agent/用户偏好与工作约束.md"}
+{"id": "H07", "slice": "hit", "query": "timer fired", "gold": "02 经验与方法/准经验/A timer that fired is not a product.md"}
+{"id": "H08", "slice": "hit", "query": "did the job run", "gold": "02 经验与方法/准经验/A timer that fired is not a product.md"}
+{"id": "H09", "slice": "hit", "query": "ship from main", "gold": "02 经验与方法/Deploy/Ship from main only.md"}
+{"id": "H10", "slice": "hit", "query": "correction", "gold": "90 系统文件/Agent记忆/纠错与取代记录.md"}
+{"id": "S01", "slice": "supersede", "query": "how to deploy", "gold": "02 经验与方法/Deploy/Ship from main only.md", "old": "02 经验与方法/Deploy/Always push from the feature branch.md"}
+{"id": "S02", "slice": "supersede", "query": "push from the feature branch", "gold": "02 经验与方法/Deploy/Ship from main only.md", "old": "02 经验与方法/Deploy/Always push from the feature branch.md"}
+{"id": "S03", "slice": "supersede", "query": "feature branch", "gold": "02 经验与方法/Deploy/Ship from main only.md", "old": "02 经验与方法/Deploy/Always push from the feature branch.md"}
+{"id": "S04", "slice": "supersede", "query": "always push from the feature branch", "gold": "02 经验与方法/Deploy/Ship from main only.md", "old": "02 经验与方法/Deploy/Always push from the feature branch.md"}
+{"id": "B01", "slice": "neighbor", "query": "move original clippings exports into cold storage", "gold": "02 经验与方法/Agent/用户偏好与工作约束.md", "trap": "03 资料与证据/Archive the inbox PDFs.md"}
+{"id": "B02", "slice": "neighbor", "query": "move the original files out of the inbox into the cold archive", "gold": "02 经验与方法/Agent/用户偏好与工作约束.md", "trap": "03 资料与证据/Archive the inbox PDFs.md"}
+{"id": "B03", "slice": "neighbor", "query": "how to handle a production incident", "gold": null, "trap": "02 经验与方法/Deploy/Always push from the feature branch.md"}
+{"id": "B04", "slice": "neighbor", "query": "handling originals means moving them", "gold": "02 经验与方法/Agent/用户偏好与工作约束.md", "trap": "03 资料与证据/Archive the inbox PDFs.md"}
+{"id": "N01", "slice": "negative", "query": "banana smoothie recipe", "gold": null}
+{"id": "N02", "slice": "negative", "query": "what is the weather in oslo", "gold": null}
+{"id": "N03", "slice": "negative", "query": "kubernetes helm chart", "gold": null}
+{"id": "N04", "slice": "negative", "query": "how to tune a guitar", "gold": null}

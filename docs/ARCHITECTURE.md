@@ -196,7 +196,7 @@ Home page `verified_at: 2026-08-21`.
 | Execution gate | Passed. Pre-action recall in effect; Clippings mutate/move/delete and Obsidian restart are hard-blocked |
 | Host daily evolution | Running. Writer is a pinned local CLI |
 
-**Retrieval:** one short noun, one page, dual SHA receipt. The agent must cite `canonical_source`. Experience is retrieved.
+**Retrieval:** one short noun, one page, dual SHA receipt. The agent must cite `canonical_source`. Experience is retrieved. The public, clone-reproducible neighbor test is [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md); the 25/25 row above is the author’s filled table, not that fixture.
 
 **Corrections:** written to canonical pages (`supersedes` / quasi-correction → formal correction). The next similar task hits the new page through L4. Old wording is not current rule. Provisional methods become `active` after adopt + accept. The vault gets sharper; the agent gets steadier.
 

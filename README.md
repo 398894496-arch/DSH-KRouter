@@ -67,6 +67,17 @@ A miss is not a hit: `canonical_match: false` plus hints. `./scripts/krouter sug
 Q11|deploy;deployment;how we ship|02 经验与方法/Deploy/发布流程.md|Ship from main only
 ```
 
+## Prove the lock against a neighbor
+
+The 25/25 author-vault blind test is not this. That number proves a filled alias table opens. This fixture proves the lock will **not** cite a plausible wrong page after a correction, and will miss instead of guessing:
+
+```bash
+python3 tests/fixtures/lock_vs_neighbor/run.py
+python3 -m pytest -q tests/test_lock_vs_neighbor.py
+```
+
+Four retrievers, exact path match, no GPU. On 2026-08-27: krouter false-neighbor **0**, old superseded page **0**; TF-IDF cosine and lexical both return the old deploy page on every supersede query. Protocol, gold file, and what would falsify it: [`docs/LOCK_VS_NEIGHBOR.md`](docs/LOCK_VS_NEIGHBOR.md). This is not LongMemEval.
+
 ## Start the daily writer
 
 This is the product. Timer is **on by default**.

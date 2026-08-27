@@ -66,6 +66,17 @@ CI 每次 push 跑 pytest、这支脚本、DSH 桥。查询时不联网。
 Q11|deploy;deployment;怎么发版|02 经验与方法/发布/发布流程.md|只从 main 发
 ```
 
+## 用隔壁页证明这把锁
+
+作者活库 25/25 盲测不是这个实验。那个数字只证明填满的别名表能打开。这份 fixture 证明：纠错之后锁**不会**引用一个看起来很像的旧页，打不中就未命中，不会猜：
+
+```bash
+python3 tests/fixtures/lock_vs_neighbor/run.py
+python3 -m pytest -q tests/test_lock_vs_neighbor.py
+```
+
+四个检索器，只认路径完全一致，不用 GPU。2026-08-27：krouter 假近邻 **0**、旧取代页 **0**；TF-IDF 余弦和词项计数在每道取代题上都返回旧发版页。协议、金标、怎样算证伪：[`docs/LOCK_VS_NEIGHBOR.md`](docs/LOCK_VS_NEIGHBOR.md)。这不是 LongMemEval。
+
 ## 打开每天的写入器
 
 这就是产品。定时器**默认开**。
