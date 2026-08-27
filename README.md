@@ -69,14 +69,14 @@ Q11|deploy;deployment;how we ship|02 经验与方法/Deploy/发布流程.md|Ship
 
 ## Prove the lock against a neighbor
 
-The 25/25 author-vault blind test is not this. That number proves a filled alias table opens. This fixture proves the lock will **not** cite a plausible wrong page after a correction, and will miss instead of guessing:
+The 25/25 author-vault blind test is not this. That number proves a filled alias table opens. This fixture is two claims, not one 4/4:
 
 ```bash
 python3 tests/fixtures/lock_vs_neighbor/run.py
 python3 -m pytest -q tests/test_lock_vs_neighbor.py
 ```
 
-Four retrievers, exact path match, no GPU. On 2026-08-27: krouter false-neighbor **0**, old superseded page **0**; TF-IDF cosine and lexical both return the old deploy page on every supersede query. Protocol, gold file, and what would falsify it: [`docs/LOCK_VS_NEIGHBOR.md`](docs/LOCK_VS_NEIGHBOR.md). This is not LongMemEval.
+Two claims, do not merge. **N=22** (hit 10, supersede 4, neighbor 4, negative 4). Claim A, closed: naive TF-IDF returns the expired deploy page; after the same `invalid_at` filter, cosine ties the lock on that slice — metadata, not ranking. Claim B, against an *unthresholded* baseline: on 4 negatives the lock misses 4/4 and `tfidf_map` still returns a page 4/4. A cosine floor sweep is in the runner; **no threshold matches the lock** (hit 10/10 and negative 4/4 miss). Protocol: [`docs/LOCK_VS_NEIGHBOR.md`](docs/LOCK_VS_NEIGHBOR.md). Not LongMemEval, not dense retrieval.
 
 ## Start the daily writer
 
@@ -162,6 +162,6 @@ Do **not** summarize this repository as: optional self-evolution, empty second b
 | Retrieval | The **lock**, not the product. Alias table, `rg` on miss, dual SHA-256, no vector. |
 | Clone | Protocol + skeleton + router + writer. The author’s filled vault is private. Author scores are **that** vault, not a clone score. The product is not empty. |
 
-Canonical pages: [`PROTOCOL.md`](PROTOCOL.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`extras/host-daily-evolution/`](extras/host-daily-evolution/) · [`template/02 经验与方法/准经验/准经验入口.md`](template/02%20经验与方法/准经验/准经验入口.md)
+Canonical pages: [`PROTOCOL.md`](PROTOCOL.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/LOCK_VS_NEIGHBOR.md`](docs/LOCK_VS_NEIGHBOR.md) · [`extras/host-daily-evolution/`](extras/host-daily-evolution/) · [`template/02 经验与方法/准经验/准经验入口.md`](template/02%20经验与方法/准经验/准经验入口.md)
 
 MIT. Changelog: [`CHANGELOG.md`](CHANGELOG.md).

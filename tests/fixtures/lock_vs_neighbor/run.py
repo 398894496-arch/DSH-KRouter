@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
 """Reproduce the lock-vs-neighbor experiment.
 
-Four retrievers on the same fixture vault and gold file:
+Naive retrievers see every markdown file, including expired pages.
+Ablations get the same metadata the lock has: `invalid_at` (`*_live`) and the
+live alias table with nouns prepended (`tfidf_map`).
 
-- krouter: alias table, miss is allowed, expired map rows dropped
-- lexical: python count of query tokens in each markdown file, miss if none
-- tfidf: word + char-ngram TF-IDF cosine, always returns top-1
-- hybrid: Reciprocal Rank Fusion of lexical and tfidf, always returns top-1
-  if either ranked a file
-
-This is not LongMemEval. Scoring is exact path match. Citing a neighbor is
-a miss against gold, not a partial credit. The CI vector is TF-IDF cosine,
-not a neural encoder; install sentence-transformers and pass --encoder
-sbert only if you want that extra row.
+Scoring is exact path match. Citing a neighbor is a failure. A miss is success
+when gold is null. N=22. Not LongMemEval. Not a neural encoder.
 """
 from __future__ import annotations
 
@@ -29,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "skill/krouter-obsidian/scripts"))
 
-from canonical_lookup import load_rows, lookup  # noqa: E402
+from canonical_lookup import in_force, live_rows, load_rows, lookup, parse_frontmatter  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_VAULT = HERE / "vault"
@@ -38,6 +32,7 @@ DEFAULT_GOLD = HERE / "gold.jsonl"
 TODAY = date(2026, 8, 27)
 MISS = None
 TOKEN = re.compile(r"[a-z0-9\u4e00-\u9fff]+", re.I)
+THRESHOLDS = (0.0, 0.05, 0.08, 0.10, 0.15, 0.19, 0.20, 0.23, 0.25, 0.30)
 
 
 def rel(path: Path, vault: Path) -> str:
@@ -105,19 +100,42 @@ def lexical_predict(query: str, files: list[Path], vault: Path) -> str | None:
     return scored[0][1]
 
 
+def live_md_files(vault: Path, today: date) -> list[Path]:
+    """Drop pages whose frontmatter is expired or not yet valid. Unmapped pages stay."""
+    kept: list[Path] = []
+    for path in md_files(vault):
+        live, _, _ = in_force(parse_frontmatter(path), today)
+        if live:
+            kept.append(path)
+    return kept
+
+
+def map_texts(vault: Path, rows, today: date) -> list[tuple[str, str]]:
+    """Live alias rows only. Aliases are prepended so cosine sees the same nouns."""
+    out: list[tuple[str, str]] = []
+    for _case_id, aliases, source, _anchor in live_rows(rows, vault, today):
+        text = " ".join(aliases) + "\n" + read(vault / source)
+        out.append((source.replace("\\", "/"), text))
+    return out
+
+
 def build_tfidf(files: list[Path], vault: Path):
-    docs = [(rel(p, vault), features(read(p))) for p in files]
+    return build_tfidf_texts([(rel(p, vault), read(p)) for p in files])
+
+
+def build_tfidf_texts(named: list[tuple[str, str]]):
+    docs = [(name, features(text)) for name, text in named]
     df: Counter[str] = Counter()
     for _, bag in docs:
         df.update(bag.keys())
-    n = len(docs)
+    n = max(len(docs), 1)
     idf = {term: math.log((1 + n) / (1 + count)) + 1.0 for term, count in df.items()}
 
     def vec(bag: Counter[str]) -> dict[str, float]:
         return {term: (1 + math.log(count)) * idf.get(term, 0.0) for term, count in bag.items()}
 
     doc_vecs = [(name, vec(bag)) for name, bag in docs]
-    return doc_vecs, idf, vec
+    return doc_vecs, vec
 
 
 def cosine(a: dict[str, float], b: dict[str, float]) -> float:
@@ -132,13 +150,15 @@ def cosine(a: dict[str, float], b: dict[str, float]) -> float:
     return num / (na * nb)
 
 
-def tfidf_predict(query: str, doc_vecs, vec) -> str | None:
+def tfidf_predict(query: str, doc_vecs, vec, min_score: float = 0.0) -> str | None:
     qv = vec(features(query))
     ranked = sorted(
         ((cosine(qv, dv), name) for name, dv in doc_vecs),
         key=lambda item: (-item[0], item[1]),
     )
-    if not ranked or ranked[0][0] <= 0:
+    if not ranked or ranked[0][0] < min_score:
+        return MISS
+    if ranked[0][0] <= 0:
         return MISS
     return ranked[0][1]
 
@@ -227,6 +247,13 @@ def summarize(rows: list[dict]) -> dict:
     }
 
 
+def timed(bucket: list[float], fn):
+    t0 = time.perf_counter()
+    value = fn()
+    bucket.append((time.perf_counter() - t0) * 1000)
+    return value
+
+
 def run(
     vault: Path = DEFAULT_VAULT,
     map_path: Path = DEFAULT_MAP,
@@ -234,44 +261,76 @@ def run(
 ) -> dict:
     gold = load_gold(gold_path)
     files = md_files(vault)
+    live_files = live_md_files(vault, TODAY)
     rows = load_rows(map_path)
-    doc_vecs, _idf, vec = build_tfidf(files, vault)
+    doc_vecs, vec = build_tfidf(files, vault)
+    live_vecs, live_vec = build_tfidf(live_files, vault)
+    map_vecs, map_vec = build_tfidf_texts(map_texts(vault, rows, TODAY))
 
     systems = {
         "krouter": [],
         "lexical": [],
         "tfidf": [],
         "hybrid": [],
+        "lexical_live": [],
+        "tfidf_live": [],
+        "tfidf_map": [],
+        "hybrid_live": [],
     }
     latencies_ms: dict[str, list[float]] = {name: [] for name in systems}
 
     for item in gold:
         q = item["query"]
-
-        t0 = time.perf_counter()
-        k = krouter_predict(q, rows, vault)
-        latencies_ms["krouter"].append((time.perf_counter() - t0) * 1000)
-        systems["krouter"].append(score_one(k, item))
-
-        t0 = time.perf_counter()
-        lex = lexical_predict(q, files, vault)
-        latencies_ms["lexical"].append((time.perf_counter() - t0) * 1000)
-        systems["lexical"].append(score_one(lex, item))
-
-        t0 = time.perf_counter()
-        tf = tfidf_predict(q, doc_vecs, vec)
-        latencies_ms["tfidf"].append((time.perf_counter() - t0) * 1000)
-        systems["tfidf"].append(score_one(tf, item))
-
-        t0 = time.perf_counter()
-        hy = rrf(
-            [
-                lexical_ranks(q, files, vault),
-                tfidf_ranks(q, doc_vecs, vec),
-            ]
+        systems["krouter"].append(
+            score_one(timed(latencies_ms["krouter"], lambda: krouter_predict(q, rows, vault)), item)
         )
-        latencies_ms["hybrid"].append((time.perf_counter() - t0) * 1000)
-        systems["hybrid"].append(score_one(hy, item))
+        systems["lexical"].append(
+            score_one(timed(latencies_ms["lexical"], lambda: lexical_predict(q, files, vault)), item)
+        )
+        systems["tfidf"].append(
+            score_one(timed(latencies_ms["tfidf"], lambda: tfidf_predict(q, doc_vecs, vec)), item)
+        )
+        systems["hybrid"].append(
+            score_one(
+                timed(
+                    latencies_ms["hybrid"],
+                    lambda: rrf([lexical_ranks(q, files, vault), tfidf_ranks(q, doc_vecs, vec)]),
+                ),
+                item,
+            )
+        )
+        systems["lexical_live"].append(
+            score_one(
+                timed(latencies_ms["lexical_live"], lambda: lexical_predict(q, live_files, vault)),
+                item,
+            )
+        )
+        systems["tfidf_live"].append(
+            score_one(
+                timed(latencies_ms["tfidf_live"], lambda: tfidf_predict(q, live_vecs, live_vec)),
+                item,
+            )
+        )
+        systems["tfidf_map"].append(
+            score_one(
+                timed(latencies_ms["tfidf_map"], lambda: tfidf_predict(q, map_vecs, map_vec)),
+                item,
+            )
+        )
+        systems["hybrid_live"].append(
+            score_one(
+                timed(
+                    latencies_ms["hybrid_live"],
+                    lambda: rrf(
+                        [
+                            lexical_ranks(q, live_files, vault),
+                            tfidf_ranks(q, live_vecs, live_vec),
+                        ]
+                    ),
+                ),
+                item,
+            )
+        )
 
     out = {
         "today": TODAY.isoformat(),
@@ -287,17 +346,44 @@ def run(
         summary.pop("rows")
         summary["cases"] = scored
         out["systems"][name] = summary
+    curve = []
+    for floor in THRESHOLDS:
+        scored = [
+            score_one(tfidf_predict(item["query"], map_vecs, map_vec, min_score=floor), item)
+            for item in gold
+        ]
+        block = summarize(scored)
+        block.pop("rows")
+        hit = block["slices"]["hit"]["exact"]
+        neg_miss = block["slices"]["negative"]["miss"]
+        curve.append(
+            {
+                "min_score": floor,
+                "hit_exact": hit,
+                "negative_miss": neg_miss,
+                "false_neighbor": block["false_neighbor"],
+                "exact": block["exact"],
+                "matches_lock": hit == 1.0
+                and neg_miss == 1.0
+                and block["false_neighbor"] == 0,
+            }
+        )
+    out["threshold_curve"] = curve
+    out["threshold_any_matches_lock"] = any(point["matches_lock"] for point in curve)
     return out
 
 
 def print_table(result: dict) -> None:
-    print(f"today={result['today']}  n={result['systems']['krouter']['n']}")
+    n = result["systems"]["krouter"]["n"]
+    slices = result["systems"]["krouter"]["slices"]
+    counts = " ".join(f"{name}={block['n']}" for name, block in slices.items())
+    print(f"today={result['today']}  N={n} ({counts})")
     print(
-        f"{'system':<10} {'exact':>8} {'falseN':>8} {'oldPg':>8} {'miss':>8} {'p50ms':>8}"
+        f"{'system':<14} {'exact':>8} {'falseN':>8} {'oldPg':>8} {'miss':>8} {'p50ms':>8}"
     )
     for name, block in result["systems"].items():
         print(
-            f"{name:<10} {block['exact']:>8.2%} {block['false_neighbor']:>8.2%} "
+            f"{name:<14} {block['exact']:>8.2%} {block['false_neighbor']:>8.2%} "
             f"{block['old_page']:>8.2%} {block['miss']:>8.2%} {block['latency_p50_ms']:>8.3f}"
         )
     print()
@@ -310,6 +396,19 @@ def print_table(result: dict) -> None:
                 f"{name} {sl['exact']:.0%}/{sl['false_neighbor']:.0%}/{sl['old_page']:.0%}"
             )
         print(f"  {slice_name:<10} " + "  ".join(parts))
+    print()
+    print("tfidf_map cosine threshold sweep (same live map; miss if top-1 < min_score)")
+    print(f"{'min_score':>9} {'hit':>8} {'negMiss':>8} {'falseN':>8} {'matches_lock':>14}")
+    for point in result["threshold_curve"]:
+        print(
+            f"{point['min_score']:>9.2f} {point['hit_exact']:>8.0%} "
+            f"{point['negative_miss']:>8.0%} {point['false_neighbor']:>8.0%} "
+            f"{str(point['matches_lock']):>14}"
+        )
+    print(
+        "any threshold matches lock (hit 10/10 and negative 4/4 miss and false_neighbor 0):",
+        result["threshold_any_matches_lock"],
+    )
 
 
 def main() -> int:

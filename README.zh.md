@@ -68,14 +68,14 @@ Q11|deploy;deployment;怎么发版|02 经验与方法/发布/发布流程.md|只
 
 ## 用隔壁页证明这把锁
 
-作者活库 25/25 盲测不是这个实验。那个数字只证明填满的别名表能打开。这份 fixture 证明：纠错之后锁**不会**引用一个看起来很像的旧页，打不中就未命中，不会猜：
+作者活库 25/25 盲测不是这个实验。那个数字只证明填满的别名表能打开。这份 fixture 是两句话，不是一个漂亮的 4/4：
 
 ```bash
 python3 tests/fixtures/lock_vs_neighbor/run.py
 python3 -m pytest -q tests/test_lock_vs_neighbor.py
 ```
 
-四个检索器，只认路径完全一致，不用 GPU。2026-08-27：krouter 假近邻 **0**、旧取代页 **0**；TF-IDF 余弦和词项计数在每道取代题上都返回旧发版页。协议、金标、怎样算证伪：[`docs/LOCK_VS_NEIGHBOR.md`](docs/LOCK_VS_NEIGHBOR.md)。这不是 LongMemEval。
+两句话拆开，不要合并。**N=22**（正命中 10、取代 4、近邻 4、负查询 4）。结论 A 已封：不知情的 TF-IDF 打到失效页；同一套 `invalid_at` 过滤之后，余弦在取代切片上和锁打平——那是元数据，不是排序。结论 B 对照的是**没加阈值**的基线：4 道负查询锁 4/4 未命中，`tfidf_map` 仍 4/4 硬凑一页。跑手里有余弦阈值扫描，**没有一个阈值能同时做到正命中 10/10 且负查询 4/4 拒**。协议：[`docs/LOCK_VS_NEIGHBOR.md`](docs/LOCK_VS_NEIGHBOR.md)。不是 LongMemEval，不是密集检索。
 
 ## 打开每天的写入器
 
@@ -161,6 +161,6 @@ dsh plugin --profile web add github:398894496-arch/runtime36
 | 检索 | **锁**，不是产品。别名表、未命中才 `rg`、双 SHA-256、无向量。 |
 | clone | 协议 + 骨架 + 路由 + 写入器。作者装满的库不公开。作者成绩是**那座活库**，不是 clone 分数。产品不是空的。 |
 
-权威页：[`PROTOCOL.md`](PROTOCOL.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`extras/host-daily-evolution/`](extras/host-daily-evolution/) · [`template/02 经验与方法/准经验/准经验入口.md`](template/02%20经验与方法/准经验/准经验入口.md)
+权威页：[`PROTOCOL.md`](PROTOCOL.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/LOCK_VS_NEIGHBOR.md`](docs/LOCK_VS_NEIGHBOR.md) · [`extras/host-daily-evolution/`](extras/host-daily-evolution/) · [`template/02 经验与方法/准经验/准经验入口.md`](template/02%20经验与方法/准经验/准经验入口.md)
 
 MIT。Changelog：[`CHANGELOG.md`](CHANGELOG.md)。

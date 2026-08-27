@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Public lock-vs-neighbor fixture: alias lock against lexical / TF-IDF cosine / hybrid on exact path match. Scoring treats a neighbor cite as failure. Not LongMemEval; not the author 25/25.
+- Public lock-vs-neighbor fixture, N=22. Claim A closed: supersede 4/4 old-page is `invalid_at`+map, not rankers. Claim B is refusal vs *unthresholded* cosine; a min_score sweep on tfidf_map does not match the lock (hit 10/10 and negative 4/4 miss). Not LongMemEval; not dense retrieval.
 - The template ships both rungs of the ladder: one `active` method and one `provisional` draft, routed as Q09 and Q10. Ten sample nouns now, delete them when your own land.
 - Two SVGs in `docs/img`: a receipt on a hit next to a miss with hints, and what the vault holds on clone versus after two weeks.
 - A latin fragment of an alias is not a canonical hit. A shorter latin query has to carry the alias; one CJK character still does. Checked against 167 live aliases: no behaviour change on any of them.

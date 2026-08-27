@@ -1,10 +1,46 @@
 # Lock vs neighbor
 
-This is the reproducible experiment for the retrieval lock. It is **not** LongMemEval, LoCoMo, or a general memory-quality score. Those measure conversational fact recall with nearest-neighbor retrieval. This measures a different contract:
+This is the reproducible experiment for the retrieval lock. It is **not** LongMemEval, LoCoMo, or a general memory-quality score.
 
-**Citing a neighbor is a failure. After a correction, the next call must hit the live page. A miss is success when there is no gold page.**
+**N=22** on a public fixture vault: hit 10, supersede 4, neighbor 4, negative 4. The author’s 25/25 is a different number (filled alias table on a private vault). Do not mix them.
 
-The author’s 25/25 blind test is not this experiment. That number proves the lock opens on a filled alias table. This fixture proves the lock refuses a plausible wrong page.
+Two claims. Do not merge them.
+
+## Claim A — metadata (closed)
+
+Naive cosine, given the expired page, returns it (supersede 0/4 old-page 4/4). After the same `invalid_at` filter — and, in `tfidf_map`, the live alias table with nouns prepended — cosine hits the live page (supersede 4/4). **Expired pages disappear because the filter and the map were applied, not because any ranker is smarter.** TF-IDF, lexical, and hybrid all tie the lock on that slice once they see the same information.
+
+## Claim B — refusal (stands against an unthresholded baseline; a floor sweep does not tie the lock here)
+
+After that ablation, **unthresholded** `tfidf_map` still cannot miss: on **4 negatives** it returns a live mapped page 4/4. The lock misses 4/4. That comparison is against a baseline that was **not given a refuse option**. It does **not** prove cosine cannot refuse.
+
+The next row is a similarity floor on the same live map: miss if cosine(top-1) < `min_score`. Sweep:
+
+```text
+min_score   hit   negMiss   falseN   matches_lock
+     0.00   100%      0%      23%   False
+     0.05   100%      0%      23%   False
+     0.08    90%      0%      23%   False
+     0.19    90%     75%       9%   False
+     0.20    90%    100%       5%   False
+     0.23    90%    100%       0%   False
+```
+
+`matches_lock` means hit 10/10 **and** negative 4/4 miss **and** false_neighbor 0. **No floor on this fixture matches the lock.** The CJK gold hit `封账` scores ~0.06; the strongest negative scores ~0.19. Any floor that refuses all four negatives also drops that true hit. Closest refuse-and-zero-false-neighbor point: `min_score=0.23` → negatives 4/4 miss, false_neighbor 0, hit 9/10.
+
+N=22, **4 negatives**. The 23% false-neighbor figure is 5/22, driven mostly by those 4 items. State the 4 when you quote it.
+
+Recorded 2026-08-27, `python3 tests/fixtures/lock_vs_neighbor/run.py`:
+
+| system | exact | false_neighbor | old_page | miss |
+|---|---|---|---|---|
+| krouter | 95.45% | **0** | **0** | 27.27% |
+| tfidf (naive, expired pages in) | 36.36% | 59.09% | 18.18% | 4.55% |
+| tfidf_map (same live map, no floor) | 77.27% | 22.73% | 0 | 0 |
+
+The 22.73% is 5/22. Four of those five are the negatives. A floor of 0.23 zeros false_neighbor and refuses all 4 negatives, and drops hit to 9/10.
+
+Dense retrieval (sentence-transformers, Mem0) is still untested.
 
 ## What runs
 
@@ -13,50 +49,15 @@ python3 tests/fixtures/lock_vs_neighbor/run.py
 python3 -m pytest -q tests/test_lock_vs_neighbor.py
 ```
 
-No GPU. No extra pip. No network. The vault is `tests/fixtures/lock_vs_neighbor/vault/`, not the author’s notes and not `template/`.
-
-Four retrievers, same gold file:
-
-| System | Hit rule | Can miss? |
+| System | What it sees | Refuse option? |
 |---|---|---|
-| krouter | Alias table. Expired map rows dropped. Dual-SHA receipt is out of scope here; path match is the score. | Yes |
-| lexical | Count of query tokens in each markdown file | Yes, if no file contains a token |
-| tfidf | Word + character-trigram TF-IDF cosine | Almost never; top-1 by cosine |
-| hybrid | Reciprocal rank fusion of lexical and tfidf | Almost never |
-
-`tfidf` is a vector nearest-neighbor baseline you can reproduce in CI. It is **not** a neural embedding. If you want an extra row, install `sentence-transformers` yourself and fork the runner; that row is not what CI claims.
-
-## Slices
-
-| Slice | Gold | What a vector system typically does |
-|---|---|---|
-| hit | Canonical path; the query carries an alias | Often right, sometimes a neighbor |
-| supersede | Live page after `invalid_at`; the old page is still on disk and longer | Returns the old page |
-| neighbor | Live constraint, or `null`; a trap page shares wording | Returns the trap |
-| negative | `null` | Returns some file anyway |
-
-Scoring is exact path equality. `false_neighbor` means the system returned a path that is not gold. `old_page` is the superseded deploy note.
+| krouter | Alias table + `invalid_at` | Yes (no hit → miss) |
+| lexical / tfidf / hybrid | Every file, including expired | No (except lexical empty-token miss) |
+| `*_live` | Same `invalid_at` filter; unmapped live pages stay | No |
+| `tfidf_map` | Live alias rows; aliases in the document text | Not until the threshold sweep |
 
 ## What would falsify this
 
-- krouter `false_neighbor` > 0 on this gold file
-- krouter `slices.supersede.old_page` > 0
-- tfidf (or lexical) `slices.supersede.old_page` == 0 *and* krouter no longer unique on that slice — then the fixture is too weak, not a win
-- a neural encoder, run on the **same gold file**, matching krouter on `false_neighbor` and `old_page`
-
-A loss on `hit` paraphrases that are **not** in the alias table is expected. Coverage is the table. Do not cite that as a failure of the lock, and do not cite a win on `hit` as beating memory research.
-
-## Measured on this fixture
-
-Recorded 2026-08-27, `python3 tests/fixtures/lock_vs_neighbor/run.py`:
-
-| system | exact | false_neighbor | old_page | miss |
-|---|---|---|---|---|
-| krouter | 0.9545 | **0** | **0** | 0.2727 |
-| lexical | 0.4091 | 0.50 | 0.1818 | 0.1818 |
-| tfidf | 0.3636 | 0.5909 | 0.1818 | 0.0455 |
-| hybrid | 0.3636 | 0.5909 | 0.1818 | 0.0455 |
-
-Supersede slice: krouter 4/4 live page; lexical/tfidf/hybrid 4/4 old page.
-
-That is the claim this repository can stand on: **in the class of retrieval where a neighbor cite is a protocol violation, a missy alias lock beats cosine-over-files on this public fixture.** It is not a claim that vector memory is useless, or that clone coverage equals a filled second brain.
+- Claim A: naive tfidf supersede `old_page` == 0, or ablated systems fail supersede after the filter
+- Claim B: `threshold_any_matches_lock` is true on this gold file — then a cosine floor ties the lock here
+- A dense encoder on the **same** gold file matching the lock on hit 10/10 and negative 4/4 miss
