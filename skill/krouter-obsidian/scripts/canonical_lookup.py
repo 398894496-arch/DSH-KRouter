@@ -5,9 +5,71 @@ from __future__ import annotations
 import argparse
 import sys
 import unicodedata
+from datetime import date
 from pathlib import Path
 
 PARTICLES = set("的了着过地得")
+
+
+def parse_frontmatter(path: Path) -> dict[str, str]:
+    if not path.is_file():
+        return {}
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if not text.startswith("---"):
+        return {}
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return {}
+    found: dict[str, str] = {}
+    for raw in parts[1].splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or ":" not in line:
+            continue
+        name, val = line.split(":", 1)
+        found[name.strip()] = val.strip().strip('"').strip("'")
+    return found
+
+
+def parse_day(raw: str) -> date | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        return date.fromisoformat(text[:10])
+    except ValueError:
+        return None
+
+
+def in_force(fm: dict[str, str], today: date) -> tuple[bool, str, str]:
+    valid_from = parse_day(fm.get("valid_from") or fm.get("verified_at") or "")
+    invalid_at = parse_day(fm.get("invalid_at") or "")
+    valid_s = valid_from.isoformat() if valid_from else ""
+    invalid_s = invalid_at.isoformat() if invalid_at else ""
+    if valid_from and valid_from > today:
+        return False, valid_s, invalid_s
+    if invalid_at and invalid_at <= today:
+        return False, valid_s, invalid_s
+    return True, valid_s, invalid_s
+
+
+def live_rows(
+    rows: list[tuple[str, list[str], str, str]],
+    vault: Path | None,
+    today: date | None = None,
+) -> list[tuple[str, list[str], str, str]]:
+    """Drop expired / not-yet-valid / missing sources when a vault is given."""
+    if vault is None:
+        return rows
+    today = today or date.today()
+    kept: list[tuple[str, list[str], str, str]] = []
+    for case_id, aliases, source, anchor in rows:
+        path = vault / source
+        if not path.is_file():
+            continue
+        live, _, _ = in_force(parse_frontmatter(path), today)
+        if live:
+            kept.append((case_id, aliases, source, anchor))
+    return kept
 
 
 def normalize(value: str) -> str:
@@ -105,7 +167,13 @@ def pick(scores: dict[str, int], source_by_id: dict[str, str]) -> str | None:
     return None
 
 
-def lookup(query: str, rows: list[tuple[str, list[str], str, str]]) -> tuple[str, str, str] | None:
+def lookup(
+    query: str,
+    rows: list[tuple[str, list[str], str, str]],
+    vault: Path | None = None,
+    today: date | None = None,
+) -> tuple[str, str, str] | None:
+    rows = live_rows(rows, vault, today)
     source_by_id = {case_id: source for case_id, _aliases, source, _anchor in rows}
     winner = pick(scores_for(query, rows), source_by_id)
     if winner is None:
@@ -126,7 +194,10 @@ def suggestions(
     query: str,
     rows: list[tuple[str, list[str], str, str]],
     limit: int = 5,
+    vault: Path | None = None,
+    today: date | None = None,
 ) -> list[tuple[int, str, str, str]]:
+    rows = live_rows(rows, vault, today)
     ranked: list[tuple[int, str, str, str]] = []
     for case_id, aliases, source, _anchor in rows:
         best = 0
@@ -156,7 +227,9 @@ def main() -> int:
     if args.suggest:
         if not args.query:
             return 2
-        for score, case_id, alias, relative_source in suggestions(args.query, rows, args.limit):
+        for score, case_id, alias, relative_source in suggestions(
+            args.query, rows, args.limit, vault=vault
+        ):
             source = vault / relative_source
             if not source.is_file():
                 continue
@@ -165,7 +238,7 @@ def main() -> int:
 
     if not args.query:
         return 2
-    hit = lookup(args.query, rows)
+    hit = lookup(args.query, rows, vault=vault)
     if hit is None:
         return 1
     case_id, relative_source, anchor = hit

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.4.2 — 2026-08-27
+
+Ship `in_force` / `live_rows` / `parse_frontmatter` on `canonical_lookup.py`. `verify_canonical_map.py` and the lock-vs-neighbor runner imported them since 0.4.1; the lookup module on GitHub did not. Clone `python3 scripts/verify_canonical_map.py` raised `ImportError`. Not L0.
+
 ## 0.4.1 — 2026-08-27
 
 Docs and checkers. No new product lane.
