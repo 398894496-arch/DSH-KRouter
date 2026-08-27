@@ -1,0 +1,26 @@
+# id|aliases separated by ;|Vault-relative source|evidence anchor
+Q01|home;homepage;only entrance|Agent第二大脑.md|The only home page
+Q02|clippings;clippings originals|02 经验与方法/Agent/用户偏好与工作约束.md|Do not move Clippings originals
+Q03|folder names;readable names|02 经验与方法/Agent/用户偏好与工作约束.md|Names must show what the file is for
+Q04|daily log filename;log naming|02 经验与方法/Agent/用户偏好与工作约束.md|Daily logs use DD｜one-line summary
+Q05|correction;supersedes|90 系统文件/Agent记忆/纠错与取代记录.md|Latest correction wins
+Q06|promotion;five gates|02 经验与方法/经验与方法.md|Only verified methods enter this folder
+Q07|high trust;action basis|90 系统文件/Agent记忆/可靠记忆索引.md|High-trust: may be used as action basis
+Q08|health lamp;automation status|90 系统文件/自动化/日更健康.md|Health on this page is authoritative
+Q09|sealed;seal the day|02 经验与方法/Automation/Seal the day from the log file.md|The log file is the answer
+Q10|timer fired;scheduled job|02 经验与方法/准经验/A timer that fired is not a product.md|A live scheduler is not a delivered file
+Q11|self-evolution key;flagship lock|90 系统文件/自动化/自进化钥匙.md|This page is the config
+Q12|provisional index;draft methods|02 经验与方法/准经验/准经验入口.md|New methods enter here first
+Q13|projects folder;work in progress|01 项目/项目.md|Work in progress lives here
+Q14|sample project|01 项目/示例项目/示例项目.md|Replace the sample project
+Q15|evidence zone|03 资料与证据/资料与证据.md|Inputs, originals, and result evidence
+Q16|reviews folder|04 已完成与复盘/已完成与复盘.md|Finished results and reviews
+Q17|log index|05 时间日志/时间日志入口.md|One note per day
+Q18|sample day|05 时间日志/2026-01/01｜示例日.md|Example sealed day
+Q19|execution gate|90 系统文件/状态.md|Execution gate defaults to not-proven
+Q20|formal active|02 经验与方法/经验与方法.md|Do not treat it as a formal method yet
+Q21|placeholders only|90 系统文件/自动化/自进化钥匙.md|The clone ships placeholders only
+Q22|one note per day|05 时间日志/时间日志入口.md|One note per day
+Q23|copy originals|03 资料与证据/资料与证据.md|Inputs, originals, and result evidence
+Q24|replace the sample|01 项目/示例项目/示例项目.md|Replace the sample project
+Q25|lamp unused|90 系统文件/自动化/日更健康.md|lamp unused means you turned the timer off

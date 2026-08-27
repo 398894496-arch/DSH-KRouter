@@ -1,0 +1,25 @@
+{"id": "R01", "noun": "home", "query": "打开这座库时该从哪一篇笔记进而且只能从那里进", "gold": "Agent第二大脑.md"}
+{"id": "R02", "noun": "clippings", "query": "剪藏投进来的原始文件能不能改名或挪走", "gold": "02 经验与方法/Agent/用户偏好与工作约束.md"}
+{"id": "R03", "noun": "folder names", "query": "文件夹取名有什么硬性要求不能靠抽象术语让人猜", "gold": "02 经验与方法/Agent/用户偏好与工作约束.md"}
+{"id": "R04", "noun": "log naming", "query": "每天那篇日志的文件名必须长什么样", "gold": "02 经验与方法/Agent/用户偏好与工作约束.md"}
+{"id": "R05", "noun": "correction", "query": "旧笔记和新纠正打架时听谁的", "gold": "90 系统文件/Agent记忆/纠错与取代记录.md"}
+{"id": "R06", "noun": "five gates", "query": "一条说法要满足哪几条才能当天写成准经验", "gold": "02 经验与方法/经验与方法.md"}
+{"id": "R07", "noun": "high trust", "query": "哪些记录能直接拿来当行动指令哪些只能翻着看", "gold": "90 系统文件/Agent记忆/可靠记忆索引.md"}
+{"id": "R08", "noun": "health lamp", "query": "日更现在还在跑吗以哪一页的灯为准", "gold": "90 系统文件/自动化/日更健康.md"}
+{"id": "R09", "noun": "sealed", "query": "昨天有没有封上要看什么文件不能看跑手回执", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
+{"id": "R10", "noun": "timer fired", "query": "定时器响了是不是等于已经有产物交出去", "gold": "02 经验与方法/准经验/A timer that fired is not a product.md"}
+{"id": "R11", "noun": "self-evolution key", "query": "写入器的钥匙贴在哪一页而不是另开一份环境文件", "gold": "90 系统文件/自动化/自进化钥匙.md"}
+{"id": "R12", "noun": "provisional index", "query": "新方法先落到哪一页不能当正式规则用", "gold": "02 经验与方法/准经验/准经验入口.md"}
+{"id": "R13", "noun": "projects folder", "query": "还在做的事放在哪一类目录里", "gold": "01 项目/项目.md"}
+{"id": "R14", "noun": "sample project", "query": "仓库自带的那个项目页是不是你的真实项目", "gold": "01 项目/示例项目/示例项目.md"}
+{"id": "R15", "noun": "evidence zone", "query": "原始材料和结果证据应该放在哪一区", "gold": "03 资料与证据/资料与证据.md"}
+{"id": "R16", "noun": "reviews folder", "query": "做完的复盘落在哪一区", "gold": "04 已完成与复盘/已完成与复盘.md"}
+{"id": "R17", "noun": "log index", "query": "日记区的入口是哪一页", "gold": "05 时间日志/时间日志入口.md"}
+{"id": "R18", "noun": "sample day", "query": "模板里那篇示例日记证明了什么", "gold": "05 时间日志/2026-01/01｜示例日.md"}
+{"id": "R19", "noun": "execution gate", "query": "clone之后执行门禁默认写的是什么", "gold": "90 系统文件/状态.md"}
+{"id": "R20", "noun": "formal active", "query": "准经验当天写完能不能直接当成正式方法", "gold": "02 经验与方法/经验与方法.md"}
+{"id": "R21", "noun": "placeholders only", "query": "clone里的钥匙页允不允许带着真钥匙提交", "gold": "90 系统文件/自动化/自进化钥匙.md"}
+{"id": "R22", "noun": "one note per day", "query": "一天是不是只允许有一篇封账日记", "gold": "05 时间日志/时间日志入口.md"}
+{"id": "R23", "noun": "copy originals", "query": "证据区里的原件是拿来改的还是拿来存的", "gold": "03 资料与证据/资料与证据.md"}
+{"id": "R24", "noun": "replace the sample", "query": "示例项目页用完之后该怎么办", "gold": "01 项目/示例项目/示例项目.md"}
+{"id": "R25", "noun": "lamp unused", "query": "健康页写着unused是系统坏了还是人把定时器关了", "gold": "90 系统文件/自动化/日更健康.md"}

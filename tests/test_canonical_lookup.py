@@ -92,6 +92,25 @@ def test_cjk_fragment_still_carries_the_alias(tmp_path):
     assert lookup("入口", rows)[0] == "Q1"
 
 
+def test_expired_page_dropped_when_vault_given(tmp_path):
+    from datetime import date
+
+    from canonical_lookup import load_rows, lookup
+
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "a.md").write_text("---\ninvalid_at: 2026-01-01\n---\n", encoding="utf-8")
+    (vault / "b.md").write_text("---\nvalid_from: 2026-01-01\n---\n", encoding="utf-8")
+    path = tmp_path / "map.psv"
+    path.write_text("Q1|alpha|a.md|x\nQ2|beta|b.md|y\n", encoding="utf-8")
+    rows = load_rows(path)
+    assert lookup("alpha", rows) is not None
+    assert lookup("alpha", rows, vault=vault, today=date(2026, 8, 22)) is None
+    hit = lookup("beta", rows, vault=vault, today=date(2026, 8, 22))
+    assert hit is not None
+    assert hit[0] == "Q2"
+
+
 def test_template_sources_exist(rows):
     for _case_id, _aliases, source, _anchor in rows:
         assert (VAULT / source).is_file(), source

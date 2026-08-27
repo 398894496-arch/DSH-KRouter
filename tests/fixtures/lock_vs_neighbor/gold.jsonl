@@ -1,13 +1,19 @@
-{"id": "H01", "slice": "hit", "query": "home", "gold": "Agent第二大脑.md"}
-{"id": "H02", "slice": "hit", "query": "homepage", "gold": "Agent第二大脑.md"}
-{"id": "H03", "slice": "hit", "query": "sealed", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
-{"id": "H04", "slice": "hit", "query": "seal the day", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
-{"id": "H05", "slice": "hit", "query": "封账", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
-{"id": "H06", "slice": "hit", "query": "clippings", "gold": "02 经验与方法/Agent/用户偏好与工作约束.md"}
-{"id": "H07", "slice": "hit", "query": "timer fired", "gold": "02 经验与方法/准经验/A timer that fired is not a product.md"}
-{"id": "H08", "slice": "hit", "query": "did the job run", "gold": "02 经验与方法/准经验/A timer that fired is not a product.md"}
-{"id": "H09", "slice": "hit", "query": "ship from main", "gold": "02 经验与方法/Deploy/Ship from main only.md"}
-{"id": "H10", "slice": "hit", "query": "correction", "gold": "90 系统文件/Agent记忆/纠错与取代记录.md"}
+{"id": "H01", "slice": "hit", "kind": "lexical", "query": "home", "gold": "Agent第二大脑.md"}
+{"id": "H02", "slice": "hit", "kind": "lexical", "query": "homepage", "gold": "Agent第二大脑.md"}
+{"id": "H03", "slice": "hit", "kind": "lexical", "query": "sealed", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
+{"id": "H04", "slice": "hit", "kind": "lexical", "query": "seal the day", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
+{"id": "H05", "slice": "hit", "kind": "rewrite", "query": "封账", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
+{"id": "H06", "slice": "hit", "kind": "lexical", "query": "clippings", "gold": "02 经验与方法/Agent/用户偏好与工作约束.md"}
+{"id": "H07", "slice": "hit", "kind": "lexical", "query": "timer fired", "gold": "02 经验与方法/准经验/A timer that fired is not a product.md"}
+{"id": "H08", "slice": "hit", "kind": "lexical", "query": "did the job run", "gold": "02 经验与方法/准经验/A timer that fired is not a product.md"}
+{"id": "H09", "slice": "hit", "kind": "lexical", "query": "ship from main", "gold": "02 经验与方法/Deploy/Ship from main only.md"}
+{"id": "H10", "slice": "hit", "kind": "lexical", "query": "correction", "gold": "90 系统文件/Agent记忆/纠错与取代记录.md"}
+{"id": "H11", "slice": "hit", "kind": "rewrite", "query": "首页", "gold": "Agent第二大脑.md"}
+{"id": "H12", "slice": "hit", "kind": "rewrite", "query": "剪藏", "gold": "02 经验与方法/Agent/用户偏好与工作约束.md"}
+{"id": "H13", "slice": "hit", "kind": "rewrite", "query": "close the books", "gold": "02 经验与方法/Automation/Seal the day from the log file.md"}
+{"id": "H14", "slice": "hit", "kind": "rewrite", "query": "定时器响了", "gold": "02 经验与方法/准经验/A timer that fired is not a product.md"}
+{"id": "H15", "slice": "hit", "kind": "rewrite", "query": "发版", "gold": "02 经验与方法/Deploy/Ship from main only.md"}
+{"id": "H16", "slice": "hit", "kind": "rewrite", "query": "纠错", "gold": "90 系统文件/Agent记忆/纠错与取代记录.md"}
 {"id": "S01", "slice": "supersede", "query": "how to deploy", "gold": "02 经验与方法/Deploy/Ship from main only.md", "old": "02 经验与方法/Deploy/Always push from the feature branch.md"}
 {"id": "S02", "slice": "supersede", "query": "push from the feature branch", "gold": "02 经验与方法/Deploy/Ship from main only.md", "old": "02 经验与方法/Deploy/Always push from the feature branch.md"}
 {"id": "S03", "slice": "supersede", "query": "feature branch", "gold": "02 经验与方法/Deploy/Ship from main only.md", "old": "02 经验与方法/Deploy/Always push from the feature branch.md"}
@@ -20,3 +26,11 @@
 {"id": "N02", "slice": "negative", "query": "what is the weather in oslo", "gold": null}
 {"id": "N03", "slice": "negative", "query": "kubernetes helm chart", "gold": null}
 {"id": "N04", "slice": "negative", "query": "how to tune a guitar", "gold": null}
+{"id": "N05", "slice": "negative", "query": "photosynthesis rate in ferns", "gold": null}
+{"id": "N06", "slice": "negative", "query": "sicilian defense opening", "gold": null}
+{"id": "N07", "slice": "negative", "query": "pickle cucumbers overnight", "gold": null}
+{"id": "N08", "slice": "negative", "query": "taylor series remainder term", "gold": null}
+{"id": "N09", "slice": "negative", "query": "isbn of war and peace", "gold": null}
+{"id": "N10", "slice": "negative", "query": "calibrate a barometer", "gold": null}
+{"id": "N11", "slice": "negative", "query": "magma cooling rate basalt", "gold": null}
+{"id": "N12", "slice": "negative", "query": "violin bow rosin types", "gold": null}

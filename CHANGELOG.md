@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Public lock-vs-neighbor fixture, N=22. Claim A closed: supersede 4/4 old-page is `invalid_at`+map, not rankers. Claim B is refusal vs *unthresholded* cosine; a min_score sweep on tfidf_map does not match the lock (hit 10/10 and negative 4/4 miss). Not LongMemEval; not dense retrieval.
+- Clone-reproducible filled-table analogue: 25/25 topics and rewrite nouns on `template/` (`tests/fixtures/clone_25/`). Author LLM 25/25 stays a self-report. See `docs/VERIFY.md`.
+- README and ARCHITECTURE lead with clone-reproducible claims. Author-vault 25/25 is a self-report. `first_run.sh` is the bundled `template/` only.
+- Public lock-vs-neighbor fixture, N=36. Claim A closed: supersede 4/4 old-page is `invalid_at`+map, not rankers. Claim B is lexical TF-IDF on this fixture: 6 CJK rewrite hits on 6 pages invert vs 12 negatives; leave-one-out on either side still finds no matching floor. Not a claim about similarity retrieval. Dense retrieval untested. Not LongMemEval.
 - The template ships both rungs of the ladder: one `active` method and one `provisional` draft, routed as Q09 and Q10. Ten sample nouns now, delete them when your own land.
 - Two SVGs in `docs/img`: a receipt on a hit next to a miss with hints, and what the vault holds on clone versus after two weeks.
 - A latin fragment of an alias is not a canonical hit. A shorter latin query has to carry the alias; one CJK character still does. Checked against 167 live aliases: no behaviour change on any of them.

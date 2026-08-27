@@ -6,7 +6,8 @@ Ablations get the same metadata the lock has: `invalid_at` (`*_live`) and the
 live alias table with nouns prepended (`tfidf_map`).
 
 Scoring is exact path match. Citing a neighbor is a failure. A miss is success
-when gold is null. N=22. Not LongMemEval. Not a neural encoder.
+when gold is null. Rewrite hits (CJK / paraphrase aliases) are tagged in gold.
+Not LongMemEval. The TF-IDF floor sweep is lexical overlap, not a dense encoder.
 """
 from __future__ import annotations
 
@@ -33,6 +34,10 @@ TODAY = date(2026, 8, 27)
 MISS = None
 TOKEN = re.compile(r"[a-z0-9\u4e00-\u9fff]+", re.I)
 THRESHOLDS = (0.0, 0.05, 0.08, 0.10, 0.15, 0.19, 0.20, 0.23, 0.25, 0.30)
+STOP = frozenset(
+    "a an the is in of to for and or on at by from with what how why when where "
+    "this that these those it its be are was were been being not no do does did".split()
+)
 
 
 def rel(path: Path, vault: Path) -> str:
@@ -62,11 +67,19 @@ def char_ngrams(text: str, n: int = 3) -> list[str]:
     return [compact[i : i + n] for i in range(len(compact) - n + 1)]
 
 
-def features(text: str) -> Counter[str]:
+def features(text: str, mode: str = "word_char") -> Counter[str]:
     bag: Counter[str] = Counter()
-    bag.update(f"w:{t}" for t in tokens(text))
-    bag.update(f"c:{g}" for g in char_ngrams(text, 3))
+    toks = tokens(text)
+    if mode == "word_stopped":
+        toks = [t for t in toks if t not in STOP]
+    bag.update(f"w:{t}" for t in toks)
+    if mode == "word_char":
+        bag.update(f"c:{g}" for g in char_ngrams(text, 3))
     return bag
+
+
+def feat_fn(mode: str):
+    return lambda text: features(text, mode)
 
 
 def load_gold(path: Path) -> list[dict]:
@@ -119,12 +132,14 @@ def map_texts(vault: Path, rows, today: date) -> list[tuple[str, str]]:
     return out
 
 
-def build_tfidf(files: list[Path], vault: Path):
-    return build_tfidf_texts([(rel(p, vault), read(p)) for p in files])
+def build_tfidf(files: list[Path], vault: Path, feat=None):
+    feat = feat or features
+    return build_tfidf_texts([(rel(p, vault), read(p)) for p in files], feat=feat)
 
 
-def build_tfidf_texts(named: list[tuple[str, str]]):
-    docs = [(name, features(text)) for name, text in named]
+def build_tfidf_texts(named: list[tuple[str, str]], feat=None):
+    feat = feat or features
+    docs = [(name, feat(text)) for name, text in named]
     df: Counter[str] = Counter()
     for _, bag in docs:
         df.update(bag.keys())
@@ -150,8 +165,9 @@ def cosine(a: dict[str, float], b: dict[str, float]) -> float:
     return num / (na * nb)
 
 
-def tfidf_predict(query: str, doc_vecs, vec, min_score: float = 0.0) -> str | None:
-    qv = vec(features(query))
+def tfidf_predict(query: str, doc_vecs, vec, min_score: float = 0.0, feat=None) -> str | None:
+    feat = feat or features
+    qv = vec(feat(query))
     ranked = sorted(
         ((cosine(qv, dv), name) for name, dv in doc_vecs),
         key=lambda item: (-item[0], item[1]),
@@ -163,8 +179,21 @@ def tfidf_predict(query: str, doc_vecs, vec, min_score: float = 0.0) -> str | No
     return ranked[0][1]
 
 
-def tfidf_ranks(query: str, doc_vecs, vec) -> list[str]:
-    qv = vec(features(query))
+def tfidf_top(query: str, doc_vecs, vec, feat=None) -> tuple[float, str | None]:
+    feat = feat or features
+    qv = vec(feat(query))
+    ranked = sorted(
+        ((cosine(qv, dv), name) for name, dv in doc_vecs),
+        key=lambda item: (-item[0], item[1]),
+    )
+    if not ranked:
+        return 0.0, MISS
+    return ranked[0][0], ranked[0][1]
+
+
+def tfidf_ranks(query: str, doc_vecs, vec, feat=None) -> list[str]:
+    feat = feat or features
+    qv = vec(feat(query))
     ranked = sorted(
         ((cosine(qv, dv), name) for name, dv in doc_vecs),
         key=lambda item: (-item[0], item[1]),
@@ -247,6 +276,97 @@ def summarize(rows: list[dict]) -> dict:
     }
 
 
+def sweep_floors(gold: list[dict], doc_vecs, vec, feat=None) -> list[dict]:
+    feat = feat or features
+    curve = []
+    for floor in THRESHOLDS:
+        scored = [
+            score_one(
+                tfidf_predict(item["query"], doc_vecs, vec, min_score=floor, feat=feat),
+                item,
+            )
+            for item in gold
+        ]
+        block = summarize(scored)
+        block.pop("rows")
+        hit = block["slices"]["hit"]["exact"]
+        neg_miss = block["slices"]["negative"]["miss"]
+        curve.append(
+            {
+                "min_score": floor,
+                "hit_exact": hit,
+                "negative_miss": neg_miss,
+                "false_neighbor": block["false_neighbor"],
+                "exact": block["exact"],
+                "matches_lock": hit == 1.0
+                and neg_miss == 1.0
+                and block["false_neighbor"] == 0,
+            }
+        )
+    return curve
+
+
+def any_floor_matches(gold: list[dict], doc_vecs, vec, feat=None) -> bool:
+    return any(point["matches_lock"] for point in sweep_floors(gold, doc_vecs, vec, feat))
+
+
+def hinge_report(gold: list[dict], doc_vecs, vec, feat=None) -> dict:
+    """Is 'no floor' one inverted pair, or still true after dropping any one item?"""
+    feat = feat or features
+    rewrite = [item for item in gold if item.get("kind") == "rewrite"]
+    negatives = [item for item in gold if item["slice"] == "negative"]
+    scored_rewrite = []
+    for item in rewrite:
+        score, pred = tfidf_top(item["query"], doc_vecs, vec, feat=feat)
+        scored_rewrite.append(
+            {"id": item["id"], "query": item["query"], "gold": item["gold"], "score": round(score, 4), "pred": pred}
+        )
+    scored_neg = []
+    for item in negatives:
+        score, pred = tfidf_top(item["query"], doc_vecs, vec, feat=feat)
+        scored_neg.append(
+            {"id": item["id"], "query": item["query"], "score": round(score, 4), "pred": pred}
+        )
+    max_neg = max((row["score"] for row in scored_neg), default=0.0)
+    inverted = [row for row in scored_rewrite if row["score"] < max_neg]
+    drop_rewrite_still = []
+    for item in rewrite:
+        rest = [g for g in gold if g["id"] != item["id"]]
+        drop_rewrite_still.append(
+            {
+                "dropped": item["id"],
+                "still_no_threshold": not any_floor_matches(rest, doc_vecs, vec, feat),
+            }
+        )
+    drop_neg_still = []
+    for item in negatives:
+        rest = [g for g in gold if g["id"] != item["id"]]
+        drop_neg_still.append(
+            {
+                "dropped": item["id"],
+                "still_no_threshold": not any_floor_matches(rest, doc_vecs, vec, feat),
+            }
+        )
+    return {
+        "n_rewrite": len(rewrite),
+        "n_negative": len(negatives),
+        "max_negative": max_neg,
+        "min_rewrite": min((row["score"] for row in scored_rewrite), default=None),
+        "inverted_rewrite": inverted,
+        "n_inverted_rewrite": len(inverted),
+        "rewrite_scores": scored_rewrite,
+        "negative_scores": scored_neg,
+        "drop_any_one_rewrite_still_no_threshold": all(
+            row["still_no_threshold"] for row in drop_rewrite_still
+        ),
+        "drop_any_one_negative_still_no_threshold": all(
+            row["still_no_threshold"] for row in drop_neg_still
+        ),
+        "drop_rewrite": drop_rewrite_still,
+        "drop_negative": drop_neg_still,
+    }
+
+
 def timed(bucket: list[float], fn):
     t0 = time.perf_counter()
     value = fn()
@@ -265,7 +385,10 @@ def run(
     rows = load_rows(map_path)
     doc_vecs, vec = build_tfidf(files, vault)
     live_vecs, live_vec = build_tfidf(live_files, vault)
-    map_vecs, map_vec = build_tfidf_texts(map_texts(vault, rows, TODAY))
+    named_map = map_texts(vault, rows, TODAY)
+    map_vecs, map_vec = build_tfidf_texts(named_map)
+    word_vecs, word_vec = build_tfidf_texts(named_map, feat=feat_fn("word"))
+    stopped_vecs, stopped_vec = build_tfidf_texts(named_map, feat=feat_fn("word_stopped"))
 
     systems = {
         "krouter": [],
@@ -346,30 +469,20 @@ def run(
         summary.pop("rows")
         summary["cases"] = scored
         out["systems"][name] = summary
-    curve = []
-    for floor in THRESHOLDS:
-        scored = [
-            score_one(tfidf_predict(item["query"], map_vecs, map_vec, min_score=floor), item)
-            for item in gold
-        ]
-        block = summarize(scored)
-        block.pop("rows")
-        hit = block["slices"]["hit"]["exact"]
-        neg_miss = block["slices"]["negative"]["miss"]
-        curve.append(
-            {
-                "min_score": floor,
-                "hit_exact": hit,
-                "negative_miss": neg_miss,
-                "false_neighbor": block["false_neighbor"],
-                "exact": block["exact"],
-                "matches_lock": hit == 1.0
-                and neg_miss == 1.0
-                and block["false_neighbor"] == 0,
-            }
-        )
+    curve = sweep_floors(gold, map_vecs, map_vec)
     out["threshold_curve"] = curve
     out["threshold_any_matches_lock"] = any(point["matches_lock"] for point in curve)
+    out["hinge"] = hinge_report(gold, map_vecs, map_vec)
+    word_curve = sweep_floors(gold, word_vecs, word_vec, feat=feat_fn("word"))
+    stopped_curve = sweep_floors(gold, stopped_vecs, stopped_vec, feat=feat_fn("word_stopped"))
+    out["word_only"] = {
+        "threshold_any_matches_lock": any(point["matches_lock"] for point in word_curve),
+        "hinge": hinge_report(gold, word_vecs, word_vec, feat=feat_fn("word")),
+    }
+    out["word_stopped"] = {
+        "threshold_any_matches_lock": any(point["matches_lock"] for point in stopped_curve),
+        "hinge": hinge_report(gold, stopped_vecs, stopped_vec, feat=feat_fn("word_stopped")),
+    }
     return out
 
 
@@ -406,8 +519,37 @@ def print_table(result: dict) -> None:
             f"{str(point['matches_lock']):>14}"
         )
     print(
-        "any threshold matches lock (hit 10/10 and negative 4/4 miss and false_neighbor 0):",
+        "any lexical TF-IDF threshold matches lock (all hits exact, all negatives miss, false_neighbor 0):",
         result["threshold_any_matches_lock"],
+    )
+    hinge = result["hinge"]
+    print()
+    print(
+        f"hinge rewrite={hinge['n_rewrite']} negatives={hinge['n_negative']} "
+        f"inverted={hinge['n_inverted_rewrite']} "
+        f"min_rewrite={hinge['min_rewrite']} max_neg={hinge['max_negative']}"
+    )
+    for row in hinge["inverted_rewrite"]:
+        print(f"  inverted {row['id']} {row['query']!r} {row['score']} -> {row['pred']}")
+    print(
+        "drop any one rewrite still no threshold:",
+        hinge["drop_any_one_rewrite_still_no_threshold"],
+    )
+    print(
+        "drop any one negative still no threshold:",
+        hinge["drop_any_one_negative_still_no_threshold"],
+    )
+    print(
+        "word-only matches lock:",
+        result["word_only"]["threshold_any_matches_lock"],
+        "inverted",
+        result["word_only"]["hinge"]["n_inverted_rewrite"],
+    )
+    print(
+        "word-stopped matches lock:",
+        result["word_stopped"]["threshold_any_matches_lock"],
+        "inverted",
+        result["word_stopped"]["hinge"]["n_inverted_rewrite"],
     )
 
 
