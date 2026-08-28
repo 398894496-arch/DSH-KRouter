@@ -8,7 +8,7 @@
 
 [![ci](https://github.com/398894496-arch/runtime36/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/runtime36/actions/workflows/ci.yml)
 
-**本仓能证明的分三层，不要合并。**（1）实现正确：`clone_25` 证明锁按协议写的没错。（2）对照优势：`lock_vs_neighbor` 证明同一套元数据之后，锁会拒、没加阈值的词法 TF-IDF 仍会硬凑。（3）实战自陈：作者活库 25/25 不在本仓。总账：[`docs/VERIFY.md`](docs/VERIFY.md)。
+**本仓能证明的分三层，不要合并。**（1）实现正确：`clone_25` 证明锁按协议写的没错。（2）对照优势：`lock_vs_neighbor` 证明同一套元数据之后，锁会拒、没加阈值的词法 TF-IDF、MiniLM、BGE-M3 仍会硬凑。扫过同一套地板之后：MiniLM 在阈值前就把发版配错；BGE-M3 在 0.40 仍引用近邻题 `B03`。（3）实战自陈：作者活库 25/25 不在本仓。总账：[`docs/VERIFY.md`](docs/VERIFY.md)。
 
 ![命中给回执，未命中给提示](docs/img/receipt.svg)
 
@@ -55,12 +55,16 @@ python3 -m pytest -q tests/test_clone_25.py
 
 [`tests/fixtures/clone_25/`](tests/fixtures/clone_25/)。`verify_canonical_map.py` 验的是**你的**库，**复现不了**作者历史上的 26/26 · 156/156。
 
-### 2. 对照优势 — 这套设计打不打得过词法 TF-IDF
+### 2. 对照优势 — 锁 vs 词法 TF-IDF、MiniLM、BGE-M3
 
-两句话拆开。**N=36**（正命中 16、取代 4、近邻 4、负查询 12）。
+四句话拆开。**N=36**（正命中 16、取代 4、近邻 4、负查询 12）。MiniLM 和 BGE-M3 **做过和 `tfidf_map` 同一套余弦地板扫描**。`matches_lock` = 正命中全对 **且** 负查询全拒 **且** 假近邻 0。
 
 - **结论 A（已封）：** 不知情的 TF-IDF 打到失效发版页。同一套 `invalid_at` 过滤之后，余弦在取代切片上和锁打平——那是元数据，不是排序。
-- **结论 B（这份 fixture 上的词法 TF-IDF，不是「相似度检索」）：** 6 道 CJK 改写命中铺在 6 页上，分数都低于 12 道负查询里最强的那道。拿掉任意一道改写或任意一道负查询，仍然没有 TF-IDF 阈值能追平锁。密集检索未测。
+- **结论 B（词法 TF-IDF）：** 6 道 CJK 改写分数低于 12 道负查询里最强的那道。没有 TF-IDF 阈值能对齐锁。
+- **结论 C（MiniLM，轻量级）：** 精度问题，不是阈值问题。未设阈值时 `H15` 发版已经打到封账页，不是发版页——阈值只能丢掉匹配，不能把错页改对。中文改写不再倒挂（这点和 TF-IDF 不同）。重放 `dense_vectors.json`（冻结向量，不是现场下模型）。
+- **结论 D（BGE-M3，中量级向量）：** 临界失手，卡在一道近邻题。发版答对；正命中 16/16。阈值 0.40：16/16 命中，12 道毫不相干负查询（N01–N12）全拒；剩下的是近邻切片 `B03` 生产事故 → 定时器页（不是那 12 道里的一道）。阈值 0.45：假近邻清零，掉一道真命中。没有对齐锁的操作点。重放 `dense_m3_vectors.json`。在这个合同上（没有就空着、不许引用隔壁），羽量级打过这套中量级——这就是「比主流上了 embedding 的 RAG 更好」。重量级（混合 + rerank）不打：体重不对，不是欠的一场。
+
+现场重放（`python3` + `rg`）：clone_25 和词法/TF-IDF 行。向量两行：带指纹的 JSON，不是「陌生人自己再跑一遍编码器」。
 
 ```bash
 python3 tests/fixtures/lock_vs_neighbor/run.py

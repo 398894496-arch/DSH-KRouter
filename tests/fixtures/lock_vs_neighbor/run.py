@@ -7,11 +7,13 @@ live alias table with nouns prepended (`tfidf_map`).
 
 Scoring is exact path match. Citing a neighbor is a failure. A miss is success
 when gold is null. Rewrite hits (CJK / paraphrase aliases) are tagged in gold.
-Not LongMemEval. The TF-IDF floor sweep is lexical overlap, not a dense encoder.
+Not LongMemEval. Claim B is lexical TF-IDF. Claim C is frozen multilingual MiniLM
+on the same gold file (replay dense_vectors.json; no extra pip in pytest).
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import re
@@ -30,6 +32,12 @@ HERE = Path(__file__).resolve().parent
 DEFAULT_VAULT = HERE / "vault"
 DEFAULT_MAP = HERE / "canonical_sources.psv"
 DEFAULT_GOLD = HERE / "gold.jsonl"
+DEFAULT_DENSE = HERE / "dense_vectors.json"
+DEFAULT_DENSE_MID = HERE / "dense_m3_vectors.json"
+DENSE_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+DENSE_SEQ = 256
+DENSE_MID_MODEL = "BAAI/bge-m3"
+DENSE_MID_SEQ = 512
 TODAY = date(2026, 8, 27)
 MISS = None
 TOKEN = re.compile(r"[a-z0-9\u4e00-\u9fff]+", re.I)
@@ -80,6 +88,95 @@ def features(text: str, mode: str = "word_char") -> Counter[str]:
 
 def feat_fn(mode: str):
     return lambda text: features(text, mode)
+
+
+def dense_fingerprint(gold, files, live_files, named_map, vault: Path) -> str:
+    h = hashlib.sha256()
+    for item in gold:
+        h.update(item["id"].encode())
+        h.update(b"\0")
+        h.update(item["query"].encode())
+        h.update(b"\n")
+    for path in files:
+        h.update(rel(path, vault).encode())
+        h.update(b"\0")
+        h.update(read(path).encode())
+        h.update(b"\n")
+    for path in live_files:
+        h.update(b"live:")
+        h.update(rel(path, vault).encode())
+        h.update(b"\n")
+    for name, text in named_map:
+        h.update(b"map:")
+        h.update(name.encode())
+        h.update(b"\0")
+        h.update(text.encode())
+        h.update(b"\n")
+    return h.hexdigest()
+
+
+def load_dense(
+    path: Path,
+    gold,
+    files,
+    live_files,
+    named_map,
+    vault: Path,
+    expected_model: str,
+) -> dict:
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"{path} missing. Run python3 tests/fixtures/lock_vs_neighbor/encode_dense.py"
+        )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    expected = dense_fingerprint(gold, files, live_files, named_map, vault)
+    if payload.get("fingerprint") != expected:
+        raise RuntimeError(
+            f"{path} is stale (fingerprint mismatch). Re-run encode_dense.py"
+        )
+    if payload.get("model") != expected_model:
+        raise RuntimeError(
+            f"{path} model {payload.get('model')!r} != {expected_model!r}"
+        )
+    missing_q = [item["id"] for item in gold if item["id"] not in payload.get("queries", {})]
+    if missing_q:
+        raise RuntimeError(f"{path} missing query vectors: {missing_q}")
+    return payload
+
+
+def dense_dot(a: list[float], b: list[float]) -> float:
+    return sum(x * y for x, y in zip(a, b))
+
+
+def dense_predict(
+    query_id: str,
+    query_vecs: dict[str, list[float]],
+    doc_vecs: dict[str, list[float]],
+    min_score: float = 0.0,
+) -> str | None:
+    qv = query_vecs[query_id]
+    ranked = sorted(
+        ((dense_dot(qv, dv), name) for name, dv in doc_vecs.items()),
+        key=lambda item: (-item[0], item[1]),
+    )
+    if not ranked or ranked[0][0] < min_score:
+        return MISS
+    return ranked[0][1]
+
+
+def dense_top(
+    query_id: str,
+    query_vecs: dict[str, list[float]],
+    doc_vecs: dict[str, list[float]],
+) -> tuple[float, str | None]:
+    qv = query_vecs[query_id]
+    ranked = sorted(
+        ((dense_dot(qv, dv), name) for name, dv in doc_vecs.items()),
+        key=lambda item: (-item[0], item[1]),
+    )
+    if not ranked:
+        return 0.0, MISS
+    return ranked[0][0], ranked[0][1]
 
 
 def load_gold(path: Path) -> list[dict]:
@@ -310,6 +407,109 @@ def any_floor_matches(gold: list[dict], doc_vecs, vec, feat=None) -> bool:
     return any(point["matches_lock"] for point in sweep_floors(gold, doc_vecs, vec, feat))
 
 
+DENSE_THRESHOLDS = (
+    0.0, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80
+)
+
+
+def sweep_dense_floors(gold: list[dict], query_vecs, doc_vecs) -> list[dict]:
+    curve = []
+    for floor in DENSE_THRESHOLDS:
+        scored = [
+            score_one(dense_predict(item["id"], query_vecs, doc_vecs, min_score=floor), item)
+            for item in gold
+        ]
+        block = summarize(scored)
+        block.pop("rows")
+        hit = block["slices"]["hit"]["exact"]
+        neg_miss = block["slices"]["negative"]["miss"]
+        leftover = [r["id"] for r in scored if r["false_neighbor"]]
+        missed_hits = [r["id"] for r in scored if r["slice"] == "hit" and not r["exact"]]
+        curve.append(
+            {
+                "min_score": floor,
+                "hit_exact": hit,
+                "negative_miss": neg_miss,
+                "false_neighbor": block["false_neighbor"],
+                "exact": block["exact"],
+                "leftover_false_neighbor": leftover,
+                "missed_hits": missed_hits,
+                "matches_lock": hit == 1.0
+                and neg_miss == 1.0
+                and block["false_neighbor"] == 0,
+            }
+        )
+    return curve
+
+
+def dense_hinge_report(gold: list[dict], query_vecs, doc_vecs) -> dict:
+    rewrite = [item for item in gold if item.get("kind") == "rewrite"]
+    negatives = [item for item in gold if item["slice"] == "negative"]
+    scored_rewrite = []
+    for item in rewrite:
+        score, pred = dense_top(item["id"], query_vecs, doc_vecs)
+        scored_rewrite.append(
+            {
+                "id": item["id"],
+                "query": item["query"],
+                "gold": item["gold"],
+                "score": round(score, 4),
+                "pred": pred,
+            }
+        )
+    scored_neg = []
+    for item in negatives:
+        score, pred = dense_top(item["id"], query_vecs, doc_vecs)
+        scored_neg.append(
+            {
+                "id": item["id"],
+                "query": item["query"],
+                "score": round(score, 4),
+                "pred": pred,
+            }
+        )
+    max_neg = max((row["score"] for row in scored_neg), default=0.0)
+    inverted = [row for row in scored_rewrite if row["score"] < max_neg]
+    drop_rewrite_still = []
+    for item in rewrite:
+        rest = [g for g in gold if g["id"] != item["id"]]
+        curve = sweep_dense_floors(rest, query_vecs, doc_vecs)
+        drop_rewrite_still.append(
+            {
+                "dropped": item["id"],
+                "still_no_threshold": not any(point["matches_lock"] for point in curve),
+            }
+        )
+    drop_neg_still = []
+    for item in negatives:
+        rest = [g for g in gold if g["id"] != item["id"]]
+        curve = sweep_dense_floors(rest, query_vecs, doc_vecs)
+        drop_neg_still.append(
+            {
+                "dropped": item["id"],
+                "still_no_threshold": not any(point["matches_lock"] for point in curve),
+            }
+        )
+    return {
+        "n_rewrite": len(rewrite),
+        "n_negative": len(negatives),
+        "max_negative": max_neg,
+        "min_rewrite": min((row["score"] for row in scored_rewrite), default=None),
+        "inverted_rewrite": inverted,
+        "n_inverted_rewrite": len(inverted),
+        "rewrite_scores": scored_rewrite,
+        "negative_scores": scored_neg,
+        "drop_any_one_rewrite_still_no_threshold": all(
+            row["still_no_threshold"] for row in drop_rewrite_still
+        ),
+        "drop_any_one_negative_still_no_threshold": all(
+            row["still_no_threshold"] for row in drop_neg_still
+        ),
+        "drop_rewrite": drop_rewrite_still,
+        "drop_negative": drop_neg_still,
+    }
+
+
 def hinge_report(gold: list[dict], doc_vecs, vec, feat=None) -> dict:
     """Is 'no floor' one inverted pair, or still true after dropping any one item?"""
     feat = feat or features
@@ -389,6 +589,20 @@ def run(
     map_vecs, map_vec = build_tfidf_texts(named_map)
     word_vecs, word_vec = build_tfidf_texts(named_map, feat=feat_fn("word"))
     stopped_vecs, stopped_vec = build_tfidf_texts(named_map, feat=feat_fn("word_stopped"))
+    dense = load_dense(
+        DEFAULT_DENSE, gold, files, live_files, named_map, vault, DENSE_MODEL
+    )
+    q_dense = dense["queries"]
+    dense_all = dense["docs_all"]
+    dense_live = dense["docs_live"]
+    dense_map = dense["docs_map"]
+    dense_mid = load_dense(
+        DEFAULT_DENSE_MID, gold, files, live_files, named_map, vault, DENSE_MID_MODEL
+    )
+    q_mid = dense_mid["queries"]
+    mid_all = dense_mid["docs_all"]
+    mid_live = dense_mid["docs_live"]
+    mid_map = dense_mid["docs_map"]
 
     systems = {
         "krouter": [],
@@ -399,6 +613,12 @@ def run(
         "tfidf_live": [],
         "tfidf_map": [],
         "hybrid_live": [],
+        "dense": [],
+        "dense_live": [],
+        "dense_map": [],
+        "dense_m3": [],
+        "dense_m3_live": [],
+        "dense_m3_map": [],
     }
     latencies_ms: dict[str, list[float]] = {name: [] for name in systems}
 
@@ -454,6 +674,55 @@ def run(
                 item,
             )
         )
+        qid = item["id"]
+        systems["dense"].append(
+            score_one(
+                timed(latencies_ms["dense"], lambda: dense_predict(qid, q_dense, dense_all)),
+                item,
+            )
+        )
+        systems["dense_live"].append(
+            score_one(
+                timed(
+                    latencies_ms["dense_live"],
+                    lambda: dense_predict(qid, q_dense, dense_live),
+                ),
+                item,
+            )
+        )
+        systems["dense_map"].append(
+            score_one(
+                timed(
+                    latencies_ms["dense_map"],
+                    lambda: dense_predict(qid, q_dense, dense_map),
+                ),
+                item,
+            )
+        )
+        systems["dense_m3"].append(
+            score_one(
+                timed(latencies_ms["dense_m3"], lambda: dense_predict(qid, q_mid, mid_all)),
+                item,
+            )
+        )
+        systems["dense_m3_live"].append(
+            score_one(
+                timed(
+                    latencies_ms["dense_m3_live"],
+                    lambda: dense_predict(qid, q_mid, mid_live),
+                ),
+                item,
+            )
+        )
+        systems["dense_m3_map"].append(
+            score_one(
+                timed(
+                    latencies_ms["dense_m3_map"],
+                    lambda: dense_predict(qid, q_mid, mid_map),
+                ),
+                item,
+            )
+        )
 
     out = {
         "today": TODAY.isoformat(),
@@ -483,6 +752,18 @@ def run(
         "threshold_any_matches_lock": any(point["matches_lock"] for point in stopped_curve),
         "hinge": hinge_report(gold, stopped_vecs, stopped_vec, feat=feat_fn("word_stopped")),
     }
+    dense_curve = sweep_dense_floors(gold, q_dense, dense_map)
+    out["dense_model"] = dense["model"]
+    out["dense_threshold_curve"] = dense_curve
+    out["dense_threshold_any_matches_lock"] = any(point["matches_lock"] for point in dense_curve)
+    out["dense_hinge"] = dense_hinge_report(gold, q_dense, dense_map)
+    mid_curve = sweep_dense_floors(gold, q_mid, mid_map)
+    out["dense_m3_model"] = dense_mid["model"]
+    out["dense_m3_threshold_curve"] = mid_curve
+    out["dense_m3_threshold_any_matches_lock"] = any(
+        point["matches_lock"] for point in mid_curve
+    )
+    out["dense_m3_hinge"] = dense_hinge_report(gold, q_mid, mid_map)
     return out
 
 
@@ -492,11 +773,11 @@ def print_table(result: dict) -> None:
     counts = " ".join(f"{name}={block['n']}" for name, block in slices.items())
     print(f"today={result['today']}  N={n} ({counts})")
     print(
-        f"{'system':<14} {'exact':>8} {'falseN':>8} {'oldPg':>8} {'miss':>8} {'p50ms':>8}"
+        f"{'system':<16} {'exact':>8} {'falseN':>8} {'oldPg':>8} {'miss':>8} {'p50ms':>8}"
     )
     for name, block in result["systems"].items():
         print(
-            f"{name:<14} {block['exact']:>8.2%} {block['false_neighbor']:>8.2%} "
+            f"{name:<16} {block['exact']:>8.2%} {block['false_neighbor']:>8.2%} "
             f"{block['old_page']:>8.2%} {block['miss']:>8.2%} {block['latency_p50_ms']:>8.3f}"
         )
     print()
@@ -550,6 +831,80 @@ def print_table(result: dict) -> None:
         result["word_stopped"]["threshold_any_matches_lock"],
         "inverted",
         result["word_stopped"]["hinge"]["n_inverted_rewrite"],
+    )
+    print()
+    print(f"dense_map MiniLM threshold sweep ({result['dense_model']}; miss if top-1 < min_score)")
+    print(f"{'min_score':>9} {'hit':>8} {'negMiss':>8} {'falseN':>8} {'matches_lock':>14}")
+    for point in result["dense_threshold_curve"]:
+        print(
+            f"{point['min_score']:>9.2f} {point['hit_exact']:>8.0%} "
+            f"{point['negative_miss']:>8.0%} {point['false_neighbor']:>8.0%} "
+            f"{str(point['matches_lock']):>14}"
+        )
+    print(
+        "any dense MiniLM threshold matches lock (all hits exact, all negatives miss, false_neighbor 0):",
+        result["dense_threshold_any_matches_lock"],
+    )
+    h15 = next(c for c in result["systems"]["dense_map"]["cases"] if c["id"] == "H15")
+    print(
+        f"MiniLM precision (before any floor): H15 {h15['query']!r} "
+        f"pred={h15['pred']} gold={h15['gold']}"
+    )
+    dh = result["dense_hinge"]
+    print()
+    print(
+        f"dense hinge rewrite={dh['n_rewrite']} negatives={dh['n_negative']} "
+        f"inverted={dh['n_inverted_rewrite']} "
+        f"min_rewrite={dh['min_rewrite']} max_neg={dh['max_negative']}"
+    )
+    for row in dh["inverted_rewrite"]:
+        print(f"  inverted {row['id']} {row['query']!r} {row['score']} -> {row['pred']}")
+    print(
+        "dense drop any one rewrite still no threshold:",
+        dh["drop_any_one_rewrite_still_no_threshold"],
+    )
+    print(
+        "dense drop any one negative still no threshold:",
+        dh["drop_any_one_negative_still_no_threshold"],
+    )
+    print()
+    print(
+        f"dense_m3_map BGE-M3 threshold sweep ({result['dense_m3_model']}; miss if top-1 < min_score)"
+    )
+    print(f"{'min_score':>9} {'hit':>8} {'negMiss':>8} {'falseN':>8} {'matches_lock':>14}")
+    for point in result["dense_m3_threshold_curve"]:
+        print(
+            f"{point['min_score']:>9.2f} {point['hit_exact']:>8.0%} "
+            f"{point['negative_miss']:>8.0%} {point['false_neighbor']:>8.0%} "
+            f"{str(point['matches_lock']):>14}"
+        )
+    print(
+        "any dense BGE-M3 threshold matches lock (all hits exact, all negatives miss, false_neighbor 0):",
+        result["dense_m3_threshold_any_matches_lock"],
+    )
+    for want in (0.40, 0.45):
+        point = next(p for p in result["dense_m3_threshold_curve"] if p["min_score"] == want)
+        print(
+            f"BGE-M3 at {want:.2f}: leftover_false_neighbor={point['leftover_false_neighbor']} "
+            f"missed_hits={point['missed_hits']}"
+        )
+    print("B03 is neighbor slice (gold null), not one of the 12 OOD negatives")
+    mh = result["dense_m3_hinge"]
+    print()
+    print(
+        f"dense_m3 hinge rewrite={mh['n_rewrite']} negatives={mh['n_negative']} "
+        f"inverted={mh['n_inverted_rewrite']} "
+        f"min_rewrite={mh['min_rewrite']} max_neg={mh['max_negative']}"
+    )
+    for row in mh["inverted_rewrite"]:
+        print(f"  inverted {row['id']} {row['query']!r} {row['score']} -> {row['pred']}")
+    print(
+        "dense_m3 drop any one rewrite still no threshold:",
+        mh["drop_any_one_rewrite_still_no_threshold"],
+    )
+    print(
+        "dense_m3 drop any one negative still no threshold:",
+        mh["drop_any_one_negative_still_no_threshold"],
     )
 
 

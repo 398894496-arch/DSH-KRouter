@@ -7,7 +7,7 @@ One vault. Cursor, Codex, Claude Code, and DeepSeek Harness.
 [![ci](https://github.com/398894496-arch/runtime36/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/runtime36/actions/workflows/ci.yml)
 中文：[`README.zh.md`](README.zh.md)
 
-**What this clone can prove — three layers, do not merge.** (1) Implementation: `clone_25` shows the lock does what the protocol says. (2) Comparison: `lock_vs_neighbor` shows, after the same metadata, the lock refuses where unthresholded lexical TF-IDF still cites. (3) Field self-report: author-vault 25/25 is not in this clone. Pack: [`docs/VERIFY.md`](docs/VERIFY.md).
+**What this clone can prove — three layers, do not merge.** (1) Implementation: `clone_25` shows the lock does what the protocol says. (2) Comparison: `lock_vs_neighbor` shows, after the same metadata, the lock refuses where unthresholded lexical TF-IDF, MiniLM, and BGE-M3 still cite. After the same floors: MiniLM already mis-ranks 发版 before any threshold; BGE-M3 at 0.40 still cites neighbor `B03`. (3) Field self-report: author-vault 25/25 is not in this clone. Pack: [`docs/VERIFY.md`](docs/VERIFY.md).
 
 ![A hit returns a receipt; a miss returns hints](docs/img/receipt.svg)
 
@@ -54,12 +54,16 @@ python3 -m pytest -q tests/test_clone_25.py
 
 [`tests/fixtures/clone_25/`](tests/fixtures/clone_25/). `verify_canonical_map.py` checks *your* vault; it does **not** replay the author’s 26/26 · 156/156.
 
-### 2. Comparison — the design vs lexical TF-IDF
+### 2. Comparison — lock vs lexical TF-IDF, MiniLM, BGE-M3
 
-Two claims, do not merge. **N=36** (hit 16, supersede 4, neighbor 4, negative 12).
+Four claims, do not merge. **N=36** (hit 16, supersede 4, neighbor 4, negative 12). MiniLM and BGE-M3 got the **same cosine-floor sweep** as `tfidf_map`. `matches_lock` = every hit exact **and** every negative a miss **and** false_neighbor 0.
 
 - **Claim A (closed):** naive TF-IDF returns the expired deploy page. After the same `invalid_at` filter, cosine ties the lock on that slice — metadata, not ranking.
-- **Claim B (lexical TF-IDF on this fixture, not “similarity retrieval”):** 6 CJK rewrite hits on 6 pages score below the strongest of 12 OOD negatives. Drop any one rewrite or any one negative and there is still no TF-IDF floor that matches the lock. Dense retrieval is untested.
+- **Claim B (lexical TF-IDF):** 6 CJK rewrite hits score below the strongest of 12 OOD negatives. No TF-IDF floor matches the lock.
+- **Claim C (MiniLM, lightweight):** precision, not a floor problem. Unthresholded, `H15` 发版 already ranks the seal page, not deploy — a threshold cannot repair that. CJK inversion gone (unlike TF-IDF). Replay `dense_vectors.json` (frozen vectors, not a live download).
+- **Claim D (BGE-M3, middleweight dense):** near-miss on one neighbor item. 发版 is correct; hit 16/16. Floor 0.40: 16/16 hits, 12/12 OOD negatives (N01–N12) refuse; leftover is neighbor `B03` 生产事故 → timer page (not one of those 12). Floor 0.45: false-neighbor 0, a true hit drops. No matching floor. Replay `dense_m3_vectors.json`. On this contract (refuse when gold is null; never cite a neighbor), featherweight beats that middleweight stack — that is the “better than mainstream embedding RAG” line. Heavyweight (hybrid + rerank) is out of scope, not unfinished.
+
+Live replay (`python3` + `rg`): clone_25 and the lexical/TF-IDF rows. Dense rows: fingerprint-checked JSON, not “stranger re-runs the encoder.”
 
 ```bash
 python3 tests/fixtures/lock_vs_neighbor/run.py

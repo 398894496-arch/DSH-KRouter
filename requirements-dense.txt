@@ -1,0 +1,6 @@
+# Optional. Default pytest replays tests/fixtures/lock_vs_neighbor/dense_vectors.json.
+# Recompute after gold or vault text changes:
+#   python3 -m pip install -r requirements-dense.txt
+#   HF_HUB_DISABLE_XET=1 python3 tests/fixtures/lock_vs_neighbor/encode_dense.py
+#   HF_HUB_DISABLE_XET=1 python3 tests/fixtures/lock_vs_neighbor/encode_dense.py --mid
+sentence-transformers>=3.0

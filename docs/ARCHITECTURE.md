@@ -6,7 +6,7 @@ This is the protocol detail. README is the entry; [`PROTOCOL.md`](../PROTOCOL.md
 
 KRouter splits knowledge into **four write-up maturity layers** and **five spatial zones**. Layers answer how far this claim can be trusted. Zones answer where the file lives. Agents must read the vault through layer 4. Chat memory and vector indexes are not a second source of truth.
 
-**What this clone can prove** is three layers, do not merge. Full split: [`VERIFY.md`](VERIFY.md). (1) Implementation: `clone_25` — the lock does what this page says. (2) Comparison: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md) — after the same metadata, refuse vs unthresholded lexical TF-IDF. (3) Field self-report below: not in this repository.
+**What this clone can prove** is three layers, do not merge. Full split: [`VERIFY.md`](VERIFY.md). (1) Implementation: `clone_25` — the lock does what this page says. (2) Comparison: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md) — after the same metadata, refuse vs unthresholded lexical TF-IDF and multilingual MiniLM. (3) Field self-report below: not in this repository.
 
 Vault folder names stay in Chinese. That is the on-disk layout.
 
@@ -208,7 +208,11 @@ python3 -m pytest -q tests/test_lock_vs_neighbor.py
 
 **Claim A (closed):** naive cosine, given the expired page, returns it. After the same `invalid_at` filter, TF-IDF / lexical / hybrid tie the lock on the supersede slice. Expired pages disappear because the filter and the map were applied.
 
-**Claim B (lexical TF-IDF on this fixture):** unthresholded `tfidf_map` still returns a page on every negative. The lock misses. A TF-IDF floor sweep, including leave-one-out on 6 CJK rewrite hits and 12 negatives, finds no operating point that matches the lock. That is not a claim about similarity retrieval. Dense retrieval is untested.
+**Claim B (lexical TF-IDF on this fixture):** unthresholded `tfidf_map` still returns a page on every negative. The lock misses. A TF-IDF floor sweep, including leave-one-out on 6 CJK rewrite hits and 12 negatives, finds no operating point that matches the lock.
+
+**Claim C (MiniLM, lightweight):** same floor sweep as Claim B. CJK inversion gone. Precision miss: unthresholded `H15` 发版 ranks the seal page. A floor cannot repair a wrong live page. Replay `dense_vectors.json` (frozen vectors, not a live encoder download).
+
+**Claim D (BGE-M3, middleweight dense):** same floor sweep. Hit 16/16. Floor 0.40: 16/16 hits and 12/12 OOD negatives refuse; leftover is neighbor `B03` 生产事故 → timer page (not one of N01–N12). Floor 0.45: false-neighbor 0, a true hit drops. No operating point is 16/16 + 12/12 OOD refuse + false-neighbor 0. Replay `dense_m3_vectors.json`. On this contract the lock beats that stack; heavyweight hybrid + rerank is out of scope.
 
 Full protocol: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md). Fixture: [`tests/fixtures/lock_vs_neighbor/`](../tests/fixtures/lock_vs_neighbor/).
 

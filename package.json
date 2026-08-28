@@ -1,6 +1,6 @@
 {
   "name": "dsh-krouter",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "DSH-KRouter — Agent knowledge OS. Self-evolution. Timer on by default; your vault-page API key or logged-in CLI is the key. Cursor, Codex, Claude Code, DeepSeek Harness. No vector store.",
   "type": "module",
   "main": "extras/dsh/lib/index.js",

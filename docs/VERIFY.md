@@ -56,17 +56,21 @@ It does **not** verify the historical claim “the author’s live map was 26/26
 
 ## Layer 2 — comparison (lock vs neighbor)
 
-Expired page vs refuse. Two claims. **N=36**. Protocol: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md).
+Expired page vs refuse. Four claims. **N=36**. Protocol: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md).
 
 ```bash
 python3 tests/fixtures/lock_vs_neighbor/run.py
 python3 -m pytest -q tests/test_lock_vs_neighbor.py
 ```
 
-- **Claim A (closed):** expired pages vanish because `invalid_at` and the map were applied, not because a ranker is smarter.
-- **Claim B (lexical TF-IDF on that fixture):** after the same information, the lock refuses; unthresholded cosine still returns a page. A floor sweep, including leave-one-out, finds no operating point that matches the lock. Not “similarity retrieval.” Dense retrieval untested.
+- **Claim A (closed):** expired pages vanish because `invalid_at` and the map were applied, not because a ranker is smarter. MiniLM naive old-page is 3/4; after the same filter it is 4/4.
+- **Claim B (lexical TF-IDF on that fixture):** after the same information, the lock refuses; unthresholded cosine still returns a page. Six CJK rewrites sit below the strongest OOD negative. A floor sweep, including leave-one-out, finds no operating point that matches the lock.
+- **Claim C (multilingual MiniLM on that fixture):** same floor sweep as Claim B. CJK inversion is gone. Failure is precision: unthresholded, `H15` 发版 already ranks the seal page, not deploy. A floor cannot repair that. Replay: `dense_vectors.json` (not a live encoder). Lightweight.
+- **Claim D (BGE-M3 on that fixture):** same floor sweep. Hit 16/16 including 发版. Floor 0.40: 16/16 hits and 12/12 OOD negatives (N01–N12) refuse; leftover is neighbor `B03`「生产事故」→ timer page — not one of those 12. Floor 0.45: false-neighbor 0, a true hit drops. No operating point is 16/16 + 12/12 OOD refuse + false-neighbor 0. Replay: `dense_m3_vectors.json`. Middleweight is the mainstream opponent. Heavyweight (hybrid + rerank) is out of scope.
 
 Gold: [`tests/fixtures/lock_vs_neighbor/`](../tests/fixtures/lock_vs_neighbor/). Here N *is* small; say so when you quote false-neighbor rates.
+
+`clone_25` and the lexical/TF-IDF rows replay with `python3` + `rg` from this clone. MiniLM and BGE-M3 rows replay frozen JSON (`dense_vectors.json`, `dense_m3_vectors.json`) plus a content fingerprint. That checks the recorded vectors, not a stranger re-downloading the encoder. Re-encode is optional (`encode_dense.py`); Hub snapshots are not in the clone.
 
 ---
 
