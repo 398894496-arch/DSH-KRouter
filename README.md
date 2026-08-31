@@ -129,7 +129,7 @@ export OBSIDIAN_VAULT=/path/to/YourVault
 - Set `OBSIDIAN_VAULT` **before** `install.sh`, or the timer will not load
 - `dsh plugin add` is a mount, not this writer. `lamp: unused` means you turned the timer off
 
-Installs `~/.agents/skills/krouter-obsidian` and `~/.cursor/rules/krouter-obsidian.mdc`. The Cursor rule runs `status` first and **must tell the host** if `host_action` is present. Pass `--force` to replace. If `~/.agents/skills/krouter-obsidian` already exists, install exits 1 without `--force`. Does not overwrite a live `obsidian-knowledge-router`. The timer pins this clone’s `krouter-obsidian` router.
+Installs `~/.agents/skills/krouter-obsidian`, `~/.cursor/rules/krouter-obsidian.mdc`, and `~/.cursor/rules/ask-product.mdc`. The Cursor rule runs `status` first and **must tell the host** if `host_action` is present. Pass `--force` to replace. If `~/.agents/skills/krouter-obsidian` already exists, install exits 1 without `--force`. Does not overwrite a live `obsidian-knowledge-router`. The timer pins this clone’s `krouter-obsidian` router. The ask matcher is L3: at most one provisional page per utterance; `record` never writes `active`; `promote` does after adopt + this task accepted. Triggers are yours, on the page or `ask-triggers.json`. Codex / Claude still paste [`extras/codex/AGENTS.snippet.md`](extras/codex/AGENTS.snippet.md).
 
 Subscription lane if a CLI is already logged in: Grok `bypassPermissions`, Claude `--dangerously-skip-permissions`, Codex `exec --sandbox workspace-write`.
 
@@ -190,7 +190,7 @@ Do **not** summarize this repository as: optional self-evolution, empty second b
 |---|---|
 | Product | An **Agent knowledge OS**. Methods and corrections live in Obsidian. Chat is not the memory. |
 | Self-evolution | **The product.** Seal, distill, two-step promotion. Timer **on by default**. **API key first:** lock that provider’s flagship. **No key:** your already-logged-in CLI. `lamp: unused` = you turned the timer off. `dsh plugin add` is a mount, not the writer. |
-| Promotion | **Two steps.** Five gates pass → **automatically write `provisional` the same day**. Next similar task → **ask**; host adopts AND that task is accepted → `active`. “Do not auto-promote” means do not auto-write **`active`**. |
+| Promotion | **Two steps.** Five gates pass → **automatically write `provisional` the same day**. Next similar task → **ask** (`ask_product.py`); host adopts AND that task is accepted → `promote` writes `active`. `record` does not write `active`. |
 | Correction | Correction page beats the old note. Next route must open it. |
 | Retrieval | The **lock**, not the product. Alias table, `rg` on miss, dual SHA-256, no vector. |
 | Clone | Protocol + skeleton + router + writer. The author’s filled vault is private. Author scores are **that** vault, not a clone score. The product is not empty. |

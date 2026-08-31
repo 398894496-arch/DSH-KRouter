@@ -104,10 +104,12 @@ Fail any one: keep it in `01` / `03` as a candidate, or mark the gap. Do not pro
 ### Promote to formal
 
 ```text
-provisional  --next similar task-->  ask whether to adopt
+provisional  --next similar task-->  matcher asks whether to adopt
                                     ├ host adopts AND this task is accepted → active
                                     └ rejected or not accepted → stay provisional, or rejected
 ```
+
+The matcher is `skill/krouter-obsidian/scripts/ask_product.py`. At most one page. `record` does not write `active`; `promote` does, after adopt + this task accepted. This clone ships the matcher, not an author’s trigger list.
 
 Corrections follow the same ladder: quasi-correction → ask → adopt and accept → correction ledger `active`. The current user instruction and the latest `supersedes` beat old logs.
 

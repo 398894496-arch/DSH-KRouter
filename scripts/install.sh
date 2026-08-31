@@ -12,6 +12,7 @@ for arg in "$@"; do
       printf '%s\n' "usage: install.sh [--force] [--with-hooks]"
       printf '%s\n' "copies the KRouter Obsidian skill to ~/.agents/skills/krouter-obsidian"
       printf '%s\n' "copies a Cursor always-on rule to ~/.cursor/rules/"
+      printf '%s\n' "copies the ask-as-product rule to ~/.cursor/rules/ask-product.mdc"
       printf '%s\n' "self-evolution timer is on by default"
       printf '%s\n' "DSH-KRouter writer: detect a logged-in Claudian-class CLI, or wire *_API_KEY"
       printf '%s\n' "does not overwrite an existing skill unless --force"
@@ -24,6 +25,7 @@ done
 SKILL_SRC="$ROOT/skill/krouter-obsidian"
 SKILL_DST="${KROUTER_SKILL_HOME:-$HOME/.agents/skills/krouter-obsidian}"
 RULE_DST="${KROUTER_CURSOR_RULE:-$HOME/.cursor/rules/krouter-obsidian.mdc}"
+ASK_RULE_DST="${KROUTER_ASK_RULE:-$HOME/.cursor/rules/ask-product.mdc}"
 
 if [ -e "$SKILL_DST" ] && [ "$FORCE" -ne 1 ]; then
   printf '%s\n' "skill already exists: $SKILL_DST"
@@ -31,14 +33,17 @@ if [ -e "$SKILL_DST" ] && [ "$FORCE" -ne 1 ]; then
   exit 1
 fi
 
-mkdir -p "$(dirname "$SKILL_DST")" "$(dirname "$RULE_DST")"
+mkdir -p "$(dirname "$SKILL_DST")" "$(dirname "$RULE_DST")" "$(dirname "$ASK_RULE_DST")"
 rm -rf "$SKILL_DST"
 cp -R "$SKILL_SRC" "$SKILL_DST"
-chmod +x "$SKILL_DST/scripts/route_knowledge.sh" "$SKILL_DST/scripts/canonical_lookup.py"
+chmod +x "$SKILL_DST/scripts/route_knowledge.sh" "$SKILL_DST/scripts/canonical_lookup.py" \
+  "$SKILL_DST/scripts/ask_product.py"
 cp "$ROOT/extras/cursor/krouter-obsidian.mdc" "$RULE_DST"
+cp "$ROOT/extras/cursor/ask-product.mdc" "$ASK_RULE_DST"
 
 printf '%s\n' "skill: $SKILL_DST"
 printf '%s\n' "cursor rule: $RULE_DST"
+printf '%s\n' "ask rule: $ASK_RULE_DST"
 printf '%s\n' "Codex snippet: $ROOT/extras/codex/AGENTS.snippet.md"
 printf '%s\n' "Claude Code snippet: $ROOT/extras/claude-code/CLAUDE.snippet.md"
 

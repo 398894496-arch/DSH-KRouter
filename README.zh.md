@@ -130,7 +130,7 @@ export OBSIDIAN_VAULT=/path/to/YourVault
 - **先**把 `OBSIDIAN_VAULT` 指到那座库再跑 `install.sh`，否则不挂定时器
 - `dsh plugin add` 是挂载，不是这个写入器。`lamp: unused` 是你把定时器关了
 
-装到 `~/.agents/skills/krouter-obsidian` 和 `~/.cursor/rules/krouter-obsidian.mdc`。Cursor 规则先跑 `status`，收据里有 `host_action` **必须告诉宿主**。`--force` 才覆盖。若 `~/.agents/skills/krouter-obsidian` 已在，不带 `--force` 会 exit 1。不会覆盖正在用的 `obsidian-knowledge-router`。定时器钉死本仓库的 `krouter-obsidian`。
+装到 `~/.agents/skills/krouter-obsidian`、`~/.cursor/rules/krouter-obsidian.mdc`、`~/.cursor/rules/ask-product.mdc`。Cursor 规则先跑 `status`，收据里有 `host_action` **必须告诉宿主**。`--force` 才覆盖。若 `~/.agents/skills/krouter-obsidian` 已在，不带 `--force` 会 exit 1。不会覆盖正在用的 `obsidian-knowledge-router`。定时器钉死本仓库的 `krouter-obsidian`。问的匹配器是 L3：一句最多一条准经验；`record` 不写 `active`；采纳且该次验收后 `promote` 才升正式。触发词是你自己的，写在准经验页或 `ask-triggers.json`。Codex / Claude 仍要贴 [`extras/codex/AGENTS.snippet.md`](extras/codex/AGENTS.snippet.md)。
 
 本机已登录 CLI 时的订阅通道：Grok `bypassPermissions`，Claude `--dangerously-skip-permissions`，Codex `exec --sandbox workspace-write`。
 
@@ -191,7 +191,7 @@ dsh plugin --profile web add github:398894496-arch/runtime36
 |---|---|
 | 产品 | **Agent 知识操作系统**。方法和纠错在 Obsidian 里。聊天不是记忆。 |
 | 自进化 | **就是产品。** 封账、蒸馏、两步晋升。定时器**默认开**。**先 API key** 锁定该家旗舰；**没有 key** 用已经登录的 CLI。`lamp: unused` = 你把定时器关了。`dsh plugin add` 是挂载，不是写入器。 |
-| 晋升 | **两步。** 五道门过了 → **当天自动写 `provisional`**。下次同类 → **先问**；采纳且该次验收 → `active`。“Do not auto-promote” 只禁止自动写 **`active`**。 |
+| 晋升 | **两步。** 五道门过了 → **当天自动写 `provisional`**。下次同类 → **先问**（`ask_product.py`）；采纳且该次验收 → `promote` 写 `active`。`record` 不写 `active`。 |
 | 纠错 | 纠错页压过旧笔记。下次路由必须打开它。 |
 | 检索 | **锁**，不是产品。别名表、未命中才 `rg`、双 SHA-256、无向量。 |
 | clone | 协议 + 骨架 + 路由 + 写入器。作者装满的库不公开。作者成绩是**那座活库**，不是 clone 分数。产品不是空的。 |

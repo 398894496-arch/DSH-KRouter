@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-08-31
+
+Ask-as-product matcher in `skill/krouter-obsidian/scripts/ask_product.py`. At most one provisional page per utterance. `record` never writes `active`; `promote` does, after adopt + this task accepted. Triggers live on the page (`triggers:`) or `90 系统文件/自动化/ask-triggers.json`. `install.sh` copies `extras/cursor/ask-product.mdc`. This clone does not ship an author’s trigger table. Codex / Claude still paste the snippet.
 
 ## 0.4.3 — 2026-08-28
 

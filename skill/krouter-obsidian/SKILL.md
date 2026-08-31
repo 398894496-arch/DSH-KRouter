@@ -18,6 +18,14 @@ Router script (after install): `$HOME/.agents/skills/krouter-obsidian/scripts/ro
 5. If the receipt has `canonical_match: true`, cite `canonical_source` as the source. Do not substitute the preferences note unless that is the mapped source.
 6. Answer and stop when complete. If the receipt has no `canonical_match: true` but lists `suggestions:`, retry **one** suggested alias. Do not treat a suggestion as a hit until the next receipt says `canonical_match: true`. Then open that source. Report any remaining gap.
 
+## Ask (L3)
+
+At the start of a user utterance that is **starting work**, run:
+
+`python3 $HOME/.agents/skills/krouter-obsidian/scripts/ask_product.py ask --query "<user text>"`
+
+If `trigger.ask` is set, ask `prompt` and wait. At most one. After adopt / reject / defer, run `record --file NAME.md --decision …`. `record` does not write `active`. If adopt, do the work; on success run `promote --file NAME.md`. Only `promote` sets `status: active`. Miss / ambiguous / already-asked: continue. Triggers live on the provisional page (`triggers: a; b`) or the vault sidecar; this clone does not ship someone else’s table.
+
 ## Boundaries
 
 - The script is read-only. Semantic vault writes need an explicit assignment.

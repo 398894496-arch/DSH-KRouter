@@ -74,6 +74,19 @@ printf '%s\n' "$suggest" | grep -q "canonical_match: true" && {
 }
 printf '%s\n' "ok suggest homz -> Q01 hint"
 
+printf '%s\n' "== ask matcher =="
+ask_out=$(OBSIDIAN_VAULT="$OBSIDIAN_VAULT" python3 "$ROOT/skill/krouter-obsidian/scripts/ask_product.py" coverage) || {
+  printf '%s\n' "FAIL ask coverage" >&2
+  printf '%s\n' "$ask_out" >&2
+  fail=1
+}
+printf '%s\n' "$ask_out" | grep -q '"ok": true' || {
+  printf '%s\n' "FAIL ask coverage not ok" >&2
+  printf '%s\n' "$ask_out" >&2
+  fail=1
+}
+printf '%s\n' "ok ask coverage"
+
 printf '%s\n' "== validate template day =="
 if python3 -c "import yaml" 2>/dev/null; then
   if python3 "$ROOT/scripts/validate_vault.py" --from-date 2026-01-01 --through-date 2026-01-01; then

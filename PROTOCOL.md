@@ -3,7 +3,7 @@
 This is an **Agent knowledge OS**, not a search plugin.
 
 - **Self-evolution** is the product (seal → distill → two-step promotion). Timer is **on by default**. **API key first:** lock that provider's flagship model and run distill + promotion. **No key:** the user's own Claudian-class CLI subscription (`grok` / official Codex / `claude` / …) does the same work. `lamp: unused` = you turned the timer off.
-- **Promotion is two-step:** five gates pass → write `provisional` the **same day**, no ask. Next similar task → ask; host adopts AND that task is accepted → `active`. Do not auto-write `active`.
+- **Promotion is two-step:** five gates pass → write `provisional` the **same day**, no ask. Next similar task → **ask** (matcher in `skill/krouter-obsidian/scripts/ask_product.py`; at most one). Host adopts → `record`. This task accepted → `promote` writes `active`. Do not write `active` on `record`.
 - **Correction-first:** current instruction and latest `supersedes` beat old logs.
 - **Retrieval is the lock:** short noun, dual SHA-256 receipt, no vector store. A neighbor cite is a protocol violation.
 

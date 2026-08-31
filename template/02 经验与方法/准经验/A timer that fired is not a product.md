@@ -9,6 +9,7 @@ source_ref: "[[05 时间日志/2026-01/01｜示例日]]"
 valid_from: 2026-01-01
 verified_at: 2026-01-01
 next_ask: ask before answering "did the scheduled job run" from the scheduler alone
+triggers: did the scheduled job run; scheduled job run; timer that fired
 last_change_writer: template
 ---
 
