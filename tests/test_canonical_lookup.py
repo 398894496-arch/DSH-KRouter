@@ -114,3 +114,33 @@ def test_expired_page_dropped_when_vault_given(tmp_path):
 def test_template_sources_exist(rows):
     for _case_id, _aliases, source, _anchor in rows:
         assert (VAULT / source).is_file(), source
+
+
+def test_query_conflict_asks_when_two_pages_tie(tmp_path):
+    from canonical_lookup import load_rows, lookup, query_conflict
+
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    (vault / "a.md").write_text("---\nstatus: active\n---\n", encoding="utf-8")
+    (vault / "b.md").write_text("---\nstatus: active\n---\n", encoding="utf-8")
+    path = tmp_path / "map.psv"
+    path.write_text(
+        "Q21|每日进化自动化真的运行过了吗|a.md|x\n"
+        "Q22|自动化什么时候运行|b.md|y\n",
+        encoding="utf-8",
+    )
+    rows = load_rows(path)
+    assert lookup("自动化", rows, vault=vault) is None
+    conflict = query_conflict("自动化", rows, vault=vault)
+    assert conflict is not None
+    assert conflict["kind"] == "ambiguous-query"
+    assert "选一个" in conflict["host_prompt"]
+    assert "Q21" in conflict["host_prompt"]
+    assert "Q22" in conflict["host_prompt"]
+
+
+def test_weak_hint_is_not_a_host_choice(rows):
+    from canonical_lookup import query_conflict
+
+    assert query_conflict("how", rows, vault=VAULT) is None
+    assert query_conflict("home", rows, vault=VAULT) is None

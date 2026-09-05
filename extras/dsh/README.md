@@ -34,6 +34,6 @@ Do not treat `extras/dsh` as a separate project to publish.
 
 Tools: `krouter_status` (includes `host_action` when the vault-page key and CLI login are missing — tell the host), `krouter_preference`, `krouter_correction`, `krouter_memory`, `krouter_project`, `krouter_search`, `krouter_suggest`.
 
-If `canonical_match` is true, open `canonical_source`. Suggestions are hints, not hits.
+If `canonical_match` is true, open `canonical_source`. Suggestions are hints, not hits. If `host_prompt` is present, ask the host; do not guess. On Windows the socket prefers `route_knowledge.py`.
 
 The alias map is not writable from these tools. Mutate it with `maintain_aliases.py` after `acquire`.

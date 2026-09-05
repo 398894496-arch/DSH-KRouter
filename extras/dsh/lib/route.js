@@ -4,7 +4,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,21 +29,36 @@ export function resolveRouter(explicit) {
     HERE,
     "../../../skill/krouter-obsidian/scripts/route_knowledge.sh",
   );
+  const bundledPy = resolve(
+    HERE,
+    "../../../skill/krouter-obsidian/scripts/route_knowledge.py",
+  );
   const installed = join(
     homedir(),
     ".agents/skills/krouter-obsidian/scripts/route_knowledge.sh",
   );
-  const candidates = [
-    explicit,
-    process.env.KROUTER_ROUTER,
-    bundled,
-    installed,
-  ].filter(Boolean);
+  const installedPy = join(
+    homedir(),
+    ".agents/skills/krouter-obsidian/scripts/route_knowledge.py",
+  );
+  const preferPy = platform() === "win32";
+  const candidates = (
+    preferPy
+      ? [explicit, process.env.KROUTER_ROUTER, bundledPy, installedPy, bundled, installed]
+      : [explicit, process.env.KROUTER_ROUTER, bundled, installed, bundledPy, installedPy]
+  ).filter(Boolean);
   for (const path of candidates) {
     if (isForeignLiveRouter(path)) continue;
     if (existsSync(path)) return path;
   }
   return null;
+}
+
+function pythonArgv(script, args) {
+  const exe = process.env.PYTHON || process.env.KROUTER_PYTHON || "";
+  if (exe) return [exe, [script, ...args]];
+  if (platform() === "win32") return ["py", ["-3", script, ...args]];
+  return ["python3", [script, ...args]];
 }
 
 export function resolveVault(explicit) {
@@ -74,11 +89,19 @@ export function runRoute({ route, query = "", vault, router, timeoutMs = 20000 }
   }
   const args = [route];
   if (query) args.push(query);
-  const result = spawnSync(script, args, {
-    encoding: "utf8",
-    timeout: timeoutMs,
-    env: { ...process.env, OBSIDIAN_VAULT: vaultRoot },
-  });
+  const isPy = String(script).endsWith(".py");
+  const result = isPy
+    ? spawnSync(...pythonArgv(script, args), {
+        encoding: "utf8",
+        timeout: timeoutMs,
+        cwd: dirname(script),
+        env: { ...process.env, OBSIDIAN_VAULT: vaultRoot },
+      })
+    : spawnSync(script, args, {
+        encoding: "utf8",
+        timeout: timeoutMs,
+        env: { ...process.env, OBSIDIAN_VAULT: vaultRoot },
+      });
   return {
     ok: result.status === 0,
     code: result.status ?? 1,

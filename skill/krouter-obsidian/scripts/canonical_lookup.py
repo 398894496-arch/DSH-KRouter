@@ -213,16 +213,96 @@ def suggestions(
     return ranked[:limit]
 
 
+def query_conflict(
+    query: str,
+    rows: list[tuple[str, list[str], str, str]],
+    vault: Path | None = None,
+    today: date | None = None,
+) -> dict | None:
+    """Ask the host when a miss is a tie between two different pages in the hit band.
+
+    Hit band is alias_score >= 100. Weak overlap hints (20–40) are not a choice.
+    """
+    live = live_rows(rows, vault, today)
+    if lookup(query, rows, vault=vault, today=today) is not None:
+        return None
+    source_by_id = {case_id: source for case_id, _aliases, source, _anchor in live}
+    scores = scores_for(query, live)
+    if not scores:
+        token_scores: dict[str, int] = {}
+        for token in query.split():
+            for case_id, score in scores_for(token, live).items():
+                token_scores[case_id] = token_scores.get(case_id, 0) + score
+        scores = token_scores
+    if not scores:
+        return None
+    top = max(scores.values())
+    if top < 100:
+        return None
+    winners = [case_id for case_id, score in scores.items() if score == top]
+    files = {source_by_id[cid] for cid in winners if cid in source_by_id}
+    if len(winners) < 2 or len(files) < 2:
+        return None
+    left_id, right_id = sorted(winners)[:2]
+
+    def named(case_id: str) -> tuple[str, str]:
+        for cid, aliases, source, _anchor in live:
+            if cid != case_id:
+                continue
+            best = 0
+            name = aliases[0] if aliases else case_id
+            for alias in aliases:
+                score = alias_score(query, alias)
+                if score > best:
+                    best = score
+                    name = alias
+            return name, source
+        return case_id, ""
+
+    left_alias, left_source = named(left_id)
+    right_alias, right_source = named(right_id)
+    return {
+        "kind": "ambiguous-query",
+        "left": (left_id, left_alias, left_source, top),
+        "right": (right_id, right_alias, right_source, top),
+        "host_prompt": (
+            f"「{query}」同时打到 {left_id}（{left_alias} → {left_source}）"
+            f"和 {right_id}（{right_alias} → {right_source}）。锁不能猜。选一个，或说都不是。"
+        ),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--map", required=True)
     parser.add_argument("--vault", required=True)
     parser.add_argument("--query", default="")
     parser.add_argument("--suggest", action="store_true")
+    parser.add_argument("--explain", action="store_true")
     parser.add_argument("--limit", type=int, default=5)
     args = parser.parse_args()
     rows = load_rows(Path(args.map))
     vault = Path(args.vault)
+
+    if args.explain:
+        if not args.query:
+            return 2
+        conflict = query_conflict(args.query, rows, vault=vault)
+        if not conflict:
+            sys.stdout.write("conflict: no\n")
+            return 0
+        left_id, left_alias, left_source, left_score = conflict["left"]
+        right_id, right_alias, right_source, right_score = conflict["right"]
+        sys.stdout.write("conflict: yes\n")
+        sys.stdout.write(f"conflict_kind: {conflict['kind']}\n")
+        sys.stdout.write(
+            f"conflict_left: {left_id}|{left_alias}|{left_source}|{left_score}\n"
+        )
+        sys.stdout.write(
+            f"conflict_right: {right_id}|{right_alias}|{right_source}|{right_score}\n"
+        )
+        sys.stdout.write(f"host_prompt: {conflict['host_prompt']}\n")
+        return 0
 
     if args.suggest:
         if not args.query:

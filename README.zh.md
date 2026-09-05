@@ -143,7 +143,7 @@ export OBSIDIAN_VAULT=/path/to/YourVault
 
 ## 四个挂载，一座库
 
-共享的是库和 `canonical_sources.psv`，不是第二套协议。
+共享的是库和 `canonical_sources.psv`，不是第二套协议。Windows 走 `route_knowledge.py`（同一套路由）；DSH 在 win32 上优先用它。
 
 | 挂载 | 仓库里有什么 |
 |---|---|

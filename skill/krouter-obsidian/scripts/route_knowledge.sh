@@ -38,7 +38,11 @@ frontmatter_value() {
 }
 
 file_sha256() {
-  shasum -a 256 -- "$1" | awk '{ print $1 }'
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 -- "$1" | awk '{ print $1 }'
+  else
+    python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
+  fi
 }
 
 emit_receipt() {
@@ -58,6 +62,14 @@ emit_receipt() {
     printf 'source_sha256: %s\n' "$(file_sha256 "$source")"
   fi
   [ -f "$CANONICAL_MAP" ] && printf 'canonical_map_sha256: %s\n' "$(file_sha256 "$CANONICAL_MAP")"
+  subconscious="$VAULT/90 系统文件/自动化/下意识.md"
+  if [ -f "$subconscious" ]; then
+    printf 'subconscious: %s\n' "$subconscious"
+    printf 'subconscious_sha256: %s\n' "$(file_sha256 "$subconscious")"
+    printf 'subconscious_rows: %s\n' "$(awk '/^Q[0-9]/{n++} END{print n+0}' "$subconscious")"
+  else
+    printf 'subconscious: missing\n'
+  fi
 }
 
 emit_host_action() {
@@ -78,7 +90,7 @@ frontmatter_fields() {
   awk '
     NR == 1 && $0 == "---" { in_frontmatter=1; next }
     in_frontmatter && $0 == "---" { exit }
-    in_frontmatter { print }
+    in_frontmatter && /^(snapshot_at|verified_at|routing_correction_recorded_at|runtime_observed_at|task_runtime_permission_status|daily_automation_cron_status|daily_automation_document_sync_status|daily_automation_sync_reproducibility_status|daily_automation_health_gate_status|semantic_retrieval_status|semantic_answers|historical_canonical_source_precision|current_canonical_routing_status|canonical_routing_map_status|canonical_routing_baseline_cases|canonical_routing_baseline_aliases|canonical_routing_increment_cases|canonical_routing_increment_aliases|canonical_routing_cases|canonical_routing_aliases|canonical_routing_verified_at|semantic_retrieval_rerun_status|knowledge_route_receipt_status|obsidian_app_version|unresolved_links_status|overall_execution_gate|status|updated):/ { print }
   ' "$CANONICAL"
 }
 
@@ -106,6 +118,10 @@ emit_suggestions() {
   lookup_py="$(dirname "$0")/canonical_lookup.py"
   [ -f "$CANONICAL_MAP" ] || return 0
   [ -n "$QUERY" ] || return 0
+  explain=$(python3 "$lookup_py" --map "$CANONICAL_MAP" --vault "$VAULT" --query "$QUERY" --explain) || true
+  if [ -n "$explain" ]; then
+    printf '%s\n' "$explain"
+  fi
   hits=$(python3 "$lookup_py" --map "$CANONICAL_MAP" --vault "$VAULT" --query "$QUERY" --suggest --limit 5) || true
   [ -n "$hits" ] || return 0
   printf 'canonical_match: false\nsuggestions:\n'
@@ -129,7 +145,18 @@ canonical_lookup() {
   printf 'route: canonical\ncanonical_id: %s\ncanonical_source: %s\ncanonical_match: true\n' \
     "$canonical_id" "$canonical_source"
   anchor=${rest#*|}
-  md_search 2 "$anchor" "$canonical_source"
+  how=$anchor
+  l0="$VAULT/90 系统文件/自动化/下意识.md"
+  if [ -f "$l0" ]; then
+    row=$(awk -F'|' -v id="$canonical_id" '$1==id { print; exit }' "$l0")
+    if [ -n "$row" ]; then
+      how=$(printf '%s\n' "$row" | awk -F'|' '{ print $4 }')
+      flag=$(printf '%s\n' "$row" | awk -F'|' '{ print $5 }')
+      [ "$flag" = "yes" ] && printf 'correction_first: yes\n'
+    fi
+  fi
+  printf 'how: %s\n' "$how"
+  printf 'open_page: only if how does not close the question\n'
   return 0
 }
 
@@ -144,7 +171,7 @@ esac
 case "$ROUTE" in
   status)
     emit_receipt "$CANONICAL" requested-fields-returned
-    printf 'route: status\nevidence_scope: selected-frontmatter-fields\n'
+    printf 'route: status\nevidence_scope: selected-frontmatter-fields\nl0: how is on the lock receipt; do not ingest 下意识.md\n'
     frontmatter_fields
     emit_host_action
     ;;

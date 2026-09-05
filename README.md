@@ -142,7 +142,7 @@ Subscription lane if a CLI is already logged in: Grok `bypassPermissions`, Claud
 
 ## Four mounts, one vault
 
-Sharing is the vault and `canonical_sources.psv`, not a second protocol.
+Sharing is the vault and `canonical_sources.psv`, not a second protocol. Windows uses `route_knowledge.py` (same routes); DSH on win32 prefers that file.
 
 | Mount | What ships |
 |---|---|

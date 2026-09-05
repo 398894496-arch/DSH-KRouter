@@ -36,8 +36,8 @@ fi
 mkdir -p "$(dirname "$SKILL_DST")" "$(dirname "$RULE_DST")" "$(dirname "$ASK_RULE_DST")"
 rm -rf "$SKILL_DST"
 cp -R "$SKILL_SRC" "$SKILL_DST"
-chmod +x "$SKILL_DST/scripts/route_knowledge.sh" "$SKILL_DST/scripts/canonical_lookup.py" \
-  "$SKILL_DST/scripts/ask_product.py"
+chmod +x "$SKILL_DST/scripts/route_knowledge.sh" "$SKILL_DST/scripts/route_knowledge.py" \
+  "$SKILL_DST/scripts/canonical_lookup.py" "$SKILL_DST/scripts/ask_product.py"
 cp "$ROOT/extras/cursor/krouter-obsidian.mdc" "$RULE_DST"
 cp "$ROOT/extras/cursor/ask-product.mdc" "$ASK_RULE_DST"
 
