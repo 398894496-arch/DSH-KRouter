@@ -4,7 +4,7 @@ A second brain for coding agents. Yesterday is sealed and distilled into [Obsidi
 
 One vault. Cursor, Codex, Claude Code, and DeepSeek Harness.
 
-[![ci](https://github.com/398894496-arch/runtime36/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/runtime36/actions/workflows/ci.yml)
+[![ci](https://github.com/398894496-arch/DSH-KRouter/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/DSH-KRouter/actions/workflows/ci.yml)
 中文：[`README.zh.md`](README.zh.md)
 
 **What this clone can prove — three layers, do not merge.** (1) Implementation: `clone_25` shows the lock does what the protocol says. (2) Comparison: `lock_vs_neighbor` shows, after the same metadata, the lock refuses where unthresholded lexical TF-IDF, MiniLM, and BGE-M3 still cite. After the same floors: MiniLM already mis-ranks 发版 before any threshold; BGE-M3 at 0.40 still cites neighbor `B03`. (3) Field self-report: author-vault 25/25 is not in this clone. Pack: [`docs/VERIFY.md`](docs/VERIFY.md).
@@ -81,8 +81,8 @@ Author vault, 2026-08-21: 72 consecutive sealed days; 30 real tasks; LLM 25/25; 
 This proves the lock answers `Q01` on **this repo’s `template/`**, not on your existing vault. It does not distill yesterday. No GPU. No Docker. No embedding daemon. `first_run.sh` ignores `OBSIDIAN_VAULT` on purpose; point it at another tree only with `KROUTER_FIRST_RUN_VAULT`.
 
 ```bash
-git clone https://github.com/398894496-arch/runtime36.git
-cd runtime36
+git clone https://github.com/398894496-arch/DSH-KRouter.git
+cd DSH-KRouter
 python3 -m venv .venv && . .venv/bin/activate
 python3 -m pip install -r requirements.txt   # PyYAML (Homebrew Python is PEP 668)
 ./scripts/first_run.sh
@@ -149,11 +149,11 @@ Sharing is the vault and `canonical_sources.psv`, not a second protocol. Windows
 | Cursor | `extras/cursor/krouter-obsidian.mdc` via `install.sh` |
 | Codex | `extras/codex/AGENTS.snippet.md` |
 | Claude Code | `extras/claude-code/CLAUDE.snippet.md` |
-| DeepSeek Harness | DSH socket. Clone: `dsh plugin add /path/to/this/repo`. Catalog: `dsh plugin --profile web add github:398894496-arch/runtime36`. Read-only tools: status, preference, **correction**, memory (vault route, not chat memory), project, search, suggest. Uninstall does not delete notes. |
+| DeepSeek Harness | DSH socket. Clone: `dsh plugin add /path/to/this/repo`. Catalog: `dsh plugin --profile web add github:398894496-arch/DSH-KRouter`. Read-only tools: status, preference, **correction**, memory (vault route, not chat memory), project, search, suggest. Uninstall does not delete notes. |
 
 ```bash
 node extras/dsh/test-bridge.mjs
-dsh plugin --profile web add github:398894496-arch/runtime36
+dsh plugin --profile web add github:398894496-arch/DSH-KRouter
 ```
 
 Requires `python3`, `rg`, PyYAML. Tests: `python3 -m pip install -r requirements-dev.txt && python3 -m pytest -q`.

@@ -6,7 +6,7 @@
 
 英文主页：[`README.md`](README.md)
 
-[![ci](https://github.com/398894496-arch/runtime36/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/runtime36/actions/workflows/ci.yml)
+[![ci](https://github.com/398894496-arch/DSH-KRouter/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/DSH-KRouter/actions/workflows/ci.yml)
 
 **本仓能证明的分三层，不要合并。**（1）实现正确：`clone_25` 证明锁按协议写的没错。（2）对照优势：`lock_vs_neighbor` 证明同一套元数据之后，锁会拒、没加阈值的词法 TF-IDF、MiniLM、BGE-M3 仍会硬凑。扫过同一套地板之后：MiniLM 在阈值前就把发版配错；BGE-M3 在 0.40 仍引用近邻题 `B03`。（3）实战自陈：作者活库 25/25 不在本仓。总账：[`docs/VERIFY.md`](docs/VERIFY.md)。
 
@@ -82,8 +82,8 @@ python3 -m pytest -q tests/test_lock_vs_neighbor.py
 这段只证明锁能在**本仓 `template/`** 上打到 `Q01`，不是在你已有的库上。不蒸馏昨天。不需要 GPU、Docker、嵌入进程。`first_run.sh` 故意不继承 `OBSIDIAN_VAULT`；要换一棵树，设 `KROUTER_FIRST_RUN_VAULT`。
 
 ```bash
-git clone https://github.com/398894496-arch/runtime36.git
-cd runtime36
+git clone https://github.com/398894496-arch/DSH-KRouter.git
+cd DSH-KRouter
 python3 -m venv .venv && . .venv/bin/activate
 python3 -m pip install -r requirements.txt
 ./scripts/first_run.sh
@@ -150,11 +150,11 @@ export OBSIDIAN_VAULT=/path/to/YourVault
 | Cursor | `install.sh` → `extras/cursor/krouter-obsidian.mdc` |
 | Codex | `extras/codex/AGENTS.snippet.md` |
 | Claude Code | `extras/claude-code/CLAUDE.snippet.md` |
-| DeepSeek Harness | DSH 插座。克隆后：`dsh plugin add /path/to/this/repo`。目录：`dsh plugin --profile web add github:398894496-arch/runtime36`。只读工具，含 **correction**；`memory` 是库内路由，不是聊天记忆。卸插件不删库 |
+| DeepSeek Harness | DSH 插座。克隆后：`dsh plugin add /path/to/this/repo`。目录：`dsh plugin --profile web add github:398894496-arch/DSH-KRouter`。只读工具，含 **correction**；`memory` 是库内路由，不是聊天记忆。卸插件不删库 |
 
 ```bash
 node extras/dsh/test-bridge.mjs
-dsh plugin --profile web add github:398894496-arch/runtime36
+dsh plugin --profile web add github:398894496-arch/DSH-KRouter
 ```
 
 需要 `python3`、`rg`、PyYAML。测试：`python3 -m pip install -r requirements-dev.txt && python3 -m pytest -q`。

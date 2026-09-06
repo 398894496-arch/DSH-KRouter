@@ -23,7 +23,7 @@ The job auto-detects the CLI each run. Keys come from the vault page, `~/.dsh-kr
 ## Prove it on the template
 
 ```bash
-export OBSIDIAN_VAULT=/path/to/runtime36/template
+export OBSIDIAN_VAULT=/path/to/DSH-KRouter/template
 ./extras/host-daily-evolution/check.sh
 ```
 

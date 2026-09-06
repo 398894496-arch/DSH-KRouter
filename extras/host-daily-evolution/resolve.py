@@ -173,7 +173,7 @@ def probe_key(name: str, key: str, extra: dict[str, str] | None = None) -> str:
             return "unprobed"
         headers = {"Authorization": f"Bearer {key}", "Accept": "application/json"}
         if name == "OPENROUTER_API_KEY":
-            headers["HTTP-Referer"] = "https://github.com/398894496-arch/runtime36"
+            headers["HTTP-Referer"] = "https://github.com/398894496-arch/DSH-KRouter"
             headers["X-Title"] = "DSH-KRouter"
     req = urllib.request.Request(url, headers=headers, method="GET")
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
