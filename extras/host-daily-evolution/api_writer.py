@@ -380,7 +380,7 @@ def openai_headers(key: str, name: str) -> dict[str, str]:
         "Accept": "application/json",
     }
     if name == "OPENROUTER_API_KEY":
-        headers["HTTP-Referer"] = "https://github.com/398894496-arch/runtime36"
+        headers["HTTP-Referer"] = "https://github.com/398894496-arch/DSH-KRouter"
         headers["X-Title"] = "DSH-KRouter"
     return headers
 
