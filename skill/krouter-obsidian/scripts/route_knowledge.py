@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -38,7 +39,6 @@ STATUS_FIELDS = (
     "daily_automation_cron_status",
     "daily_automation_document_sync_status",
     "daily_automation_sync_reproducibility_status",
-    "daily_automation_health_gate_status",
     "semantic_retrieval_status",
     "semantic_answers",
     "historical_canonical_source_precision",
@@ -94,6 +94,33 @@ def emit_receipt(source: Path, retrieval_status: str, route: str, query: str, va
         print(f"subconscious_rows: {rows}")
     else:
         print("subconscious: missing")
+
+
+def emit_daily_seal(health: Path) -> None:
+    """Seal date lives only on the health page. Do not copy it onto Agent第二大脑."""
+    if not health.is_file():
+        print("daily_seal: missing")
+        return
+    sealed = "missing"
+    pending = ""
+    through = ""
+    for raw in health.read_text(encoding="utf-8", errors="replace").splitlines():
+        if raw.startswith("- 最近已封："):
+            mark = raw.split("`", 2)
+            sealed = mark[1] if len(mark) >= 2 else "none"
+        elif raw.startswith("- 待总结"):
+            parts = raw.split("`")
+            if len(parts) >= 2:
+                pending = parts[1]
+            found = re.search(r"\d{4}-\d{2}-\d{2}", raw)
+            if found:
+                through = found.group(0)
+    print(f"daily_seal_source: {health}")
+    print(f"daily_seal: {sealed}")
+    if through:
+        print(f"daily_seal_through: {through}")
+    if pending:
+        print(f"daily_seal_pending: {pending}")
 
 
 def emit_host_action(health: Path) -> None:
@@ -234,11 +261,45 @@ def md_search(needle: str, scope: Path, max_per_file: int = 4, max_lines: int = 
         print(line)
 
 
+def print_recall(res: dict, vault: Path, lines: int) -> None:
+    from recall_index import best_lines
+
+    print(f"recall_confidence: {res.get('confidence', 'none')}")
+    print(f"recall_margin: {res.get('margin', 0)}")
+    print(f"recall_strong_terms: {res.get('strong', 0)}")
+    print("recall:")
+    for h in res["hits"]:
+        flag = f" status={h['status']}" if h["status"] else ""
+        print(f"- {h['rel']} tier={h['tier']}{flag} score={h['score']}")
+        if h["how"]:
+            print(f"  how: {h['how']}")
+        for ln, text in best_lines(vault / h["rel"], res["query_tokens"], lines):
+            print(f"  L{ln}: {text}")
+
+
 def bounded_search(scope: Path, vault: Path, map_path: Path, route: str, query: str) -> None:
+    res = None
+    try:
+        from recall_index import recall
+
+        rel = "" if scope == vault else scope.relative_to(vault).as_posix()
+        res = recall(vault, query, rel, limit=3)
+    except Exception:  # 召回缓存不可用时退回字面检索
+        res = None
+    if res and res["hits"] and res.get("confidence") != "none":
+        emit_receipt(scope, "ranked-recall-complete", route, query, vault, map_path)
+        emit_suggestions(query, vault, map_path)
+        print(f"route: {route}")
+        print(f"scope: {scope}")
+        print_recall(res, vault, 4 if scope.is_file() else 1)
+        print("open_page: only the top recall hit, and only if its how does not close the question")
+        return
     emit_receipt(scope, "bounded-literal-search-complete", route, query, vault, map_path)
     emit_suggestions(query, vault, map_path)
     print(f"route: {route}")
     print(f"scope: {scope}")
+    if res is not None:
+        print("recall: none (no page covers enough of the question; do not guess)")
     md_search(query, scope)
 
 
@@ -287,6 +348,7 @@ def main() -> int:
             for field in STATUS_FIELDS:
                 if field in meta:
                     print(f"{field}: {meta[field]}")
+        emit_daily_seal(health)
         emit_host_action(health)
         return 0
     if route == "suggest":

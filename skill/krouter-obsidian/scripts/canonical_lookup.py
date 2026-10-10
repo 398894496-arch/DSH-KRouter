@@ -108,6 +108,17 @@ def stands_in_for(q: str, a: str) -> bool:
     return len(q) >= 2
 
 
+LOCK_BAND = 100
+
+
+def carries(a: str, q: str) -> bool:
+    """An alias inside a longer question locks only when it carries the question.
+
+    `日更` sits inside `日更能不能交给云端跑` without being what the question is about.
+    """
+    return len(a) >= 4 or len(a) * 2 >= len(q)
+
+
 def alias_score(query: str, alias: str) -> int:
     q = normalize(query)
     a = normalize(alias)
@@ -116,7 +127,8 @@ def alias_score(query: str, alias: str) -> int:
     if a == q:
         return 1000 + len(a)
     if a in q:
-        return 500 + len(a)
+        # below LOCK_BAND: still ranks the suggestion, never claims the page
+        return 500 + len(a) if carries(a, q) else 60 + len(a)
     if q in a and stands_in_for(q, a):
         return 100 + len(q)
     return 0
@@ -150,7 +162,7 @@ def scores_for(query: str, rows: list[tuple[str, list[str], str, str]]) -> dict[
         best = 0
         for alias in aliases:
             best = max(best, alias_score(query, alias))
-        if best:
+        if best >= LOCK_BAND:
             scores[case_id] = best
     return scores
 
