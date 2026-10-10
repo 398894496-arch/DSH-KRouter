@@ -172,7 +172,7 @@ Field self-report (author vault, 1,180 notes, 2026-10-10; not in this clone): on
 
 Two scripts the host timer can run after the daily seal. `reconsolidate.py` reads the router's own query log (one JSONL line per call, `~/.local/state/krouter/`), shows a model each weak query with its recall candidates, and appends the confirmed `rel|query` pair to `下意识触发词-自学习.psv` — recall-only, or nothing when no candidate answers. `checkup.py` (no model) writes `90 系统文件/自动化/下意识体检.md`: locks and triggers pointing at missing or superseded pages, `supersedes` pairs where recall still prefers the replaced page, and rule pages nobody used in 60 days. It lists; you decide.
 
-Field self-report (author vault, not in clone): on 92 real router queries from 30 days, blind-judged, mean usefulness 0.68 → 1.18 of 2.
+Field self-report (author vault, not in clone): on 92 real router queries from 30 days, blind-judged, mean usefulness 0.74 → 1.26 of 2.
 
 ## Not Mem0. Not a notes app.
 

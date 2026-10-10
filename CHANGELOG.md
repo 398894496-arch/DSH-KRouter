@@ -2,10 +2,10 @@
 
 ## 0.7.0 — 2026-10-10
 
-Memory maintenance, measured on the router's own real traffic. 92 de-duplicated queries the author's agents actually sent in 30 days, blind-judged (old vs new shuffled, Opus scores 0/1/2): mean 0.68 → 1.18, direct hits 18 → 38, useless 47 → 21. Synthetic held-out set unchanged (right page 88%, top-1 75%, wrong locks 0, 0/6 off-topic answered); p50 ~115 ms.
+Memory maintenance, measured on the router's own real traffic. 92 de-duplicated queries the author's agents actually sent in 30 days, blind-judged (old vs new shuffled, Opus scores 0/1/2): mean 0.74 → 1.26, direct hits 20 → 42, useless 44 → 18. Synthetic held-out set: right page 88% → 92%, top-1 75%, wrong locks 0, 0/6 off-topic answered; p50 ~113 ms.
 
 - **Lock**: the whitespace token fallback only counts whole-alias hits, so `纠错` no longer locks `纠错优先级` for `Claude Code 纠错`. A source page whose `status` is superseded / retired / rejected / deprecated / archived is out of force: no lock, no L0 row.
-- **Recall**: a one-keyword query (`DSH`, `SyGJ`) answers when its one content term matches; bare numbers are not content terms. Trigger text now feeds the word-likeness statistics.
+- **Recall**: a one-keyword query (`DSH`, `SyGJ`) answers when its one content term matches; bare numbers are not content terms. Trigger text now feeds the word-likeness statistics, and a bigram that appears in any title or trigger counts as a real word when deciding whether to refuse (`别名` in `别名表谁能改`).
 - **Scope widening**: `preference` / `correction` / `memory` / `project` widen to the whole vault (rule pages first) when their own scope has no page that covers the question, and print `scope_widened: vault`.
 - **Query log**: one JSONL line per routed query under `~/.local/state/krouter/` (`KROUTER_NO_QUERY_LOG=1` turns it off). Half of real calls repeat an earlier question.
 - **`reconsolidate.py`** (nightly, one model call): weak queries + their recall candidates → the model picks the page that answers, or none → `rel|original query` appended to `90 系统文件/**/下意识触发词-自学习.psv`. Recall-only, never a lock, no invented paraphrase. Replay on history: 8 learned, 20 none, 12/12 off-topic probes refused.

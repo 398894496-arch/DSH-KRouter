@@ -280,7 +280,7 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     hits = hits[:limit]
     if not hits:
         return {"hits": [], "stats": stats, "query_tokens": qtok, "confidence": "none", "margin": 0.0}
-    strong = strong_matches(con, hits[0]["rid"], present, df)
+    strong = strong_matches(con, hits[0]["rid"], present, df, named)
     top = hits[0]["score"]
     second = hits[1]["score"] if len(hits) > 1 else 0.0
     margin = top / second if second else 9.9
@@ -288,7 +288,7 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     n_docs = con.execute("SELECT count(*) FROM files").fetchone()[0] or 1
     scale = min(1.0, n_docs / 1000)
     # 关键词式查询（`DSH`、`SyGJ`）本身只有一个实词，命中它就够；整句问题仍要求至少两个实词
-    need = min(MIN_STRONG_MATCH, query_content_terms(raw, df))
+    need = min(MIN_STRONG_MATCH, query_content_terms(raw, df, named))
     if gate and (top < SCORE_MIN * scale or (strong < need and top < SINGLE_TERM_SCORE * scale) or strong == 0):
         conf = "none"
     elif margin >= 1.5 and hits[0]["tier"] == "rule":
@@ -303,7 +303,8 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
             "strong": strong, "confidence": conf}
 
 
-def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict[str, int]) -> int:
+def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict[str, int],
+                   named: set[str] = frozenset()) -> int:
     """首条命中页里出现了几个"像词"的查询词。只碰上一个泛词的，多半是巧合。"""
     if not terms:
         return 0
@@ -313,17 +314,17 @@ def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict
         terms + [rid],
     )}
     # 纯数字（年份、日期、序号）到处都有，只参与排序，不算实词
-    return sum(1 for t in hit if soft_weight(t, df) >= STRONG_W and not t.isdigit())
+    return sum(1 for t in hit if (soft_weight(t, df) >= STRONG_W or t in named) and not t.isdigit())
 
 
-def query_content_terms(raw: list[str], df: dict[str, int]) -> int:
+def query_content_terms(raw: list[str], df: dict[str, int], named: set[str] = frozenset()) -> int:
     """问题里有几个实词：拉丁词、像词的双字；库里没有但由少见字组成的双字也算（说明问的是库外的东西）。"""
     n = 0
     for t in raw:
         if not is_cjk_bigram(t):
             n += len(t) >= 2 and not t.isdigit()
         elif df.get(t, 0) > 0:
-            n += soft_weight(t, df) >= STRONG_W
+            n += soft_weight(t, df) >= STRONG_W or t in named
         else:
             n += min(df.get(t[0], 0), df.get(t[1], 0)) < 30
     return n
