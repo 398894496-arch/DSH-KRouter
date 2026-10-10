@@ -182,3 +182,44 @@ def test_checkup_flags_dead_lock_and_tenure(vault, tmp_path):
     page = (vault / "90 系统文件/自动化/下意识体检.md").read_text(encoding="utf-8")
     assert "Q09 →" in page and "superseded" in page
     assert "tenure: \"1/1\"" in page
+
+
+def test_function_bigram_does_not_carry_a_refusal(vault):
+    assert r.recall(vault, "帮我写一首关于秋天的诗")["confidence"] == "none"
+
+
+def test_unknown_latin_term_is_refused(vault):
+    assert r.recall(vault, "Kubernetes的排版怎么扩容")["confidence"] == "none"
+
+
+def test_topic_page_needs_to_be_named(vault):
+    write(vault, "02 经验与方法/主题档案/主题｜Grok 订阅.md",
+          "---\ntitle: 主题｜Grok 订阅\ntopic_terms: grok-fixed;Grok订阅\n---\n\n排版 排版 排版 时间日志 封账 时间日志 封账。\n")
+    unnamed = r.recall(vault, "封账要看时间日志吗", limit=5)
+    assert unnamed["hits"][0]["rel"] != "02 经验与方法/主题档案/主题｜Grok 订阅.md"
+    named = r.recall(vault, "grok-fixed 封账", limit=5)
+    assert named["hits"][0]["rel"] == "02 经验与方法/主题档案/主题｜Grok 订阅.md"
+    assert named["hits"][0]["tier"] == "topic"
+
+
+def test_consolidate_topics_writes_cited_provisional_page(vault, monkeypatch):
+    import consolidate_topics as ct
+
+    write(vault, "05 时间日志/2026-10/02｜修补丁.md", "---\ntitle: 02｜修补丁\n---\n\n中文补丁又掉了，用户要求重装。\n")
+    write(vault, ct.LIST, "cn|中文补丁|中文补丁|\n")
+    seen = {}
+
+    def fake(cli, model, prompt):
+        seen["prompt"] = prompt
+        return ("## 一句话\n补丁反复掉。[[05 时间日志/2026-10/02｜修补丁]]\n## 当前状态\n截至 2026-10-02 未修好。[[不存在的页]]\n"
+                "## 关键事实\n- x\n## 用户纠错与踩过的坑\n- y\n## 时间线\n- z\n## 未决与不确定\n- w\n## 相关页面\n- v\nTRIGGERS: 中文又丢了;汉化补丁")
+
+    monkeypatch.setattr(ct, "call_model", fake)
+    res = ct.build(vault, ct.load_list(vault)[0], "cli", "m", False)
+    assert res["status"] == "written" and res["bad_links"] == 1 and not res["missing_sections"]
+    page = (vault / ct.OUT_DIR / "主题｜中文补丁.md").read_text(encoding="utf-8")
+    assert "status: provisional" in page and "topic_terms: 中文补丁" in page
+    assert "triggers: 中文补丁;中文又丢了;汉化补丁" in page
+    assert "`不存在的页`（未找到此页）" in page and "[[05 时间日志/2026-10/02｜修补丁]]" in page
+    assert "05 时间日志/2026-10/02｜修补丁.md" in seen["prompt"]
+    assert ct.build(vault, ct.load_list(vault)[0], "cli", "m", False)["status"] == "unchanged"
