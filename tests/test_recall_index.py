@@ -108,3 +108,77 @@ def test_lookup_refuses_short_alias_lock():
     rows = [("Q21", ["日更", "日更健康"], "90 系统文件/自动化/日更健康.md", "当前健康以本页为准")]
     assert lookup("日更能不能交给云端自动化跑", rows) is None
     assert lookup("日更健康", rows)[0] == "Q21"
+
+
+def test_token_fallback_fragment_does_not_lock():
+    rows = [("Q05", ["纠错优先级", "最新纠正"], "AGENTS.md", "用户当前指令和最新纠正优先")]
+    assert lookup("Claude Code 纠错", rows) is None
+    assert lookup("纠错优先级", rows)[0] == "Q05"
+
+
+def test_rejected_source_is_not_locked(tmp_path):
+    from canonical_lookup import lookup as lk
+
+    v = tmp_path / "v"
+    write(v, "old.md", "---\nstatus: rejected\n---\n")
+    write(v, "new.md", "---\nstatus: active\n---\n")
+    rows = [("Q18", ["项目阶段诊断"], "old.md", "x"), ("Q19", ["真实任务"], "new.md", "y")]
+    assert lk("项目阶段诊断", rows, vault=v) is None
+    assert lk("真实任务", rows, vault=v)[0] == "Q19"
+
+
+def test_single_keyword_query_is_answered(vault):
+    res = r.recall(vault, "封账")
+    assert res["confidence"] != "none"
+    assert hits(res)[0] == "02 经验与方法/搜索与知识库/封账先看时间日志文件.md"
+
+
+def test_bare_number_is_not_a_content_term(vault):
+    res = r.recall(vault, "2026")
+    assert res["confidence"] == "none"
+
+
+def test_route_widens_from_single_file_scope(vault, monkeypatch, tmp_path):
+    import subprocess
+    import sys
+
+    root = Path(__file__).resolve().parents[1] / "skill/krouter-obsidian/scripts/route_knowledge.py"
+    write(vault, "02 经验与方法/Agent/用户偏好与工作约束.md", "---\ntitle: 用户偏好\n---\n\n名称要能看懂。\n")
+    env = {**__import__("os").environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_STATE_DIR": str(tmp_path / "state")}
+    out = subprocess.run([sys.executable, str(root), "preference", "封账 时间日志"], capture_output=True, text=True, env=env).stdout
+    assert "scope_widened: vault" in out
+    assert "封账先看时间日志文件.md" in out
+    log = (tmp_path / "state" / "queries.jsonl").read_text(encoding="utf-8")
+    assert "ranked-recall-complete+widened" in log
+
+
+def test_reconsolidate_reads_only_weak_queries(tmp_path):
+    import json
+
+    import reconsolidate as rc
+
+    log = tmp_path / "q.jsonl"
+    log.write_text("\n".join(json.dumps(x, ensure_ascii=False) for x in [
+        {"ts": "2026-10-01T00:00:00Z", "q": "没答好", "status": "bounded-literal-search-complete"},
+        {"ts": "2026-10-01T00:00:01Z", "q": "低置信", "status": "ranked-recall-complete", "confidence": "low"},
+        {"ts": "2026-10-01T00:00:02Z", "q": "答好了", "status": "ranked-recall-complete", "confidence": "high"},
+        {"ts": "2026-09-01T00:00:00Z", "q": "游标之前", "status": "bounded-literal-search-complete"},
+    ]), encoding="utf-8")
+    got = [row["q"] for row in rc.load_misses(log, "2026-09-30T00:00:00Z")]
+    assert got == ["没答好", "低置信"]
+
+
+def test_checkup_flags_dead_lock_and_tenure(vault, tmp_path):
+    import subprocess
+    import sys
+
+    write(vault, "02 经验与方法/准经验/新排版规则.md",
+          "---\ntitle: 新排版规则\nstatus: active\nsupersedes:\n  - \"[[02 经验与方法/准经验/旧排版规则]]\"\n---\n\n排版形态和动画要多变。\n")
+    psv = tmp_path / "m2.psv"
+    psv.write_text("Q09|旧规则|02 经验与方法/准经验/旧排版规则.md|x\n", encoding="utf-8")
+    script = Path(__file__).resolve().parents[1] / "skill/krouter-obsidian/scripts/checkup.py"
+    env = {**__import__("os").environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_STATE_DIR": str(tmp_path / "s")}
+    subprocess.run([sys.executable, str(script), "--map", str(psv), "--days", "1"], check=True, env=env, capture_output=True)
+    page = (vault / "90 系统文件/自动化/下意识体检.md").read_text(encoding="utf-8")
+    assert "Q09 →" in page and "superseded" in page
+    assert "tenure: \"1/1\"" in page
