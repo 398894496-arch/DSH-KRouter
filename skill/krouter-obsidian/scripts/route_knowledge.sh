@@ -153,6 +153,12 @@ bounded_search() {
   scope=$1
   [ -n "$QUERY" ] || usage
   recalled=$(recall_search "$scope")
+  if [ "$scope" != "$VAULT" ] && { [ -z "$recalled" ] || printf '%s\n' "$recalled" | grep -q '^recall: none'; }; then
+    wide=$(recall_search "$VAULT")
+    if [ -n "$wide" ] && ! printf '%s\n' "$wide" | grep -q '^recall: none'; then
+      recalled=$(printf 'scope_widened: vault (the route scope had no page covering this question)\n%s' "$wide")
+    fi
+  fi
   if [ -n "$recalled" ] && ! printf '%s\n' "$recalled" | grep -q '^recall: none'; then
     emit_receipt "$scope" ranked-recall-complete
     emit_suggestions

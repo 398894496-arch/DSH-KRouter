@@ -168,6 +168,12 @@ The lock still decides alone: only a row in `canonical_sources.psv` may claim a 
 
 Field self-report (author vault, 1,180 notes, 2026-10-10; not in this clone): on 30 held-out questions written before tuning, the right page was found 21% → 88% (top-1 0% → 75%), wrong locks 0, 0/6 off-topic questions answered, p50 118 ms through one Python process. Template tests: `tests/test_recall_index.py`.
 
+## Nightly upkeep: learn from misses, list what went stale
+
+Two scripts the host timer can run after the daily seal. `reconsolidate.py` reads the router's own query log (one JSONL line per call, `~/.local/state/krouter/`), shows a model each weak query with its recall candidates, and appends the confirmed `rel|query` pair to `下意识触发词-自学习.psv` — recall-only, or nothing when no candidate answers. `checkup.py` (no model) writes `90 系统文件/自动化/下意识体检.md`: locks and triggers pointing at missing or superseded pages, `supersedes` pairs where recall still prefers the replaced page, and rule pages nobody used in 60 days. It lists; you decide.
+
+Field self-report (author vault, not in clone): on 92 real router queries from 30 days, blind-judged, mean usefulness 0.74 → 1.26 of 2.
+
 ## Not Mem0. Not a notes app.
 
 ![On clone it is the OS; after two weeks it holds your sealed days, your nouns, and your adopted methods](docs/img/fills-up.svg)

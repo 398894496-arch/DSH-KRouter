@@ -19,7 +19,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-SCHEMA_VERSION = "recall-v5"
+SCHEMA_VERSION = "recall-v6"
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
 SCORE_MIN = 8.5  # bm25×分层权重的绝对下限
@@ -106,7 +106,7 @@ def first_rule_line(body: str) -> str:
     return plain[: HOW_MAX - 1] + "…" if len(plain) > HOW_MAX else plain
 
 
-TRIGGER_FILE = "下意识触发词.psv"
+TRIGGER_GLOB = "下意识触发词*.psv"  # 人工/生成的触发词 + 夜间自学习的触发词
 
 
 def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
@@ -117,7 +117,7 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
     raw = os.environ.get("KROUTER_MAP") or str(Path(__file__).resolve().parent / "canonical_sources.psv")
     sources = [Path(raw)]
     if vault is not None and (vault / "90 系统文件").is_dir():
-        sources += sorted((vault / "90 系统文件").rglob(TRIGGER_FILE))
+        sources += sorted((vault / "90 系统文件").rglob(TRIGGER_GLOB))
     out: dict[str, list[str]] = {}
     digest = hashlib.sha1()
     for path in sources:
@@ -231,7 +231,7 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
                 " ".join(tokens(title + " " + path.stem)),
                 " ".join(tokens(trig)),
                 " ".join(tokens(dirs + "\n" + body)),
-                " ".join(unigrams(title + body)),
+                " ".join(unigrams(title + " " + trig + " " + body)),
                 tier_of(rel, status),
                 status,
                 how,
@@ -247,7 +247,8 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
 TIER_BOOST = {"rule": 1.6, "project": 1.0, "other": 0.9, "log": 0.8, "dead": 0.25}
 
 
-def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_first: bool = True) -> dict:
+def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_first: bool = True,
+           gate: bool = True) -> dict:
     con = connect(cache_path(vault))
     stats = refresh(vault, con) if refresh_first else {}
     raw: list[str] = []
@@ -279,14 +280,16 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     hits = hits[:limit]
     if not hits:
         return {"hits": [], "stats": stats, "query_tokens": qtok, "confidence": "none", "margin": 0.0}
-    strong = strong_matches(con, hits[0]["rid"], present, df)
+    strong = strong_matches(con, hits[0]["rid"], present, df, named)
     top = hits[0]["score"]
     second = hits[1]["score"] if len(hits) > 1 else 0.0
     margin = top / second if second else 9.9
     # bm25 的量级随库大小变化：小库按文档数等比缩放下限，千篇以上用满额
     n_docs = con.execute("SELECT count(*) FROM files").fetchone()[0] or 1
     scale = min(1.0, n_docs / 1000)
-    if top < SCORE_MIN * scale or (strong < MIN_STRONG_MATCH and top < SINGLE_TERM_SCORE * scale):
+    # 关键词式查询（`DSH`、`SyGJ`）本身只有一个实词，命中它就够；整句问题仍要求至少两个实词
+    need = min(MIN_STRONG_MATCH, query_content_terms(raw, df, named))
+    if gate and (top < SCORE_MIN * scale or (strong < need and top < SINGLE_TERM_SCORE * scale) or strong == 0):
         conf = "none"
     elif margin >= 1.5 and hits[0]["tier"] == "rule":
         conf = "high"
@@ -300,7 +303,8 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
             "strong": strong, "confidence": conf}
 
 
-def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict[str, int]) -> int:
+def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict[str, int],
+                   named: set[str] = frozenset()) -> int:
     """首条命中页里出现了几个"像词"的查询词。只碰上一个泛词的，多半是巧合。"""
     if not terms:
         return 0
@@ -309,7 +313,21 @@ def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict
         f"SELECT DISTINCT term FROM vinst WHERE term IN ({marks}) AND doc = ? AND col IN ('title','triggers','body')",
         terms + [rid],
     )}
-    return sum(1 for t in hit if soft_weight(t, df) >= STRONG_W)
+    # 纯数字（年份、日期、序号）到处都有，只参与排序，不算实词
+    return sum(1 for t in hit if (soft_weight(t, df) >= STRONG_W or t in named) and not t.isdigit())
+
+
+def query_content_terms(raw: list[str], df: dict[str, int], named: set[str] = frozenset()) -> int:
+    """问题里有几个实词：拉丁词、像词的双字；库里没有但由少见字组成的双字也算（说明问的是库外的东西）。"""
+    n = 0
+    for t in raw:
+        if not is_cjk_bigram(t):
+            n += len(t) >= 2 and not t.isdigit()
+        elif df.get(t, 0) > 0:
+            n += soft_weight(t, df) >= STRONG_W or t in named
+        else:
+            n += min(df.get(t[0], 0), df.get(t[1], 0)) < 30
+    return n
 
 
 def soft_weight(t: str, df: dict[str, int]) -> float:

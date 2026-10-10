@@ -40,11 +40,17 @@ def parse_day(raw: str) -> date | None:
         return None
 
 
+DEAD_STATUSES = {"superseded", "retired", "rejected", "deprecated", "archived"}
+
+
 def in_force(fm: dict[str, str], today: date) -> tuple[bool, str, str]:
     valid_from = parse_day(fm.get("valid_from") or fm.get("verified_at") or "")
     invalid_at = parse_day(fm.get("invalid_at") or "")
     valid_s = valid_from.isoformat() if valid_from else ""
     invalid_s = invalid_at.isoformat() if invalid_at else ""
+    # a replaced or rejected page must not be claimed by the lock or listed in L0
+    if (fm.get("status") or "").strip().lower() in DEAD_STATUSES:
+        return False, valid_s, invalid_s
     if valid_from and valid_from > today:
         return False, valid_s, invalid_s
     if invalid_at and invalid_at <= today:
@@ -188,10 +194,14 @@ def lookup(
     rows = live_rows(rows, vault, today)
     source_by_id = {case_id: source for case_id, _aliases, source, _anchor in rows}
     winner = pick(scores_for(query, rows), source_by_id)
-    if winner is None:
+    if winner is None and len(query.split()) > 1:
+        # Token fallback: only whole-alias hits count. A token that is just a fragment of an
+        # alias (`纠错` in `纠错优先级`) must not speak for the rest of `Claude Code 纠错`.
         token_scores: dict[str, int] = {}
         for token in query.split():
             for case_id, score in scores_for(token, rows).items():
+                if score < 500:
+                    continue
                 token_scores[case_id] = token_scores.get(case_id, 0) + score
         winner = pick(token_scores, source_by_id)
     if winner is None:

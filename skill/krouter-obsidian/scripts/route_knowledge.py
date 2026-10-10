@@ -180,6 +180,23 @@ def how_for(vault: Path, case_id: str, anchor: str) -> tuple[str, bool]:
     return anchor, False
 
 
+
+def log_query(route: str, query: str, status: str, top: str = "", confidence: str = "") -> None:
+    """One JSONL line per routed query, outside the vault. Feeds nightly trigger learning. Never fails the route."""
+    if not query or os.environ.get("KROUTER_NO_QUERY_LOG") == "1":
+        return
+    try:
+        import json
+
+        base = Path(os.environ.get("KROUTER_STATE_DIR") or Path.home() / ".local" / "state" / "krouter")
+        base.mkdir(parents=True, exist_ok=True)
+        row = {"ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "route": route, "q": query,
+               "status": status, "top": top, "confidence": confidence}
+        with (base / "queries.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
 def canonical_lookup(query: str, vault: Path, map_path: Path, route: str) -> bool:
     if not query or not map_path.is_file():
         return False
@@ -193,6 +210,7 @@ def canonical_lookup(query: str, vault: Path, map_path: Path, route: str) -> boo
         print(f"Canonical source missing: {source}", file=sys.stderr)
         return False
     emit_receipt(source, "canonical-match", route, query, vault, map_path)
+    log_query(route, query, "canonical-match", relative, "lock")
     print("route: canonical")
     print(f"canonical_id: {case_id}")
     print(f"canonical_source: {source}")
@@ -286,15 +304,28 @@ def bounded_search(scope: Path, vault: Path, map_path: Path, route: str, query: 
         res = recall(vault, query, rel, limit=3)
     except Exception:  # 召回缓存不可用时退回字面检索
         res = None
+    widened = False
+    if (res is None or not res["hits"] or res.get("confidence") == "none") and scope != vault:
+        # 路由范围（单个偏好/纠错页、01 项目）里没有答案：扩到全库，规则页优先，并如实标出
+        try:
+            wide = recall(vault, query, "", limit=3)
+            if wide["hits"] and wide.get("confidence") != "none":
+                res, widened = wide, True
+        except Exception:
+            pass
     if res and res["hits"] and res.get("confidence") != "none":
         emit_receipt(scope, "ranked-recall-complete", route, query, vault, map_path)
+        log_query(route, query, "ranked-recall-complete" + ("+widened" if widened else ""), res["hits"][0]["rel"], res.get("confidence", ""))
         emit_suggestions(query, vault, map_path)
         print(f"route: {route}")
         print(f"scope: {scope}")
-        print_recall(res, vault, 4 if scope.is_file() else 1)
+        if widened:
+            print("scope_widened: vault (the route scope had no page covering this question)")
+        print_recall(res, vault, 4 if (scope.is_file() and not widened) else 1)
         print("open_page: only the top recall hit, and only if its how does not close the question")
         return
     emit_receipt(scope, "bounded-literal-search-complete", route, query, vault, map_path)
+    log_query(route, query, "bounded-literal-search-complete")
     emit_suggestions(query, vault, map_path)
     print(f"route: {route}")
     print(f"scope: {scope}")
