@@ -19,7 +19,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-SCHEMA_VERSION = "recall-v6"
+SCHEMA_VERSION = "recall-v8"
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
 SCORE_MIN = 8.5  # bm25×分层权重的绝对下限
@@ -41,7 +41,10 @@ QUERY_STOP = {
     "什么", "怎么", "怎样", "能不", "不能", "是不", "不是", "哪个", "哪些", "哪里", "应该",
     "可以", "现在", "到底", "一下", "我的", "我们", "你的", "为什", "么要", "有没", "没有",
     "是什", "么样", "要不", "不要", "还是", "这个", "那个", "如何", "多少", "吗我",
+    "关于", "帮我", "请问", "一首", "一个", "一下",
 }
+# 含这些虚字的双字（`天的`、`帮我`）出现得极频繁，"像词"指标会误判；只影响拒答，不影响排序
+FUNCTION_CHARS = set("的了我你他她吗呢吧啊么什")
 CJK_RE = re.compile(r"[㐀-鿿豈-﫿]+")
 LATIN_RE = re.compile(r"[a-z0-9]+")  # 与 FTS5 unicode61 的切分一致
 
@@ -139,9 +142,14 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
     return out, digest.hexdigest()
 
 
+TOPIC_PREFIX = "02 经验与方法/主题档案/"
+
+
 def tier_of(rel: str, status: str) -> str:
     if status in DEAD_STATUS or status == "generated":
         return "dead"
+    if rel.startswith(TOPIC_PREFIX):
+        return "topic"
     if rel in RULE_FILES or rel.startswith(RULE_PREFIXES) or ("协作/" in rel and rel.startswith("90 系统文件/")):
         return "rule"
     if rel.startswith("05 时间日志/"):
@@ -228,7 +236,7 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
             "INSERT INTO docs(rel, title, triggers, body, uni, tier, status, how) VALUES(?,?,?,?,?,?,?,?)",
             (
                 rel,
-                " ".join(tokens(title + " " + path.stem)),
+                " ".join(tokens(title + " " + path.stem + " " + meta.get("topic_terms", ""))),
                 " ".join(tokens(trig)),
                 " ".join(tokens(dirs + "\n" + body)),
                 " ".join(unigrams(title + " " + trig + " " + body)),
@@ -244,7 +252,9 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
     return {"added": added, "changed": changed, "removed": removed, "docs": len(seen)}
 
 
-TIER_BOOST = {"rule": 1.6, "project": 1.0, "other": 0.9, "log": 0.8, "dead": 0.25}
+TIER_BOOST = {"rule": 1.6, "topic": 1.4, "project": 1.0, "other": 0.9, "log": 0.8, "dead": 0.25}
+# 主题档案只在问题点到这个主题时才相关；没点名就大幅降权，免得大页靠泛词抢第一
+TOPIC_UNNAMED = 0.35
 
 
 def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_first: bool = True,
@@ -253,34 +263,42 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     stats = refresh(vault, con) if refresh_first else {}
     raw: list[str] = []
     for t in tokens(query):
+        if len(t) == 1 and CJK_RE.fullmatch(t):
+            continue  # 单个汉字（`的`）不是词
         if t not in QUERY_STOP and t not in raw:
             raw.append(t)
     if not raw:
         return {"hits": [], "stats": stats, "query_tokens": [], "confidence": "none", "margin": 0.0}
     df = term_df(con, raw + [c for t in raw if is_cjk_bigram(t) for c in t])
     present = [t for t in raw if df.get(t, 0) > 0]
-    named = phrase_terms(con, [t for t in present if is_cjk_bigram(t)])
+    bigrams = [t for t in present if is_cjk_bigram(t)]
+    named = phrase_terms(con, bigrams)
+    titled = phrase_terms(con, bigrams, ("title",))
     qtok = [t for t in present if not is_cjk_bigram(t) or t in named or wordness(t, df) >= WORDNESS_MIN] or present
     if not qtok:
         return {"hits": [], "stats": stats, "query_tokens": [], "confidence": "none", "margin": 0.0}
     match = "{title triggers body} : (" + " OR ".join('"' + t.replace('"', "") + '"' for t in qtok) + ")"
     rows = con.execute(
-        "SELECT rowid, rel, tier, status, how, bm25(docs, 0, 4.0, 4.0, 1.0, 0, 0, 0, 0) AS s "
+        "SELECT rowid, rel, tier, status, how, title, bm25(docs, 0, 4.0, 4.0, 1.0, 0, 0, 0, 0) AS s "
         "FROM docs WHERE docs MATCH ? ORDER BY s LIMIT 80",
         (match,),
     ).fetchall()
     scope = scope.strip("/")
     hits = []
-    for rid, rel, tier, status, how, s in rows:
+    qset = set(raw)
+    for rid, rel, tier, status, how, title, s in rows:
         if scope and not (rel == scope or rel.startswith(scope + "/")):
             continue
+        boost = TIER_BOOST.get(tier, 1.0)
+        if tier == "topic" and not (set(title.split()) & qset):
+            boost *= TOPIC_UNNAMED
         hits.append({"rid": rid, "rel": rel, "tier": tier, "status": status, "how": how,
-                     "score": round(-s * TIER_BOOST.get(tier, 1.0), 3)})
+                     "score": round(-s * boost, 3)})
     hits.sort(key=lambda h: -h["score"])
     hits = hits[:limit]
     if not hits:
         return {"hits": [], "stats": stats, "query_tokens": qtok, "confidence": "none", "margin": 0.0}
-    strong = strong_matches(con, hits[0]["rid"], present, df, named)
+    strong = strong_matches(con, hits[0]["rid"], present, df, titled)
     top = hits[0]["score"]
     second = hits[1]["score"] if len(hits) > 1 else 0.0
     margin = top / second if second else 9.9
@@ -288,10 +306,13 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     n_docs = con.execute("SELECT count(*) FROM files").fetchone()[0] or 1
     scale = min(1.0, n_docs / 1000)
     # 关键词式查询（`DSH`、`SyGJ`）本身只有一个实词，命中它就够；整句问题仍要求至少两个实词
-    need = min(MIN_STRONG_MATCH, query_content_terms(raw, df, named))
-    if gate and (top < SCORE_MIN * scale or (strong < need and top < SINGLE_TERM_SCORE * scale) or strong == 0):
+    need = min(MIN_STRONG_MATCH, query_content_terms(raw, df, titled))
+    # 问题的核心词库里一次都没出现（`Kubernetes`），只靠一两个边角词凑上的，判为库外
+    unknown = unknown_content_terms(raw, df)
+    if gate and (top < SCORE_MIN * scale or (strong < need and top < SINGLE_TERM_SCORE * scale) or strong == 0
+                 or (unknown and strong <= 2)):
         conf = "none"
-    elif margin >= 1.5 and hits[0]["tier"] == "rule":
+    elif margin >= 1.5 and hits[0]["tier"] in ("rule", "topic"):
         conf = "high"
     elif margin >= 1.15:
         conf = "medium"
@@ -314,7 +335,19 @@ def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict
         terms + [rid],
     )}
     # 纯数字（年份、日期、序号）到处都有，只参与排序，不算实词
-    return sum(1 for t in hit if (soft_weight(t, df) >= STRONG_W or t in named) and not t.isdigit())
+    return sum(1 for t in hit if (soft_weight(t, df) >= STRONG_W or t in named) and not t.isdigit()
+               and not set(t) & FUNCTION_CHARS)
+
+
+def unknown_content_terms(raw: list[str], df: dict[str, int]) -> int:
+    n = 0
+    for t in raw:
+        if df.get(t, 0):
+            continue
+        # 只看拉丁专名（`Kubernetes`）。中文词库里没有多半只是换了说法（`讲究`），不代表问的是库外
+        if not is_cjk_bigram(t):
+            n += len(t) >= 4 and not t.isdigit()
+    return n
 
 
 def query_content_terms(raw: list[str], df: dict[str, int], named: set[str] = frozenset()) -> int:
@@ -323,6 +356,8 @@ def query_content_terms(raw: list[str], df: dict[str, int], named: set[str] = fr
     for t in raw:
         if not is_cjk_bigram(t):
             n += len(t) >= 2 and not t.isdigit()
+        elif set(t) & FUNCTION_CHARS:
+            continue
         elif df.get(t, 0) > 0:
             n += soft_weight(t, df) >= STRONG_W or t in named
         else:
@@ -337,13 +372,17 @@ def soft_weight(t: str, df: dict[str, int]) -> float:
     return max(0.2, min(1.0, wordness(t, df) / 0.3))
 
 
-def phrase_terms(con: sqlite3.Connection, terms: list[str]) -> set[str]:
-    """出现在任意标题或触发词里的双字：这些短语是人或模型完整写出来的，跨词拼接的垃圾双字基本不会出现。"""
+def phrase_terms(con: sqlite3.Connection, terms: list[str], cols: tuple[str, ...] = ("title", "triggers")) -> set[str]:
+    """出现在任意标题（或触发词）里的双字：这些是完整写出来的短语，跨词拼接的垃圾双字基本不会出现。
+
+    排序用标题+触发词；拒答只用标题——模型生成的口语触发词里有泛词（`帮我`），不能拿来撑"像词"。
+    """
     if not terms:
         return set()
     marks = ",".join("?" * len(terms))
     return {t for (t,) in con.execute(
-        f"SELECT DISTINCT term FROM vcol WHERE term IN ({marks}) AND col IN ('title','triggers')", terms)}
+        f"SELECT DISTINCT term FROM vcol WHERE term IN ({marks}) AND col IN ({','.join('?' * len(cols))})",
+        terms + list(cols))}
 
 
 def is_cjk_bigram(t: str) -> bool:

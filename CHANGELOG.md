@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0 — 2026-10-10
+
+**Topic dossiers: the missing middle layer.** Retrieval was near its ceiling (synthetic: right page top-1 83%, top-10 95%); what still failed on real traffic was knowledge that lived only in daily logs (`SyGJ` in 44 logs, zero pages). `consolidate_topics.py` merges each listed topic (`90 系统文件/自动化/主题档案清单.psv`) into `02 经验与方法/主题档案/主题｜…md`: one-line summary, current state as of the latest evidence, facts with a `[[source]]` each, user corrections, timeline, open conflicts, authority pages first. Evidence is the vault only (authority pages, other pages, logs newest first, capped); frontmatter is written by the script, not the model; every wikilink must resolve or is demoted to text; a page is regenerated only when its evidence hash changes. Status stays `provisional`.
+
+Recall treats dossiers as their own tier and only boosts one when the question names its topic (title or `topic_terms`), so a 20 KB page cannot win on stray words. Refusal got stricter where dossiers made it looser: bigrams with function characters (`的了我你他她吗呢吧啊么什`) and words that only appear in model-written triggers no longer count as content; a latin term the vault has never seen (`Kubernetes`) refuses unless more than two real words match. Single CJK characters are dropped from the query.
+
+Field self-report, author vault (not in clone): 92 real router queries, blind-judged old vs new: mean 0.66 → 1.41 of 2, direct hits 14 → 52, useless 45 → 14; 16 topic questions written before the dossiers existed: 0.62 → 1.31. Synthetic held-out unchanged (88% / top-1 75% / wrong locks 0 / 0 of 6 off-topic answered). p50 ~115 ms.
+
 ## 0.7.0 — 2026-10-10
 
 Memory maintenance, measured on the router's own real traffic. 92 de-duplicated queries the author's agents actually sent in 30 days, blind-judged (old vs new shuffled, Opus scores 0/1/2): mean 0.74 → 1.26, direct hits 20 → 42, useless 44 → 18. Synthetic held-out set: right page 88% → 92%, top-1 75%, wrong locks 0, 0/6 off-topic answered; p50 ~113 ms.

@@ -174,6 +174,12 @@ Two scripts the host timer can run after the daily seal. `reconsolidate.py` read
 
 Field self-report (author vault, not in clone): on 92 real router queries from 30 days, blind-judged, mean usefulness 0.74 → 1.26 of 2.
 
+## Topic dossiers: logs → one page per recurring topic
+
+Daily logs are episodic; rule pages are curated; the questions agents repeat most land in between — a tool, a client deployment, a patch that keeps breaking. `consolidate_topics.py` merges each topic you list in `90 系统文件/自动化/主题档案清单.psv` into `02 经验与方法/主题档案/主题｜…md`, citing a source for every fact, linking authority pages instead of copying them, `provisional` until you adopt it, regenerated only when its evidence changes. Recall boosts a dossier only when the question names its topic.
+
+Field self-report (author vault, not in clone): 92 real router queries, blind-judged, mean usefulness 0.66 → 1.41 of 2 (direct hits 14 → 52).
+
 ## Not Mem0. Not a notes app.
 
 ![On clone it is the OS; after two weeks it holds your sealed days, your nouns, and your adopted methods](docs/img/fills-up.svg)
