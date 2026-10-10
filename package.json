@@ -1,7 +1,7 @@
 {
   "name": "dsh-krouter",
-  "version": "0.5.1",
-  "description": "DSH-KRouter — Agent knowledge OS. Self-evolution. Timer on by default; your vault-page API key or logged-in CLI is the key. Cursor, Codex, Claude Code, DeepSeek Harness. No vector store.",
+  "version": "0.6.0",
+  "description": "DSH-KRouter — Agent knowledge OS. Self-evolution. Timer on by default; your vault-page API key or logged-in CLI is the key. Exact alias lock, ranked L1 recall on a miss, refuses instead of guessing. Cursor, Codex, Claude Code, DeepSeek Harness. No vector store.",
   "type": "module",
   "main": "extras/dsh/lib/index.js",
   "exports": {
@@ -36,7 +36,8 @@
     "memory-system",
     "second-brain",
     "self-evolution",
-    "agent-memory"
+    "agent-memory",
+    "recall"
   ],
   "license": "MIT",
   "repository": {

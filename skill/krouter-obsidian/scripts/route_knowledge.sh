@@ -9,6 +9,13 @@ VAULT=$OBSIDIAN_VAULT
 ROUTE=${1:-}
 QUERY=${2:-}
 
+# One process instead of four: the Python twin runs lock + recall + receipt in-process.
+# KROUTER_SH_ONLY=1 keeps the pure-shell path below.
+if [ "${KROUTER_SH_ONLY:-0}" != 1 ] && command -v python3 >/dev/null 2>&1 \
+  && [ -f "$(dirname "$0")/route_knowledge.py" ]; then
+  exec python3 "$(dirname "$0")/route_knowledge.py" "$@"
+fi
+
 CANONICAL="$VAULT/Agent第二大脑.md"
 PREFERENCES="$VAULT/02 经验与方法/Agent/用户偏好与工作约束.md"
 CORRECTIONS="$VAULT/90 系统文件/Agent记忆/纠错与取代记录.md"
@@ -90,8 +97,37 @@ frontmatter_fields() {
   awk '
     NR == 1 && $0 == "---" { in_frontmatter=1; next }
     in_frontmatter && $0 == "---" { exit }
-    in_frontmatter && /^(snapshot_at|verified_at|routing_correction_recorded_at|runtime_observed_at|task_runtime_permission_status|daily_automation_cron_status|daily_automation_document_sync_status|daily_automation_sync_reproducibility_status|daily_automation_health_gate_status|semantic_retrieval_status|semantic_answers|historical_canonical_source_precision|current_canonical_routing_status|canonical_routing_map_status|canonical_routing_baseline_cases|canonical_routing_baseline_aliases|canonical_routing_increment_cases|canonical_routing_increment_aliases|canonical_routing_cases|canonical_routing_aliases|canonical_routing_verified_at|semantic_retrieval_rerun_status|knowledge_route_receipt_status|obsidian_app_version|unresolved_links_status|overall_execution_gate|status|updated):/ { print }
+    in_frontmatter && /^(snapshot_at|verified_at|routing_correction_recorded_at|runtime_observed_at|task_runtime_permission_status|daily_automation_cron_status|daily_automation_document_sync_status|daily_automation_sync_reproducibility_status|semantic_retrieval_status|semantic_answers|historical_canonical_source_precision|current_canonical_routing_status|canonical_routing_map_status|canonical_routing_baseline_cases|canonical_routing_baseline_aliases|canonical_routing_increment_cases|canonical_routing_increment_aliases|canonical_routing_cases|canonical_routing_aliases|canonical_routing_verified_at|semantic_retrieval_rerun_status|knowledge_route_receipt_status|obsidian_app_version|unresolved_links_status|overall_execution_gate|status|updated):/ { print }
   ' "$CANONICAL"
+}
+
+emit_daily_seal() {
+  # Seal date lives only on the health page. Do not copy it onto Agent第二大脑.
+  [ -f "$HEALTH" ] || { printf 'daily_seal: missing\n'; return 0; }
+  sealed=$(awk '
+    /^- 最近已封：/ {
+      if (match($0, /`[0-9]{4}-[0-9]{2}-[0-9]{2}`/)) {
+        print substr($0, RSTART + 1, RLENGTH - 2)
+        exit
+      }
+      print "none"
+      exit
+    }
+  ' "$HEALTH")
+  pending=$(awk '
+    /^- 待总结/ {
+      n = split($0, parts, "`")
+      if (n >= 2) print parts[2]
+      if (match($0, /[0-9]{4}-[0-9]{2}-[0-9]{2}/)) print substr($0, RSTART, 10)
+      exit
+    }
+  ' "$HEALTH")
+  through=$(printf '%s\n' "$pending" | awk 'NR==2{print}')
+  pending=$(printf '%s\n' "$pending" | awk 'NR==1{print}')
+  printf 'daily_seal_source: %s\n' "$HEALTH"
+  printf 'daily_seal: %s\n' "${sealed:-missing}"
+  [ -n "$through" ] && printf 'daily_seal_through: %s\n' "$through"
+  [ -n "$pending" ] && printf 'daily_seal_pending: %s\n' "$pending"
 }
 
 md_search() {
@@ -103,13 +139,34 @@ md_search() {
   fi
 }
 
+recall_search() {
+  # $1 scope (absolute). Ranked L1 recall over the vault; empty output means it could not run.
+  rel=${1#"$VAULT"}
+  rel=${rel#/}
+  lines=1
+  [ -f "$1" ] && lines=4
+  python3 "$(dirname "$0")/recall_index.py" --vault "$VAULT" --query "$QUERY" --scope "$rel" \
+    --limit 3 --lines "$lines" 2>/dev/null || true
+}
+
 bounded_search() {
   scope=$1
   [ -n "$QUERY" ] || usage
+  recalled=$(recall_search "$scope")
+  if [ -n "$recalled" ] && ! printf '%s\n' "$recalled" | grep -q '^recall: none'; then
+    emit_receipt "$scope" ranked-recall-complete
+    emit_suggestions
+    printf 'route: %s\n' "$ROUTE"
+    printf 'scope: %s\n' "$scope"
+    printf '%s\n' "$recalled"
+    printf 'open_page: only the top recall hit, and only if its how does not close the question\n'
+    return 0
+  fi
   emit_receipt "$scope" bounded-literal-search-complete
   emit_suggestions
   printf 'route: %s\n' "$ROUTE"
   printf 'scope: %s\n' "$scope"
+  [ -n "$recalled" ] && printf '%s\n' "$recalled" | grep '^recall' || true
   md_search 4 "$QUERY" "$scope" \
     | awk 'NR <= 24 { print } NR == 25 { print "[truncated after 24 lines]"; exit }' || true
 }
@@ -173,6 +230,7 @@ case "$ROUTE" in
     emit_receipt "$CANONICAL" requested-fields-returned
     printf 'route: status\nevidence_scope: selected-frontmatter-fields\nl0: how is on the lock receipt; do not ingest 下意识.md\n'
     frontmatter_fields
+    emit_daily_seal
     emit_host_action
     ;;
   preference)

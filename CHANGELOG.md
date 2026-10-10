@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 — 2026-10-10
+
+A lock miss is now answered by **L1 recall** instead of a whole-sentence literal grep. `skill/krouter-obsidian/scripts/recall_index.py` keeps a rebuildable SQLite FTS5 cache under `~/.cache/krouter/` (stdlib only, no service, no vectors): CJK bigrams + latin words, title and triggers weighted, rule pages first, `superseded` pages sink, cross-word junk bigrams filtered. Each hit prints its `how` line and the best matching line; weak overlap prints `recall: none` and must not guess. Triggers come from the alias table plus any `90 系统文件/**/下意识触发词.psv` (`rel|phrase;phrase`) and never lock.
+
+The lock got stricter: a short alias inside a longer question (`日更` in `日更能不能交给云端跑`) only ranks suggestions. `route_knowledge.sh` now execs the Python twin (one process instead of four); `KROUTER_SH_ONLY=1` keeps the shell path. Ships the L0 compiler `compile_subconscious.py` and the `status` seal lines (`daily_seal*`) from the health page.
+
+Field self-report, author vault (not in clone): 30 held-out questions written before tuning, right page 21% → 88%, top-1 0% → 75%, wrong locks 0, 0/6 off-topic answered, p50 118 ms. Clone tests: `tests/test_recall_index.py`.
+
 ## 0.5.1 — 2026-09-05
 
 Windows can run the same lock through `skill/krouter-obsidian/scripts/route_knowledge.py`; DSH on win32 prefers that file. Same-score miss across two pages prints `host_prompt` and must not guess. `sha256` falls back to Python when `shasum` is missing. One protocol, two launchers. Does not ship L0 / `下意识.md`.
