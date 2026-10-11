@@ -6,7 +6,7 @@ This is the protocol detail. README is the entry; [`PROTOCOL.md`](../PROTOCOL.md
 
 KRouter splits knowledge into **four write-up maturity layers** and **five spatial zones**. Layers answer how far this claim can be trusted. Zones answer where the file lives. Agents must read the vault through layer 4. Chat memory and vector indexes are not a second source of truth.
 
-**What this clone can prove** is three layers, do not merge. Full split: [`VERIFY.md`](VERIFY.md). (1) Implementation: `clone_25` — the lock does what this page says. (2) Comparison: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md) — after the same metadata, refuse vs unthresholded lexical TF-IDF and multilingual MiniLM. (3) Field self-report below: not in this repository.
+**What can be proved** is four layers, do not merge. Full split: [`VERIFY.md`](VERIFY.md). (1) Implementation: `clone_25` — the lock does what this page says. (2) Comparison: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md) — after the same metadata, refuse vs unthresholded lexical TF-IDF and multilingual MiniLM. (3) Field self-report below: not in this repository. (4) Real traffic, blind-judged: not in this repository.
 
 Vault folder names stay in Chinese. That is the on-disk layout.
 
@@ -123,7 +123,7 @@ A formal method may become a Skill candidate only after **at least three** verif
 
 ## L4 Retrieval
 
-The agent does not dump a full question into the vault. It sends one contiguous short noun. No vector store. No retrieval subprocess.
+The agent does not dump the vault into context. It sends a short noun, or a short question. No vector store, no service: one Python process and a rebuildable SQLite FTS5 cache (`~/.cache/krouter/`, stdlib).
 
 ### Routes
 
@@ -133,26 +133,27 @@ The agent does not dump a full question into the vault. It sends one contiguous 
 | `preference` | Host preferences and constraints |
 | `correction` | Corrections and `supersedes` |
 | `memory` | High-trust memory index |
-| `project` | Literal search under `01 项目` |
-| `search` | Alias hit first; otherwise vault-wide literal search |
+| `project` | Alias hit first; otherwise L1 recall under `01 项目`, widening to the vault if nothing there covers it |
+| `search` | Alias hit first; otherwise vault-wide L1 recall |
 | `suggest` | Nearest aliases on a miss. Hints only; not a hit |
 
-The host sets `OBSIDIAN_VAULT`.
+`preference`, `correction` and `memory` read one page; when that page has no answer they widen to the vault and print `scope_widened: vault`. The host sets `OBSIDIAN_VAULT`.
 
 ### Alias scoring
 
 `canonical_lookup.py` against `canonical_sources.psv`:
 
 1. Normalized alias equals query: highest.
-2. Alias is a substring of the query: next.
+2. Alias is a substring of the query and carries it (alias ≥ 4 characters, or at least half the query): next. A shorter alias inside a longer question only ranks suggestions.
 3. Query is a substring of the alias and length ≥ 2: next.
 4. Strip particles `的了着过地得` and punctuation before compare.
 5. Tied scores resolve to the lowest id only when they point at the same file; otherwise no hit.
-6. If the whole string misses, sum scores over whitespace tokens and use the same tie-break.
+6. If the whole string misses, sum scores over whitespace tokens — whole-alias hits only; a token that is just a fragment of an alias does not count — and use the same tie-break.
+7. A source whose `status` is superseded / retired / rejected / deprecated / archived, or that is outside `valid_from` / `invalid_at`, is out of force: no hit, no L0 row.
 
-Hit: receipt `canonical_match: true`. The agent **must** open and cite `canonical_source`. Do not substitute the preferences note or another nearby page. If the mapped page is `candidate` or `rejected`, still read it.
+Hit: receipt `canonical_match: true`. The agent **must** open and cite `canonical_source`. Do not substitute the preferences note or another nearby page. If the mapped page is `candidate`, still read it. A rejected or superseded page never locks (rule 7).
 
-Miss: literal `rg` in that route’s scope. Skip `Clippings/`, backups, and cold mirrors.
+Miss: **L1 recall** (`recall_index.py`). Ranked over the route’s scope; rule pages first, a topic dossier only when the question names its topic, superseded pages sunk; each hit prints its `how`, the best matching line, and an `answer:` card when one fits the question. Weak overlap prints `recall: none` — then, and only then, literal `rg` in that scope. Skip `Clippings/`, backups, and cold mirrors. Recall never claims a page; only the lock does.
 
 ### Receipt
 
@@ -187,7 +188,7 @@ New semantic search, vector layers, graph databases, or auto-injection must firs
 
 ---
 
-## What has been run (three layers)
+## What has been run (four layers)
 
 Do not merge. [`VERIFY.md`](VERIFY.md).
 
@@ -223,6 +224,10 @@ Full protocol: [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md). Fixture: [`tests/fi
 These numbers are from the author’s private vault. **This repository does not contain the materials to reproduce them.** They are a self-report, not a receipt. To measure *your* table, run `verify_canonical_map.py` on *your* files. To count *your* sealed days, run `verify_sealed_days.py` on *your* `05 时间日志/`. Neither replays the author’s 26/26 or 72 days.
 
 Home page `verified_at: 2026-08-21`.
+
+### 4. Real traffic (not in this clone)
+
+The questions the author’s agents actually sent the router (92 de-duplicated queries, 30 days), old router vs new, outputs shuffled and blind-judged 0 / 1 / 2 by an LLM: mean usefulness 0.62 → 1.47 of 2 for ≤ 0.5.1 vs 0.9.0 in one run. Method, per-release runs, and what is still failing: [`VERIFY.md`](VERIFY.md#layer-4--real-traffic-blind-judged-not-in-this-clone).
 
 | Result | Detail |
 |---|---|

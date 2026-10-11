@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1 — 2026-10-11
+
+Docs only. The README had grown one appended section per release, each with its own numbers from a different run. Now: the front page states what the product does today (lock, then ranked recall with precomputed answers, refusing instead of guessing; topics and answer cards built overnight) and quotes **one** same-run number — 92 real router queries, blind-judged, ≤ 0.5.1 vs 0.9.0: mean usefulness 0.62 → 1.47 of 2, direct answers 14 → 55, useless 49 → 12. The four after-the-lock features are one section. Evidence is four layers: `docs/VERIFY.md` adds layer 4 (real traffic) with the method, every per-release run, the held-out synthetic set, the judge's noise (±0.05), and what still fails. `PROTOCOL.md` and `docs/ARCHITECTURE.md` now describe the miss path the code runs, and drop "a rejected page still locks", which stopped being true in 0.7.0.
+
 ## 0.9.0 — 2026-10-11
 
 **Answer cards (sleep-time compute).** The router used to stop at "here is the right page": the one-line `how` was just the page's first sentence (`你的层（全局结构）`), so an agent still had to open the page. Real traffic is predictable — half the calls repeat an earlier question — so `answer_cards.py` precomputes, for every rule and topic page, 3–5 `question → one-line answer` cards taken only from that page (447 cards on 104 pages in the author vault). Cards live in `90 系统文件/自动化/下意识问答.jsonl` (no source page is edited), carry the page's content hash, and are rewritten only when the page changes; a card whose page changed is ignored until then. Card questions also act as recall triggers, and the best-matching card on each hit prints as `answer:`.
