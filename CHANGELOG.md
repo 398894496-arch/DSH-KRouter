@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.1 — 2026-10-11
+
+- **`first_run.sh` no longer writes the host's query log.** The demo routes run on the bundled template, not on the host's traffic, yet each run appended its queries (`home`, `correction`, `memory` …) to `~/.local/state/krouter/queries.jsonl`, which the nightly learning reads. 0.10.0 isolated pytest; the demo script, also run by `verify_clean.sh`, slipped past. It now sets `KROUTER_NO_QUERY_LOG=1`; a test runs it and checks that no log appears. Found while rolling 0.10.0 out on the author's machine.
+
 ## 0.10.0 — 2026-10-11
 
 Third outside review (two parts: a re-review of 0.9.3, and "would a stranger's agent recommend this"). Every finding was reproduced first; one proposed fix was measured and replaced (below).

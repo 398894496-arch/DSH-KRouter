@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+# 演示跑在模板上，不是宿主的真实流量：不写查询日志（夜间学习读它）
+export KROUTER_NO_QUERY_LOG=1
 
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 # Always the bundled template unless the host names another vault for this script.
