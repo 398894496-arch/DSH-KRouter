@@ -9,3 +9,14 @@ This repo stays a deterministic router. Do not add a vector index, embedding dae
 Before **upload** (`git push` / a release): commit, then `./scripts/verify_clean.sh`. That script unpacks `git archive HEAD` into a temp dir — uncommitted and untracked files are not there. A green pytest in a dirty worktree is not this check. v0.4.1 shipped `verify_canonical_map.py` against helpers that only existed uncommitted.
 
 A miss may print alias **suggestions**. Those are hints to add or retry a noun. They are not `canonical_match: true`.
+
+## Changes to ranking, refusal or card checks
+
+A change to a scoring constant (`SCORE_MIN`, `TITLE_HIT`, `TOPIC_*`, `CARD_MIN`, `ALIEN_MIN`, `ANSWER_SUPPORT_MIN`, …) or to a refusal / card check ships with numbers, in the PR description, before and after, on the same run:
+
+- `tests/test_recall_bench.py` on the template (in CI): every off-topic and half-off-topic question refused; the gold-page count may rise, never fall. Raise `POS_TOP1_MIN` when it rises; never lower it to make a change pass.
+- If you have a vault of your own: your held-out questions — written before you tuned, never used to tune — not the questions you tuned on.
+
+Tests and evaluation runs must not write the host's query log (`~/.local/state/krouter/queries.jsonl`): it is what the nightly learning reads, so test questions in it become learned triggers, and held-out questions in it stop being held out. `tests/conftest.py` points `KROUTER_STATE_DIR` and `KROUTER_CACHE_DIR` at a temp dir; evaluation scripts set `KROUTER_NO_QUERY_LOG=1`.
+
+`main` takes reviewed changes; hosts should pin a release tag.
