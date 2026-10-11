@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0 — 2026-10-11
+
+**Answer cards (sleep-time compute).** The router used to stop at "here is the right page": the one-line `how` was just the page's first sentence (`你的层（全局结构）`), so an agent still had to open the page. Real traffic is predictable — half the calls repeat an earlier question — so `answer_cards.py` precomputes, for every rule and topic page, 3–5 `question → one-line answer` cards taken only from that page (447 cards on 104 pages in the author vault). Cards live in `90 系统文件/自动化/下意识问答.jsonl` (no source page is edited), carry the page's content hash, and are rewritten only when the page changes; a card whose page changed is ignored until then. Card questions also act as recall triggers, and the best-matching card on each hit prints as `answer:`.
+
+One-concept queries (`DSH`, `发版`, `grok-fixed`; not bare numbers) skip the two-content-word gate, and a query that is a page's name (title, file name, or `topic_terms`) doubles that page; a named dossier now outranks same-named scattered rule pages. Speed: the per-query freshness walk no longer builds a `pathlib` object per file — recall 112 → 30 ms in-process, router p50 ~105–111 ms.
+
+Field self-report, author vault (not in clone): 92 real router queries, blind-judged 0.8.0 vs 0.9.0: mean 1.34 → 1.43 of 2, direct hits 46 → 52, useless 15 → 12; 40 of 92 now carry an `answer:` line. Synthetic: top-1 82% → 85%, held-out right page 88% → 92%, wrong locks 0, off-topic unchanged.
+
 ## 0.8.0 — 2026-10-10
 
 **Topic dossiers: the missing middle layer.** Retrieval was near its ceiling (synthetic: right page top-1 83%, top-10 95%); what still failed on real traffic was knowledge that lived only in daily logs (`SyGJ` in 44 logs, zero pages). `consolidate_topics.py` merges each listed topic (`90 系统文件/自动化/主题档案清单.psv`) into `02 经验与方法/主题档案/主题｜…md`: one-line summary, current state as of the latest evidence, facts with a `[[source]]` each, user corrections, timeline, open conflicts, authority pages first. Evidence is the vault only (authority pages, other pages, logs newest first, capped); frontmatter is written by the script, not the model; every wikilink must resolve or is demoted to text; a page is regenerated only when its evidence hash changes. Status stays `provisional`.

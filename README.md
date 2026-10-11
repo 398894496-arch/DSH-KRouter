@@ -180,6 +180,10 @@ Daily logs are episodic; rule pages are curated; the questions agents repeat mos
 
 Field self-report (author vault, not in clone): 92 real router queries, blind-judged, mean usefulness 0.66 → 1.41 of 2 (direct hits 14 → 52).
 
+## Answer cards: precomputed answers for predictable questions
+
+Half of real router calls repeat an earlier question. `answer_cards.py` writes, overnight, 3–5 `question → one-line answer` cards per rule or topic page, taken only from that page and keyed to its content hash, so a changed page drops its stale cards until they are rewritten. The router prints the best-matching card as `answer:` next to the page, so the agent usually does not need to open it.
+
 ## Not Mem0. Not a notes app.
 
 ![On clone it is the OS; after two weeks it holds your sealed days, your nouns, and your adopted methods](docs/img/fills-up.svg)
