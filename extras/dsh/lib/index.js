@@ -62,7 +62,7 @@ export function apply(ctx, config = {}) {
   registerKrouterTools(ctx, config, defineTool);
   if (!keyPresent()) {
     console.error(
-      "DSH-KRouter HOST ACTION: login a Claudian-class CLI (grok / official Codex / claude) or put *_API_KEY on the vault page / ~/.dsh-krouter-keys.env. Chat login is not the timer. Run ./scripts/install.sh to graft the writer.",
+      "KRouter HOST ACTION: login a Claudian-class CLI (grok / official Codex / claude) or put *_API_KEY on the vault page / ~/.dsh-krouter-keys.env. Chat login is not the timer. Run ./scripts/install.sh to graft the writer.",
     );
   }
 }

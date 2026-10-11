@@ -9,7 +9,7 @@ RESOLVE="$DIR/resolve.py"
 BUNDLED_ROUTER="$ROOT/skill/krouter-obsidian/scripts/route_knowledge.sh"
 
 if [ -z "${OBSIDIAN_VAULT:-}" ]; then
-  printf '%s\n' "DSH-KRouter: OBSIDIAN_VAULT is not set. Timer on; distill skipped." >&2
+  printf '%s\n' "KRouter: OBSIDIAN_VAULT is not set. Timer on; distill skipped." >&2
   exit 0
 fi
 
@@ -37,7 +37,7 @@ python3 "$RESOLVE" --exec || rc=$?
 if [ "${KROUTER_NIGHTLY:-1}" != 0 ]; then
   SK=$(dirname "$KROUTER_ROUTER")
   [ -f "$SK/nightly.py" ] || SK="$ROOT/skill/krouter-obsidian/scripts"
-  python3 "$SK/nightly.py" --vault "$OBSIDIAN_VAULT" >&2 || printf '%s\n' "DSH-KRouter: nightly runner failed (rc=$?)" >&2
+  python3 "$SK/nightly.py" --vault "$OBSIDIAN_VAULT" >&2 || printf '%s\n' "KRouter: nightly runner failed (rc=$?)" >&2
 fi
 
 exit "$rc"

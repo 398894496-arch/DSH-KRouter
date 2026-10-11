@@ -1,7 +1,7 @@
 {
   "name": "dsh-krouter",
-  "version": "0.11.3",
-  "description": "DSH-KRouter DSH socket (same product as the repo root: router + writer). Not a second project.",
+  "version": "0.12.0",
+  "description": "KRouter DSH socket (same product as the repo root: router + writer). Not a second project.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -42,7 +42,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/398894496-arch/DSH-KRouter.git",
+    "url": "https://github.com/398894496-arch/KRouter.git",
     "directory": "extras/dsh"
   }
 }

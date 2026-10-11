@@ -160,7 +160,7 @@ def compile_vault(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Compile DSH-KRouter L0 下意识 index")
+    parser = argparse.ArgumentParser(description="Compile KRouter L0 下意识 index")
     parser.add_argument("--vault", required=True)
     parser.add_argument("--map", default="")
     parser.add_argument("--out", default="")

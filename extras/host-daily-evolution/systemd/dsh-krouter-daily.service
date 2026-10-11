@@ -1,5 +1,5 @@
 [Unit]
-Description=DSH-KRouter daily evolution (seal yesterday, then nightly upkeep)
+Description=KRouter daily evolution (seal yesterday, then nightly upkeep)
 
 [Service]
 Type=oneshot

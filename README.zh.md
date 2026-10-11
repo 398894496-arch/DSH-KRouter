@@ -1,19 +1,21 @@
-# DSH-KRouter
+# KRouter
+
+*原名 **DSH-KRouter**：它并不只服务 DeepSeek Harness，所以改了名。旧链接、旧的 clone 地址和旧的一行安装命令都还能用（自动跳转）。*
 
 **给你所有编程 agent 共用的第二大脑——不用设置，不用维护。** 每天夜里，它把前一天封账写进一座 [Obsidian](https://obsidian.md) 库（就是普通的 Markdown 文件夹），把值得留下的蒸馏出来。第二天任何 agent——Cursor、Codex、Claude Code、DeepSeek Harness——来问，拿到的是**那一页加回执**；库里没有，就直说不知道。不用向量库，不用跑服务。中英文都行；macOS、Linux、Windows 都能用。
 
-[![ci](https://github.com/398894496-arch/DSH-KRouter/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/DSH-KRouter/actions/workflows/ci.yml) [![release](https://img.shields.io/github/v/release/398894496-arch/DSH-KRouter)](https://github.com/398894496-arch/DSH-KRouter/releases/latest) [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE) · 英文主页：[`README.md`](README.md)
+[![ci](https://github.com/398894496-arch/KRouter/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/KRouter/actions/workflows/ci.yml) [![release](https://img.shields.io/github/v/release/398894496-arch/KRouter)](https://github.com/398894496-arch/KRouter/releases/latest) [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE) · 英文主页：[`README.md`](README.md)
 
 ## 安装 —— 一行，什么都不用懂
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bootstrap.sh | sh
+curl -fsSL https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.sh | sh
 ```
 
 Windows（PowerShell，不需要管理员）：
 
 ```powershell
-irm https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bootstrap.ps1 | iex
+irm https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.ps1 | iex
 ```
 
 它会下载最新发布版（tag，永远不是 `main`），先按 release 里的 `SHA256SUMS` 核对 SHA-256，再在 `文稿/第二大脑` 建一座库（系统语言是中文就用中文模板），装好路由器和 agent 规则，并在 Obsidian 里打开这座库。然后它会**先问你**要不要装夜间任务，用一句话说清：会用哪个 CLI、以什么权限运行，每晚会发出多少页、多少 token——数字来自在新库上的一次预演。没有终端可问就不装；`--timer` 表示事先同意，`--no-timer` 表示不要。想固定在某个版本：`… | KROUTER_TAG=v0.11.2 sh`（Windows 先设 `$env:KROUTER_TAG`）。已有的库（`… | sh -s -- --vault ~/MyVault`）一个文件都不动，只补缺失的骨架文件。同一行再跑一次就是升级。唯一的前提是 Python 3（Windows 脚本缺 Python 时会用 winget 自动装）。最后一行会告诉你还剩哪一步：登录一个 AI 编程工具，或者贴一个 API key。之后不需要维护任何东西——锁名词只是可选的快捷方式，不是前提；召回自己就能按页面标题和正文答，答不了就直说，不硬猜。哪天晚上的活没干成，会弹桌面通知说明原因。数据去向、CLI 写入器能看到什么：[`SECURITY.md`](SECURITY.md)。
@@ -22,6 +24,7 @@ irm https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bo
 
 - **查询从不外发。** 查找全在本地：一个 SQLite 全文缓存加 Python 标准库，每次约 110 ms。
 - **夜间任务会把库里的文字发给一个模型**——你登录的那个 AI 编程工具（花你的订阅额度），或你给的 API key。发出去的是：昨天的日志（用来蒸馏）、规则页和主题页（用来预先算答案）、和各个主题相关的片段、路由器没答好的问题。`extras/host-daily-evolution/run.sh --dry-run` 会先列出要发什么、多少 token，什么都不发。`KROUTER_NIGHTLY=0` 关掉夜间步骤。
+- **夜间写手受限运行；API key 通道在本机什么都不运行。** grok 在内核沙箱里跑（只能碰知识库和路由器）；claude 的工具被限定为读写知识库、运行路由器；Codex 能读你的账户，其他 CLI 什么都能碰——安装时的提示会说清你选的是哪种。细节：[`SECURITY.md`](SECURITY.md)。
 - **key 从不放在库里，也从不外发、从不打印。** 贴在钥匙页上的 key 下次运行会挪进 `~/.dsh-krouter-keys.env`（权限 600）。名字或标记表明是机密的页（凭据、密钥、credential、secret、password，或 `secret: true`）从不外发、从不引用；其他地方像 key 的文字一律显示为 `<redacted>`。
 - **花费**：自带模板第一晚约 4,000 token；有一百来个规则页和主题页的库约 16 万 token。之后每晚只重做改过的页。用订阅的 CLI，花的是额度不是钱。
 
@@ -122,8 +125,8 @@ python3 -m pytest -q tests/test_lock_vs_neighbor.py
 这段只证明锁能在**本仓 `template/`** 上打到 `Q01`，不是在你已有的库上。不蒸馏昨天。不需要 GPU、Docker、嵌入进程。`first_run.sh` 故意不继承 `OBSIDIAN_VAULT`；要换一棵树，设 `KROUTER_FIRST_RUN_VAULT`。
 
 ```bash
-git clone https://github.com/398894496-arch/DSH-KRouter.git
-cd DSH-KRouter
+git clone https://github.com/398894496-arch/KRouter.git
+cd KRouter
 python3 -m venv .venv && . .venv/bin/activate
 python3 -m pip install -r requirements.txt
 ./scripts/first_run.sh
@@ -193,11 +196,11 @@ export OBSIDIAN_VAULT=/path/to/YourVault
 | Cursor | `install.sh` → `extras/cursor/krouter-obsidian.mdc` |
 | Codex | `extras/codex/AGENTS.snippet.md` |
 | Claude Code | `extras/claude-code/CLAUDE.snippet.md` |
-| DeepSeek Harness | DSH 插座。克隆后：`dsh plugin add /path/to/this/repo`。目录：`dsh plugin --profile web add github:398894496-arch/DSH-KRouter`。只读工具，含 **correction**；`memory` 是库内路由，不是聊天记忆。卸插件不删库 |
+| DeepSeek Harness | DSH 插座。克隆后：`dsh plugin add /path/to/this/repo`。目录：`dsh plugin --profile web add github:398894496-arch/KRouter`。只读工具，含 **correction**；`memory` 是库内路由，不是聊天记忆。卸插件不删库 |
 
 ```bash
 node extras/dsh/test-bridge.mjs
-dsh plugin --profile web add github:398894496-arch/DSH-KRouter
+dsh plugin --profile web add github:398894496-arch/KRouter
 ```
 
 需要 `python3`、`rg`、PyYAML。测试：`python3 -m pip install -r requirements-dev.txt && python3 -m pytest -q`。

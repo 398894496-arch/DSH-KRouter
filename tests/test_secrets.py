@@ -182,3 +182,44 @@ def test_hashes_in_notes_survive_redaction():
                  "integrity sha512-y77VWOwb/Th4MabcdEFGH1234567yxZfYWe5+K+Pg=="):
         assert redact(text) == text
     assert "a1b2c3d4a1b2" not in redact("Together 密钥：" + "a1b2c3d4" * 8)  # labelled hex is still a key
+
+
+def test_two_keys_on_one_line_are_both_kept(keyed_vault, tmp_path, monkeypatch):
+    sys.path.insert(0, str(SCRIPTS))
+    import llm
+
+    keys = tmp_path / "keys.env"
+    monkeypatch.setenv("KROUTER_KEYS_ENV", str(keys))
+    page = keyed_vault / KEY_PAGE
+    other = "Zy9xWv8uTs7rQp6oNm5lKj4i"
+    page.write_text(f"DeepSeek: sk-{BARE} OpenAI: sk-proj-{other}\n", encoding="utf-8")
+    assert set(llm.move_page_keys(keyed_vault)) == {"DEEPSEEK_API_KEY", "OPENAI_API_KEY"}
+    text = keys.read_text(encoding="utf-8")
+    assert f"DEEPSEEK_API_KEY=sk-{BARE}" in text and f"OPENAI_API_KEY=sk-proj-{other}" in text
+    assert BARE not in page.read_text(encoding="utf-8") and other not in page.read_text(encoding="utf-8")
+    assert "DEEPSEEK_API_KEY" in page.read_text(encoding="utf-8") and "OPENAI_API_KEY" in page.read_text(encoding="utf-8")
+
+
+PATHS = [
+    "报告在 /Users/me/Documents/2026Q3Report2026Final.csv",
+    "见 https://docs.example.com/guide/v2/Install2026Guide",
+    "备份 s3://bucket-a/2026Backup2026Daily/x",
+    "gs://b/Model2026Weights2026v3",
+    "~/proj/Release2026Notes2026v2",
+]
+
+
+@pytest.mark.parametrize("text", PATHS)
+def test_paths_and_urls_survive_redaction(text):
+    sys.path.insert(0, str(SCRIPTS))
+    from krouter_redact import redact
+
+    assert redact(text) == text
+
+
+def test_keys_inside_urls_are_still_masked():
+    sys.path.insert(0, str(SCRIPTS))
+    from krouter_redact import redact
+
+    assert BARE not in redact(f"https://api.x.com/v1?key={BARE}")
+    assert "sk-abcdefghijklmnop1234" not in redact("https://hooks.example.com/sk-abcdefghijklmnop1234")

@@ -42,9 +42,12 @@ MSG = {
         "py_old": "需要 Python 3.9 或更新版本，当前是 {v}。",
         "ask": "要开启每晚自动整理吗？开启后每天 09:10：{lane}整理昨天的记录{perm}；并把 {pages} 页规则页和主题页（约 {tokens} token）发给它，预先算好常见问题的答案。之后随时可以用 uninstall.sh 关掉。开启？[y/N] ",
         "lane_cli": "用 {cli} ", "lane_key": "用你的 API key ", "lane_none": "（等你登录一个 AI 编程工具或贴好 key 之后）",
-        "perm_claude": "（它会在知识库目录里以跳过权限确认的模式运行，能读写这个库里的任何文件）",
-        "perm_grok": "（它会在知识库目录里以跳过权限确认的模式运行，能读写这个库里的任何文件）",
-        "perm_codex": "（Codex 在只能写这个库的沙箱里运行）", "perm_key": "（直接调用 API，不运行任何本地程序）", "perm_other": "（在知识库目录里运行）",
+        "perm_grok": "（在内核沙箱里运行：只能读写这个知识库、运行路由器，读不到你账户里的其他文件，包括 key 文件）",
+        "perm_claude": "（只允许读写这个知识库、运行路由器，不能执行别的命令，也不能上网抓网页；但没有内核沙箱）",
+        "perm_codex": "（在 Codex 沙箱里运行：只能写这个知识库，但读得到你账户里的文件，包括 key 文件）",
+        "perm_key": "（直接调用 API，不在本机运行任何 agent）",
+        "perm_other": "（不受限制：它以你的身份运行，能读写你账户里的任何文件）",
+        "prefer_key": "更稳妥的是用 API key：它直接调用接口，不在本机运行任何 agent（把 key 贴到知识库的「自进化钥匙」页就行）。\n",
         "timer_off": "没有开启每晚自动整理。想开的时候运行：{cmd}",
         "timer_skip_noninteractive": "不是在交互终端里运行，所以没有开启每晚自动整理（需要你明确同意）。想开的时候运行：{cmd}",
     },
@@ -58,9 +61,12 @@ MSG = {
         "py_old": "Python 3.9 or newer is required; this is {v}.",
         "ask": "Turn on the nightly upkeep? Every day at 09:10 it will {lane}distill yesterday{perm}, and send {pages} rule and topic pages (about {tokens} tokens) to it to precompute answers. uninstall.sh turns it off any time. Turn on? [y/N] ",
         "lane_cli": "use {cli} to ", "lane_key": "use your API key to ", "lane_none": "(once you log in to an AI coding CLI or paste a key) ",
-        "perm_claude": " (it runs in the vault folder with permission prompts skipped, so it can read and write any file in the vault)",
-        "perm_grok": " (it runs in the vault folder with permission prompts skipped, so it can read and write any file in the vault)",
-        "perm_codex": " (Codex runs in a sandbox that can write only the vault)", "perm_key": " (a direct API call; no local program runs)", "perm_other": " (it runs in the vault folder)",
+        "perm_grok": " (in a kernel sandbox: it can read and write only this vault and run the router; nothing else in your account, keys file included)",
+        "perm_claude": " (allowed only to read and write this vault and run the router: no other command, no web fetch; but no kernel sandbox)",
+        "perm_codex": " (in Codex's sandbox: it writes only this vault but can read files in your account, keys file included)",
+        "perm_key": " (a direct API call; no agent runs on this machine)",
+        "perm_other": " (unconfined: it runs as you and can read and write any file in your account)",
+        "prefer_key": "The safer choice is an API key: a direct API call, no agent runs on this machine (paste it on the vault's key page).\n",
         "timer_off": "Nightly upkeep is off. To turn it on later: {cmd}",
         "timer_skip_noninteractive": "Not run from an interactive terminal, so the nightly upkeep was not turned on (it needs your yes). To turn it on: {cmd}",
     },
@@ -249,7 +255,8 @@ def decide_timer(args: argparse.Namespace, vault: Path, t: dict) -> tuple[bool, 
     kind, cli, pages, tokens = nightly_preview(vault)
     lane = t["lane_cli"].format(cli=cli) if kind not in ("", "key") else (t["lane_key"] if kind == "key" else t["lane_none"])
     perm = t.get(f"perm_{kind}", t["perm_other"]) if kind else ""
-    answer = ask_tty(t["ask"].format(lane=lane, perm=perm, pages=pages, tokens=tokens))
+    prompt = (t["prefer_key"] if kind not in ("", "key") else "") + t["ask"].format(lane=lane, perm=perm, pages=pages, tokens=tokens)
+    answer = ask_tty(prompt)
     if answer is None:
         return False, False
     return answer.strip().lower() in {"y", "yes", "是", "好", "开"}, True

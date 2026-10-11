@@ -68,7 +68,7 @@ def _load_lane():
             if str(scripts) not in sys.path:
                 sys.path.append(str(scripts))
             return mod
-    raise SystemExit("DSH-KRouter: skill/krouter-obsidian/scripts/llm.py not found")
+    raise SystemExit("KRouter: skill/krouter-obsidian/scripts/llm.py not found")
 
 
 _lane = _load_lane()
@@ -195,8 +195,8 @@ def probe_key(name: str, key: str, extra: dict[str, str] | None = None) -> str:
             return "unprobed"
         headers = {"Authorization": f"Bearer {key}", "Accept": "application/json"}
         if name == "OPENROUTER_API_KEY":
-            headers["HTTP-Referer"] = "https://github.com/398894496-arch/DSH-KRouter"
-            headers["X-Title"] = "DSH-KRouter"
+            headers["HTTP-Referer"] = "https://github.com/398894496-arch/KRouter"
+            headers["X-Title"] = "KRouter"
     req = urllib.request.Request(url, headers=headers, method="GET")
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
@@ -320,12 +320,61 @@ def write_runtime_prompt(base: Path, vault: Path, router: Path) -> Path:
         + zone_note(vault)
         + "---\n\n"
     )
-    dest = Path(__file__).resolve().parent / ".runtime-prompt.md"
+    # 放在库里：grok 的内核沙箱只许读库目录，库外的提示文件它读不到。`.krouter/` 是点目录，不进索引，跑完就删
+    dest = vault / ".krouter" / "runtime-prompt.md"
+    dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(header + base.read_text(encoding="utf-8"), encoding="utf-8")
     return dest
 
 
-def writer_invoke(writer: str, prompt: Path, vault: Path) -> list[str]:
+GROK_PROFILE = "krouter"
+GROK_MARK = "# krouter: written by KRouter for the nightly writer; regenerated every run"
+
+
+def write_grok_sandbox(vault: Path, router: Path) -> None:
+    """A kernel-enforced grok sandbox for the writer: read and write the vault, read the router, write its cache
+    and state; nothing else in the account — no keys file, no ~/.ssh, no browser profiles. Extends grok's
+    built-in `strict` profile (read CWD + system paths, write CWD + temp). Other profiles in the file are kept."""
+    home = Path.home()
+    cache = Path(os.environ.get("KROUTER_CACHE_DIR") or home / ".cache" / "krouter")
+    state = Path(os.environ.get("KROUTER_STATE_DIR") or home / ".local" / "state" / "krouter")
+    for d in (cache, state):
+        d.mkdir(parents=True, exist_ok=True)
+    skill = router.resolve().parent
+    block = "\n".join([
+        GROK_MARK, f"[profiles.{GROK_PROFILE}]", 'extends = "strict"',
+        "read_only = " + json.dumps(sorted({skill.as_posix(), skill.parent.as_posix()})),
+        "read_write = " + json.dumps([cache.as_posix(), state.as_posix()]), "",
+    ])
+    path = vault / ".grok" / "sandbox.toml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    kept, skipping = [], False
+    for line in lines:  # drop our previous block (marker line through the next blank line), keep everything else
+        if line == GROK_MARK:
+            skipping = True
+            continue
+        if skipping:
+            skipping = bool(line.strip())
+            continue
+        kept.append(line)
+    old = "\n".join(kept).rstrip()
+    path.write_text((old + "\n\n" if old else "") + block, encoding="utf-8")
+
+
+def claude_allow(vault: Path, router: Path) -> list[str]:
+    """Claude Code has no kernel sandbox here, so its tools are allow-listed instead: read and edit only inside
+    the vault, run only the router, no other shell command, no web fetch; anything else is refused (`dontAsk`)."""
+    v = str(vault).rstrip("/")
+    r = str(router)
+    return [f"Read(/{v}/**)", f"Edit(/{v}/**)", "Glob", "Grep", f"Bash(sh {r}:*)", f"Bash({r}:*)"]
+
+
+def writer_invoke(writer: str, prompt: Path, vault: Path, router: Path | None = None) -> list[str]:
+    """argv for the CLI writer. grok runs in a kernel sandbox; claude with an allow-list and no other shell;
+    codex in its workspace-write sandbox (writes the vault only, can still read the account); other harnesses
+    have no confinement KRouter can set, and the install prompt says so."""
+    router = router or Path(os.environ.get("KROUTER_ROUTER") or timer_router())
     kind, _ = writer_probe_argv(writer)
     vault_s = str(vault)
     prompt_s = str(prompt)
@@ -342,7 +391,7 @@ def writer_invoke(writer: str, prompt: Path, vault: Path) -> list[str]:
                 "--permission-mode",
                 "bypassPermissions",
                 "--sandbox",
-                "off",
+                GROK_PROFILE,
                 "--max-turns",
                 "32",
                 "--no-alt-screen",
@@ -365,11 +414,11 @@ def writer_invoke(writer: str, prompt: Path, vault: Path) -> list[str]:
             "-",
         ]
     if kind == "claude":
-        argv = [writer, "--print", "--dangerously-skip-permissions", "--add-dir", vault_s]
+        argv = [writer, "--print", "--no-session-persistence", "--permission-mode", "dontAsk",
+                "--tools", "Read,Edit,Write,Glob,Grep,Bash", "--add-dir", vault_s]
         if flagship:
             argv.extend(["--model", flagship])
-        argv.append(prompt.read_text(encoding="utf-8"))
-        return argv
+        return argv + ["--allowedTools", *claude_allow(vault, router)]  # prompt on stdin
     if kind == "opencode":
         return [writer, "run", "--auto", "--dir", vault_s, prompt.read_text(encoding="utf-8")]
     if kind in {"kimi", "pi", "vibe", "antigravity", "cursor"}:
@@ -438,12 +487,12 @@ def distill_gate(payload: dict[str, str]) -> tuple[bool, int, str]:
         return (
             False,
             0,
-            "DSH-KRouter: timer on; key probe network failed. Distill skipped.",
+            "KRouter: timer on; key probe network failed. Distill skipped.",
         )
     return (
         False,
         0,
-        f"DSH-KRouter: timer on; distill skipped. "
+        f"KRouter: timer on; distill skipped. "
         f"Log in grok/codex/claude once, or put your *_API_KEY on {page} "
         f"or in {keys_env_path()}.",
     )
@@ -463,11 +512,13 @@ def apply_live_env(vault: Path, probe: bool) -> tuple[dict[str, str], dict[str, 
 def run_cli_writer(writer: str, vault: Path, router: Path) -> int:
     base = Path(__file__).resolve().parent / "PROMPT.md"
     prompt = write_runtime_prompt(base, vault, router)
-    argv = writer_invoke(writer, prompt, vault)
     kind = writer_probe_argv(writer)[0]
+    if kind == "grok":
+        write_grok_sandbox(vault, router)
+    argv = writer_invoke(writer, prompt, vault, router)
     stdin = subprocess.DEVNULL
     handle = None
-    if kind == "codex":
+    if kind in ("codex", "claude"):
         handle = open(prompt, "rb")
         stdin = handle
     try:
@@ -478,6 +529,7 @@ def run_cli_writer(writer: str, vault: Path, router: Path) -> int:
     finally:
         if handle is not None:
             handle.close()
+        prompt.unlink(missing_ok=True)
     from api_writer import target_day, write_pending
 
     day = target_day()
@@ -488,7 +540,7 @@ def run_cli_writer(writer: str, vault: Path, router: Path) -> int:
             f"CLI writer {kind} left no seal (exit {code}). Timer on; left to-summarize.",
         )
         print(
-            "DSH-KRouter: CLI writer left a to-summarize note.",
+            "KRouter: CLI writer left a to-summarize note.",
             file=sys.stderr,
         )
     return 0
@@ -525,7 +577,7 @@ def exec_distill(probe: bool) -> int:
         return run_cli_writer(writer, vault, router)
     notify.send(notify.NO_WRITER, kind="no-writer")
     print(
-        f"DSH-KRouter: timer on; distill skipped. "
+        f"KRouter: timer on; distill skipped. "
         f"Put *_API_KEY on {payload.get('key_page', 'the vault key page')} "
         f"or log in grok/codex/claude (Claudian-class subscription).",
         file=sys.stderr,
@@ -534,7 +586,7 @@ def exec_distill(probe: bool) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Resolve DSH-KRouter self-evolution key and writer")
+    parser = argparse.ArgumentParser(description="Resolve KRouter self-evolution key and writer")
     parser.add_argument("--exec", action="store_true", help="timer entry: detect, then run the writer")
     parser.add_argument("--status", action="store_true", help="print JSON status, no secrets")
     parser.add_argument("--sync-health", action="store_true", help="patch the health page from local detect")

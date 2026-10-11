@@ -40,7 +40,7 @@ KNOWN = re.compile(
     r"|hf_[A-Za-z0-9]{20,}|xai-[A-Za-z0-9]{20,}|gsk_[A-Za-z0-9]{20,}|pplx-[A-Za-z0-9]{20,}|nvapi-[A-Za-z0-9_-]{20,}"
     r"|csk-[A-Za-z0-9]{20,}|fw_[A-Za-z0-9]{16,})")
 BEARER = re.compile(r"(?i)\b(bearer\s+)[A-Za-z0-9._~+/=-]{16,}")
-RUN = re.compile(r"(?<![A-Za-z0-9+/=_.-])[A-Za-z0-9+/=_.-]{16,}(?![A-Za-z0-9+/=_.-])")
+RUN = re.compile(r"(?<![A-Za-z0-9+/=_.~:-])[A-Za-z0-9+/=_.~:-]{16,}(?![A-Za-z0-9+/=_.~:-])")
 
 
 def _value_is_secret(v: str) -> bool:
@@ -57,12 +57,20 @@ HEX = re.compile(r"[0-9a-fA-F]+")
 SRI = re.compile(r"^(?:sha(?:1|256|384|512))[-:]", re.I)
 
 
+PATHLIKE = re.compile(r"^(?:/|~/|\./|\.\./|[A-Za-z][A-Za-z0-9+.-]*://)")
+FILE_EXT = re.compile(r"\.[A-Za-z][A-Za-z0-9]{0,5}$")
+
+
 def _high_entropy(run: str) -> bool:
     """A long unbroken piece mixing letters and digits — except pure hex (git commits, SHA digests) and SRI
     integrity strings (`sha512-…`): coding notes are full of those, and masking them loses the note's point.
     Hex keys written with a label (`KEY=…`, `密钥：…`) are still caught by the label rule; unlabeled ones are
     left to the secret-page layer."""
     if SRI.match(run) or HEX.fullmatch(run.replace("-", "")):
+        return False
+    # 路径和 URL（`/Users/…/2026Q3Report2026Final.csv`、`https://docs…/Install2026Guide`、`s3://…`）照原样留着：
+    # 知识库里记的路径和链接是有用的信息；放在路径里的已知密钥形状由 KNOWN 那一层拦
+    if PATHLIKE.match(run) or FILE_EXT.search(run):
         return False
     for piece in re.split(r"[-_./]", run):
         if len(piece) >= 16 and len(re.findall(r"[A-Za-z]", piece)) >= 2 and len(re.findall(r"\d", piece)) >= 2:

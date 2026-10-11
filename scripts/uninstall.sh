@@ -1,5 +1,5 @@
 #!/bin/sh
-# 卸载 DSH-KRouter：停掉并删除定时任务、Cursor 规则、skill 目录。不动库。
+# 卸载 KRouter：停掉并删除定时任务、Cursor 规则、skill 目录。不动库。
 # 别名表若还只在 skill 目录里（没进库），先复制进库再删，绝不丢。
 # --purge 另外删除可重建的缓存和查询日志；钥匙文件永远只提示、不删。
 set -eu

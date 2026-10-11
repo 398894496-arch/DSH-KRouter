@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security problem
-    url: https://github.com/398894496-arch/DSH-KRouter/security/advisories/new
+    url: https://github.com/398894496-arch/KRouter/security/advisories/new
     about: Report it privately, not as an issue.
   - name: Question or idea
-    url: https://github.com/398894496-arch/DSH-KRouter/discussions
+    url: https://github.com/398894496-arch/KRouter/discussions
     about: Ask or propose in Discussions.

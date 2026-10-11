@@ -20,7 +20,7 @@ BUNDLED_ROUTER = ROOT / "skill/krouter-obsidian/scripts/route_knowledge.sh"
 def main() -> int:
     vault = os.environ.get("OBSIDIAN_VAULT", "").strip()
     if not vault:
-        print("DSH-KRouter: OBSIDIAN_VAULT is not set. Timer on; distill skipped.", file=sys.stderr)
+        print("KRouter: OBSIDIAN_VAULT is not set. Timer on; distill skipped.", file=sys.stderr)
         return 0
     router = os.environ.get("KROUTER_ROUTER", "")
     if "obsidian-knowledge-router" in router or not router:
@@ -36,7 +36,7 @@ def main() -> int:
         night = subprocess.run([sys.executable, str(scripts / "nightly.py"), "--vault", vault],
                                stdout=sys.stderr, check=False)
         if night.returncode != 0:
-            print(f"DSH-KRouter: nightly runner failed (rc={night.returncode})", file=sys.stderr)
+            print(f"KRouter: nightly runner failed (rc={night.returncode})", file=sys.stderr)
     return rc
 
 

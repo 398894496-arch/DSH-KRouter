@@ -1,6 +1,6 @@
 # Host daily evolution (the writer)
 
-This is the **product**, not a side plugin. It is the writer socket of **DSH-KRouter** (same tree as `extras/dsh`). Self-evolution: seal yesterday’s log, distill, **write `provisional` the same day when the five gates pass**.
+This is the **product**, not a side plugin. It is the writer socket of **KRouter** (same tree as `extras/dsh`). Self-evolution: seal yesterday’s log, distill, **write `provisional` the same day when the five gates pass**.
 
 `install.sh` installs the timer (`KROUTER_NO_TIMER=1` skips it); the one-line install asks the host first (`lamp: running` once installed). **API key first:** lock that provider's flagship model, then distill and promote. **No key:** the user's Claudian-class CLI subscription does the same work. `lamp: unused` = you turned the timer off.
 
@@ -25,7 +25,7 @@ The job auto-detects the CLI each run. Keys come from the vault page, `~/.dsh-kr
 ## Prove it on the template
 
 ```bash
-export OBSIDIAN_VAULT=/path/to/DSH-KRouter/template
+export OBSIDIAN_VAULT=/path/to/KRouter/template
 ./extras/host-daily-evolution/check.sh
 ```
 

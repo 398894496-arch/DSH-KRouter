@@ -1,6 +1,6 @@
 # Security
 
-DSH-KRouter reads and writes a personal knowledge vault and can hold model API keys, so this page says exactly
+KRouter reads and writes a personal knowledge vault and can hold model API keys, so this page says exactly
 where data goes and how to report a problem.
 
 ## Where your data goes
@@ -16,10 +16,24 @@ where data goes and how to report a problem.
 `extras/host-daily-evolution/run.sh --dry-run` lists what the next nightly run would send, with token estimates,
 and sends nothing. The one-line install asks before it installs the nightly job; without a yes it is not installed.
 
-**What a CLI writer can see.** When the nightly job uses a logged-in CLI (`claude`, `grok`, …) it runs inside the vault
-with permission prompts skipped (Codex runs in a workspace-write sandbox). It can read any file in the vault, which is
-why keys never live there. Text filters (`krouter_redact.py`) protect what KRouter itself prints and sends; they cannot
-filter what an agent reads on its own.
+**What the nightly writer can see.** It depends on the lane, and the install prompt says which one you are choosing:
+
+| Lane | Runs on this machine | Can read | Can write |
+|---|---|---|---|
+| **API key (recommended)** | Nothing: a direct API call | — (KRouter sends only what `--dry-run` lists) | — |
+| `grok` | grok, in a kernel-enforced sandbox profile (`strict` + the router) | The vault, the router, system paths | The vault, KRouter's cache and state |
+| `claude` | Claude Code, with tools allow-listed (`dontAsk`): read / edit inside the vault, run the router, nothing else | The vault (tool-level rule, no kernel sandbox) | The vault |
+| Codex | Codex in its `workspace-write` sandbox | **Your whole account**, keys file included | The vault |
+| Others (opencode, kimi, …) | The CLI with no confinement KRouter can set | **Your whole account** | **Your whole account** |
+
+The vault is where untrusted text arrives (clipped web pages, pasted chats), so a writer that can do more than
+read and write the vault is one prompt injection away from acting as you. Prefer the API-key lane; if you use a CLI,
+prefer grok or claude. Before 0.12.0 the claude and grok writers ran with permission prompts skipped and no
+sandbox — able to read and write anything in the account; an outside review pointed this out and a test confirmed
+it (grok read a file outside the vault through both its file tool and its shell; under the new profile it cannot).
+
+Text filters (`krouter_redact.py`) protect what KRouter itself prints and sends; they cannot filter what an agent
+reads on its own — that is what the sandbox and the allow-list are for.
 
 **Known limits of the text filter.** An unlabeled key that is pure hexadecimal is not masked (that is how notes record
 commits and digests), nor a key split into short hyphenated groups. Put keys in `~/.dsh-krouter-keys.env`, or keep them
@@ -29,7 +43,12 @@ on a page whose name says what it is.
 
 The one-line install downloads a tagged release, never `main`, and checks the package's SHA-256 against the release's
 `SHA256SUMS` before unpacking (releases from v0.11.2 on; older tags fall back to the source archive and say so).
-`KROUTER_TAG=vX.Y.Z` pins one release.
+`KROUTER_TAG=vX.Y.Z` pins one release. If the release has a checksum file, a failed download or a mismatch stops the
+install; a release without one installs only with `KROUTER_ALLOW_UNVERIFIED=1`.
+
+What the checksum does and does not prove: it is published in the same release as the package, so it catches a
+corrupted or truncated download, not a compromised repository or release. For that, compare the package with the
+tagged source yourself (`npm pack` on a checkout of the tag gives the same files).
 
 ## Reporting a vulnerability
 

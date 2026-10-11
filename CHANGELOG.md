@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.12.0 — 2026-10-11
+
+**Renamed: DSH-KRouter → KRouter.** It was never specific to DeepSeek Harness. Old links, the old clone URL, the old
+one-line install and old release downloads all redirect (checked after the rename). The npm / DSH plugin package
+keeps its name (`dsh-krouter`), and so do the skill directory, `KROUTER_*` variables and the timer labels, so
+existing installs are untouched.
+
+**The nightly writer is confined (seventh outside review).** The review said the claude and grok writers, run with
+permission prompts skipped and no sandbox, could read and write the whole account — keys file, `~/.ssh` — not just
+the vault, and that the docs claimed otherwise. Tested: under the old flags grok read a file outside the vault
+through both its file tool and its shell. Now:
+- **grok** runs in a kernel-enforced sandbox profile KRouter writes into `<vault>/.grok/sandbox.toml`: grok's
+  `strict` (read the working directory and system paths, write the working directory) plus the router read-only and
+  KRouter's cache and state writable. Tested: outside file denied through both tools, vault write works, the real
+  router answers. The runtime prompt now lives in the vault (`.krouter/`, deleted after the run) because the
+  sandbox cannot read outside it.
+- **claude** runs with `--permission-mode dontAsk` and tools allow-listed: read and edit inside the vault, run the
+  router, nothing else (no other shell command, no web fetch). This is a tool-level rule, not a kernel sandbox; it
+  could not be tested end to end this round (the CLI's login had expired) and is covered by an argv test.
+- **Codex** keeps its `workspace-write` sandbox (writes the vault only) and is now described truthfully: it can read
+  the account. Other CLIs have no confinement KRouter can set, and the install prompt says so.
+- The install prompt offers the API-key lane first ("no agent runs on this machine") and states, per CLI, what it
+  can reach. `SECURITY.md` has a lane-by-lane table.
+
+**Also from the review**
+- Two keys pasted on one line are both kept (each named from the words before it); a line with something
+  key-shaped left that cannot be taken apart is kept whole in the keys file's pending area — never dropped.
+- Paths and URLs survive redaction: a path- or URL-shaped run, or one ending in a file extension, is kept unless it
+  holds a known key shape (`/Users/…/2026Q3Report2026Final.csv`, `https://…/Install2026Guide`, `s3://…`). Keys in
+  query parameters and known key shapes inside URLs are still masked.
+- The one-line install never falls back to an unverified archive on its own: a release with a checksum file must
+  download and match, and a release without one installs only with `KROUTER_ALLOW_UNVERIFIED=1`. `SECURITY.md` says
+  what a same-release checksum does and does not prove.
+
 ## 0.11.3 — 2026-10-11
 
 - **The Windows one-line install no longer closes the PowerShell window.** `bootstrap.ps1` ended with `exit $LASTEXITCODE`; under `irm … | iex` that exits the user's own session, so the window closed before the last line — the one saying what is left to do — could be read. Found by running the published one-liner on a real Windows host after 0.11.2. It now returns instead; a test keeps both PowerShell scripts ASCII-only and free of `exit`.
