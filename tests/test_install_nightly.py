@@ -158,3 +158,30 @@ def test_run_py_matches_run_sh_contract(tmp_path):
     assert '"est_tokens_total"' in res.stdout
     after = {p.relative_to(vault).as_posix(): p.stat().st_mtime_ns for p in vault.rglob("*") if p.is_file()}
     assert after == before
+
+
+def test_propose_aliases_drafts_and_apply_adds_only_ticked_rows(tmp_path, monkeypatch):
+    vault = tmp_path / "vault"
+    shutil.copytree(REPO / "template", vault)
+    table = vault / "90 系统文件/canonical_sources.psv"
+    shutil.copy(SAMPLE, table)
+    monkeypatch.delenv("KROUTER_MAP", raising=False)
+    sys.path.insert(0, str(SCRIPTS))
+    import propose_aliases as pa
+
+    out, n = pa.propose(vault, 40, use_model=False)
+    text = out.read_text(encoding="utf-8")
+    assert n > 0 and not any(ln.startswith("- [x]") for ln in text.splitlines())
+    assert table.read_bytes() == SAMPLE.read_bytes()  # nothing applied by itself
+    rows = [ln for ln in text.splitlines() if ln.startswith("- [ ] ")]
+    first = rows[0].replace("- [ ] ", "- [x] ", 1)
+    cid, aliases, rel, _anchor = first[6:].split("|", 3)
+    # a ticked row whose alias already locks another page is refused, not written
+    bad = f"- [x] Q98|唯一总入口|{rel}|x"
+    out.write_text(text.replace(rows[0], first) + bad + "\n", encoding="utf-8")
+    res = pa.apply(vault)
+    assert res["applied"] == 1 and res["refused"] and "唯一总入口" in res["refused"][0]["why"]
+    new = table.read_text(encoding="utf-8")
+    assert f"{cid}|{aliases}|{rel}|" in new and "Q98" not in new
+    left = out.read_text(encoding="utf-8")
+    assert first not in left and bad in left  # applied row leaves the checklist; refused one stays for review
