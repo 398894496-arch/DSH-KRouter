@@ -84,11 +84,12 @@ def load_cards(vault: Path) -> list[dict]:
 def targets(vault: Path) -> list[str]:
     con = ri.connect(ri.cache_path(vault))
     ri.refresh(vault, con)
-    return [r for (r,) in con.execute("SELECT rel FROM docs WHERE tier IN ('rule', 'topic') ORDER BY rel")]
+    rels = [r for (r,) in con.execute("SELECT rel FROM docs WHERE tier IN ('rule', 'topic') ORDER BY rel")]
+    return [r for r in rels if not ri.is_secret_page(ri.zones.canon(vault, r))]  # 钥匙页永不外发
 
 
 def block(vault: Path, rel: str) -> str:
-    _meta, body = ri.split_frontmatter((vault / rel).read_text(encoding="utf-8", errors="replace"))
+    _meta, body = ri.split_frontmatter(ri.redact((vault / rel).read_text(encoding="utf-8", errors="replace")))
     body = re.sub(r"\n{3,}", "\n\n", body).strip()[:PAGE_MAX]
     return f"### 页面路径: {rel}\n{body}\n"
 

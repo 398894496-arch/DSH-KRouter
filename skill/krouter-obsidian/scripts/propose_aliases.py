@@ -101,7 +101,7 @@ def model_nouns(vault: Path, rels: list[str]) -> dict[str, list[str]]:
 
     blocks = []
     for rel in rels:
-        _meta, body = ri.split_frontmatter((vault / rel).read_text(encoding="utf-8", errors="replace"))
+        _meta, body = ri.split_frontmatter(ri.redact((vault / rel).read_text(encoding="utf-8", errors="replace")))
         blocks.append(f"### {rel}\n{body.strip()[:600]}\n")
     out: dict[str, list[str]] = {}
     for i in range(0, len(blocks), 20):
@@ -128,7 +128,8 @@ def propose(vault: Path, limit: int, use_model: bool, out: Path | None = None) -
     ri.refresh(vault, con)
     pages = con.execute("SELECT rel, tier, status, how, title FROM docs WHERE tier IN ('rule', 'topic')").fetchall()
     want = demand(vault)
-    pages = [p for p in pages if p[0] not in locked and (p[2] or "") not in ri.DEAD_STATUS]
+    pages = [p for p in pages if p[0] not in locked and (p[2] or "") not in ri.DEAD_STATUS
+             and not ri.is_secret_page(zones.canon(vault, p[0]))]
     pages.sort(key=lambda p: (-want.get(p[0], 0), p[1] != "rule", p[0]))
     pages = pages[:limit]
     nouns = model_nouns(vault, [p[0] for p in pages]) if use_model and pages else {}

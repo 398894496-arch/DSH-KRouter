@@ -46,6 +46,7 @@ def _load_lane():
 
 _lane = _load_lane()
 import zones  # noqa: E402  (skill scripts dir, appended by _load_lane)
+from krouter_redact import redact  # noqa: E402
 CHAT_SPECS = _lane.CHAT_SPECS
 lock_flagship = _lane.lock_flagship
 openai_headers = _lane.openai_headers
@@ -244,7 +245,7 @@ def collect_snapshot(vault: Path, day: date) -> str:
     health = zones.path(vault, "90 系统文件/自动化/日更健康.md")
     health_text = ""
     if health.is_file():
-        health_text = health.read_text(encoding="utf-8", errors="replace")[:2000]
+        health_text = redact(health.read_text(encoding="utf-8", errors="replace")[:2000])
     return json.dumps(
         {
             "target_date": day.isoformat(),
@@ -283,7 +284,7 @@ def tool_impl(vault: Path, name: str, args: dict) -> str:
         path = safe_vault_path(vault, zones.real(vault, str(args.get("path") or "")))
         if path is None or not path.is_file():
             return "denied or missing"
-        return path.read_text(encoding="utf-8", errors="replace")[:MAX_FILE_BYTES]
+        return redact(path.read_text(encoding="utf-8", errors="replace")[:MAX_FILE_BYTES])
     if name == "write_file":
         files = [{"path": str(args.get("path") or ""), "content": str(args.get("content") or "")}]
         n = apply_files(vault, files)

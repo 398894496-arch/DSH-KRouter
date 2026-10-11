@@ -22,3 +22,15 @@
 {"q": "evidence for climate change", "expect": null, "kind": "semi"}
 {"q": "sample size for a medical trial", "expect": null, "kind": "semi"}
 {"q": "猫咪每天的日志睡几个小时", "expect": null, "kind": "semi"}
+{"q": "定时任务到底跑没跑", "expect": "02 经验与方法/准经验/A timer that fired is not a product.md", "kind": "pos_zh"}
+{"q": "怎么判断某一天已经封账了", "expect": "02 经验与方法/Automation/Seal the day from the log file.md", "kind": "pos_zh"}
+{"q": "待总结的占位文件算封账吗", "expect": "02 经验与方法/Automation/Seal the day from the log file.md", "kind": "pos_zh"}
+{"q": "剪藏原件能不能移动", "expect": "02 经验与方法/Agent/用户偏好与工作约束.md", "kind": "pos_zh"}
+{"q": "文件名要能看出用途吗", "expect": "02 经验与方法/Agent/用户偏好与工作约束.md", "kind": "pos_zh"}
+{"q": "两条纠错冲突时听哪条", "expect": "90 系统文件/Agent记忆/纠错与取代记录.md", "kind": "pos_zh"}
+{"q": "低可信的记忆能当指令用吗", "expect": "90 系统文件/Agent记忆/可靠记忆索引.md", "kind": "pos_zh"}
+{"q": "原件和结果证据放哪里", "expect": "03 资料与证据/资料与证据.md", "kind": "pos_zh"}
+{"q": "示例项目是什么", "expect": "01 项目/示例项目/示例项目.md", "kind": "pos_zh"}
+{"q": "写准经验之前要过哪五道门", "expect": "02 经验与方法/经验与方法.md", "kind": "pos_zh"}
+{"q": "定时器的 API key 贴在哪里", "expect": "90 系统文件/自动化/自进化钥匙.md", "kind": "pos_zh"}
+{"q": "日更健康页的灯是什么意思", "expect": "90 系统文件/自动化/日更健康.md", "kind": "pos_zh"}
