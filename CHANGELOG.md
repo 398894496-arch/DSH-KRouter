@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.1 — 2026-10-11
+
+- **Answer cards no longer go stale on frontmatter edits.** Cards were keyed to the whole page, so any frontmatter edit — `verified_at`, `status`, or the `nightly` / `nightly_at` fields `nightly.py` writes onto the health page — staled every card on that page, and the nightly run paid to rewrite them only to stale them again minutes later. Found on the author's machine after 0.11.0: all five health-page cards stale, `日更每天几点跑` ranked by a different page. New cards are keyed to the page body; cards written earlier (whole-page hash) stay valid until the page changes, so nothing is regenerated in bulk.
+- The health page (`90 系统文件/自动化/日更健康.md`) gets no cards: the system rewrites its body every day (seal dates), so a card on it could never stay valid; the rule pages answer its questions.
+
 ## 0.11.0 — 2026-10-11
 
 For anyone, with nothing to know and nothing to maintain. Plus the fifth outside review's two secret findings.
