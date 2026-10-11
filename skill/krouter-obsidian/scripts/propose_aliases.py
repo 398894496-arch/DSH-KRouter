@@ -129,7 +129,8 @@ def propose(vault: Path, limit: int, use_model: bool, out: Path | None = None) -
     pages = con.execute("SELECT rel, tier, status, how, title FROM docs WHERE tier IN ('rule', 'topic')").fetchall()
     want = demand(vault)
     pages = [p for p in pages if p[0] not in locked and (p[2] or "") not in ri.DEAD_STATUS
-             and not ri.is_secret_page(zones.canon(vault, p[0]))]
+             and not ri.is_secret_page(zones.canon(vault, p[0]),
+                                       ri.split_frontmatter((vault / p[0]).read_text(encoding="utf-8", errors="replace"))[0])]
     pages.sort(key=lambda p: (-want.get(p[0], 0), p[1] != "rule", p[0]))
     pages = pages[:limit]
     nouns = model_nouns(vault, [p[0] for p in pages]) if use_model and pages else {}

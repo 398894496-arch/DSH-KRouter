@@ -268,20 +268,61 @@ def _parse(text: str) -> dict[str, str]:
     return out
 
 
+def keys_file() -> Path:
+    return Path(os.environ.get("KROUTER_KEYS_ENV") or Path.home() / ".dsh-krouter-keys.env")
+
+
+def move_page_keys(vault: Path | None) -> list[str]:
+    """Keys pasted on the vault's key page move to the keys file (chmod 600) and leave the vault.
+
+    The page is the easiest place for anyone to paste a key, but anything in the vault is readable by the CLI
+    writer, synced by Obsidian Sync / iCloud / git, and one mistake away from a model. So KRouter never reads
+    keys from the vault: on every run, a live `NAME=value` line on the key page is appended to the keys file
+    (a newer value replaces an older one) and the page line becomes a comment saying where it went.
+    Returns the names moved; values are never printed.
+    """
+    if vault is None:
+        return []
+    import sys
+    from datetime import date
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import zones
+
+    page = zones.path(vault, "90 系统文件/自动化/自进化钥匙.md")
+    if not page.is_file():
+        return []
+    target = keys_file()
+    lines = page.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
+    moved: dict[str, str] = {}
+    for i, raw in enumerate(lines):
+        m = KEY_LINE.match(raw.strip())
+        if m and _usable(m.group(2)):
+            moved[m.group(1)] = m.group(2).strip().strip('"').strip("'")
+            lines[i] = f"# {m.group(1)}=（已移到 {target}，{date.today().isoformat()}）\n"
+    if not moved:
+        return []
+    kept = []
+    if target.is_file():
+        kept = [ln for ln in target.read_text(encoding="utf-8", errors="replace").splitlines()
+                if not ((m := KEY_LINE.match(ln.strip())) and m.group(1) in moved)]
+    target.parent.mkdir(parents=True, exist_ok=True)
+    body = "\n".join(kept + [f"{k}={v}" for k, v in moved.items()]) + "\n"
+    fd = os.open(str(target), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(body)
+    os.chmod(target, 0o600)
+    page.write_text("".join(lines), encoding="utf-8")  # 先写好钥匙文件，再从页面上抹掉
+    return sorted(moved)
+
+
 def collect_keys(vault: Path | None) -> dict[str, str]:
+    """Process environment, then the keys file. Never the vault (keys pasted there are moved out first)."""
+    move_page_keys(vault)
     keys = {k: v for k, v in os.environ.items() if k.endswith(("_API_KEY", "_BASE_URL", "_MODEL")) and _usable(v)}
-    env_file = Path(os.environ.get("KROUTER_KEYS_ENV") or Path.home() / ".dsh-krouter-keys.env")
+    env_file = keys_file()
     if env_file.is_file():
         keys.update(_parse(env_file.read_text(encoding="utf-8", errors="replace")))
-    if vault is not None:
-        import sys
-
-        sys.path.insert(0, str(Path(__file__).resolve().parent))
-        import zones
-
-        page = zones.path(vault, "90 系统文件/自动化/自进化钥匙.md")
-        if page.is_file():
-            keys.update(_parse(page.read_text(encoding="utf-8", errors="replace")))
     return keys
 
 

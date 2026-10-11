@@ -136,20 +136,17 @@ def parse_vault_page(text: str) -> dict[str, str]:
 
 
 def collect_keys(vault: Path) -> dict[str, str]:
-    """Process env, then the keys file install.sh writes, then the vault page.
-
-    Later sources win. Values are never printed.
+    """Process env, then the keys file. A key pasted on the vault page is moved into the keys file first
+    (so a newly pasted key still wins), and the vault is never read for keys. Values are never printed.
     """
     keys: dict[str, str] = {}
     for name, val in os.environ.items():
         if (is_key_name(name) or is_config_name(name)) and usable(val):
             keys[name] = val.strip().strip('"').strip("'")
+    _lane.move_page_keys(vault)  # 钥匙页上贴的 key 先挪进钥匙文件；之后只读文件，永不从库里读
     path = keys_env_path()
     if path.is_file():
         keys.update(parse_vault_page(path.read_text(encoding="utf-8", errors="replace")))
-    page = key_page(vault)
-    if page.is_file():
-        keys.update(parse_vault_page(page.read_text(encoding="utf-8", errors="replace")))
     return keys
 
 
