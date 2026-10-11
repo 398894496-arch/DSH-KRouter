@@ -220,8 +220,15 @@ bounded_search() {
   printf 'route: %s\n' "$ROUTE"
   printf 'scope: %s\n' "$scope"
   [ -n "$recalled" ] && printf '%s\n' "$recalled" | grep '^recall' || true
-  md_search 4 "$QUERY" "$scope" \
-    | awk 'NR <= 24 { print } NR == 25 { print "[truncated after 24 lines]"; exit }' || true
+  # 打出来的原文行先脱敏（密钥值不进 agent 上下文）；没有 python3 时用 sed 兜住最常见的形状
+  if command -v python3 >/dev/null 2>&1; then
+    md_search 4 "$QUERY" "$scope" | python3 "$(dirname "$0")/krouter_redact.py" \
+      | awk 'NR <= 24 { print } NR == 25 { print "[truncated after 24 lines]"; exit }' || true
+  else
+    md_search 4 "$QUERY" "$scope" \
+      | sed -E 's/((API_?KEY|TOKEN|SECRET|PASSWORD)[A-Za-z0-9_]*[[:space:]]*[=:][[:space:]]*)[^[:space:]]{8,}/\1<redacted>/g; s/sk-[A-Za-z0-9_-]{16,}/<redacted>/g' \
+      | awk 'NR <= 24 { print } NR == 25 { print "[truncated after 24 lines]"; exit }' || true
+  fi
 }
 
 emit_suggestions() {

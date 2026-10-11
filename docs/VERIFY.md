@@ -55,7 +55,7 @@ It does **not** verify the historical claim “the author’s live map was 26/26
 
 ### Recall bench (refuse instead of guess, below the lock)
 
-The checks above cover the lock. [`tests/fixtures/recall_bench.jsonl`](../tests/fixtures/recall_bench.jsonl) covers what answers a miss: 24 questions against `template/` — 12 with a gold page, 6 the vault cannot answer, and 6 half-off-topic ones that borrow one vault word (`咖啡机的定时器多久除垢一次` shares only `定时` with the timer page). Recall must refuse all 12 non-answerable ones and put the gold page first for at least 9 of 12. 0.9.3: 18/24, three half-off-topic Chinese questions answered `high`. 0.10.0: 21/24, every refusal holds; the three misses are gold pages ranked below a neighbor.
+The checks above cover the lock. [`tests/fixtures/recall_bench.jsonl`](../tests/fixtures/recall_bench.jsonl) covers what answers a miss: 24 questions against `template/` — 12 with a gold page, 6 the vault cannot answer, and 6 half-off-topic ones that borrow one vault word (`咖啡机的定时器多久除垢一次` shares only `定时` with the timer page). Recall must refuse all 12 non-answerable ones and put the gold page first for at least 9 of 12 English and 9 of 12 Chinese questions (the same 12 asked in Chinese — a fresh vault is a small vault, and that is where a Chinese-speaking host starts). Gold page first, English / Chinese, and half-off-topic refused (same sample alias table): 0.9.3 9 / 9 / 3 of 6; 0.10.1 9 / 5 / 6 of 6; 0.10.2 9 / 9 / 6 of 6.
 
 ```bash
 python3 -m pytest -q tests/test_recall_bench.py

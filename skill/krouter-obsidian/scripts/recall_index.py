@@ -21,8 +21,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import zones  # noqa: E402
+import krouter_redact  # noqa: E402
 
-SCHEMA_VERSION = "recall-v11"
+redact = krouter_redact.redact
+is_secret_page = krouter_redact.is_secret_page  # 其他夜间脚本经 ri.is_secret_page 用它
+
+SCHEMA_VERSION = "recall-v12"  # v12：索引存脱敏后的文字，旧缓存必须重建
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
 SCORE_MIN = 8.5  # bm25×分层权重的绝对下限
@@ -213,6 +217,7 @@ def connect(db: Path) -> sqlite3.Connection:
         )
         con.execute("INSERT OR REPLACE INTO meta VALUES('schema', ?)", (SCHEMA_VERSION,))
         con.commit()
+        con.execute("VACUUM")  # 旧表的页还留在文件里（旧版本存的是未脱敏的原文），一并清掉
     return con
 
 
@@ -247,7 +252,8 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
             raw_bytes = path.read_bytes()
         except OSError:
             continue
-        text = raw_bytes.decode("utf-8", errors="replace")
+        # 索引、how、问答卡核对用的都是脱敏后的文字：密钥值不进缓存，也不会从这里被打印或外发
+        text = redact(raw_bytes.decode("utf-8", errors="replace"))
         meta, body = split_frontmatter(text)
         page_hash = hashlib.sha1(raw_bytes).hexdigest()[:16]
         title = meta.get("title") or path.stem
@@ -393,9 +399,30 @@ def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict
                and not set(t) & FUNCTION_CHARS)
 
 
+# 通用汉字频率前 1500（由 jieba 0.42.1 自带词典 dict.txt 的词频累加得出，MIT）。小库里没有「知道」「已经」
+# 不说明问的是库外；没有「咖啡」「除垢」才说明。只有不在这张表里、库里也没出现过的字，才算库外证据
+COMMON_CHARS = frozenset(
+    "一是人了不在有大中国和为这上他个地年来我会以到时要出的生学说道民家子也成行下们于后就发自之对得主长可过天作分方用多你着部能市等业全里工公经本都而高政法面门动日进区事代那去心小同北定开产前其军还然起种所"
+    "如现理机体表力好外与文当两实重新三么只山水关明从化平建又制南内西没此将员名手最东头者月间无安看见各城十相但已些正口通想度加第她合院物性战由位常点海意场武使次二向治因立数样身情入原问把路被并利石老教万知"
+    "级量任江及应省资委务元美特期世湖回系比气汉总展电科金先声提品设或义王社很统处四首共马形己儿司太目基领队直计别女权话少流命至报米给打变果书清活几州华解议更称程今决张导术府才保交放管结师便走达族反再题色五"
+    "京河接条规式县白它改风光运信受什组听布百济党指论强做取技黄神选记斯真却职号界件花类何眼兵传带空干农边据集联古广完质阳难增历史专官每住商即步认车台林必死游举线言皇土团收考求德叫近备研争非具李众连调感转笑"
+    "革该持始英克士尔让拉思根格造较际亲单朝红型价校约器字段周亚深候则功属积快图火千准究往极育装许参半令吃观鱼精办像帝八复影告远群包整构料随划算象容示投势热值夫网望源息语股铁断派速怎需片爱律纪支早况病境证编"
+    "越局推满且列觉服双未居除乐企引标确织初青志率项飞球节察龙响药站施均消客失轻存低甚般击曾防请离落显罗营足素视护副食创余照兴占巴虽洲村费易试星木黑左宝置跟央识维采六底宫房音环案批切斗富乡另倒若按查故突责严"
+    "桥模仅胜杀围席态破承招杨负层须父供续状域似依银范修找九致密终血旅钱赛独细效玉冲获习医演毛尽脸弹楼艺航陆右协七攻镇检写苏宗章注阿抗弟坐验封紧劳户优财养适陈喜卫排射哥油刻留急降念云微伤例景拿绝阶座刘刚害印"
+    "亿沙母酒助闻超审待压升送监策略限竟香配藏敌呢差仍兰温园树征善波哪词岛止预怕继皮执味份角草男普答益谁船惊核街夏宣掌田久著画辑奇尼剑吧谈背免孩礼材愿洋春架筑括晚乱乎讲尚良友临激刀夜室既敢邦挥昌板胡欧福港叶"
+    "简苦担句岁荆贵娘守辖威宜衣帮块堂额错剧充欢够孙班呼阵销坚练脚退读测吴希宁换版异某顾曲楚典朱毒菜判救宋茶洪含顺啊鲜败货矿端兄归冷忙买险康评肉吗厂永哈沉散遗停笔假输牛洞松渐顶训录否述毕督控丰献姑忽爷互亮纳"
+    "襄登咱钟伯臣雄季脑介鄂召饭暗扩祖齐短烈赶牌恩诉移诗础露届蒙静喝盘卖植授伊湾博痛减穿逐秘庭陵固禁票灵杂姓泽吸侧庆妈遇追甲馆补唐炮沿殿刺怪彩俄旧警索岸轮妇载靠附毫怀软骨探雷旁罪枪牙迎序慢盛雨墙恶谷顿危稳熟"
+    "概酸操诸绿佛荣针托宽折野付午肯库厚缺罢耳屋嘴末谢巨培页瓦款犯困店智拥雪翻圣戏旗吉婚奖岩疑币圆歌廷健卡烧析讨跑烟误仙疗舞亡闭汽伸脱秋姐繁侵川莫麻秀借寻私岗卷跳丽横驻套兼您君丁束纸夺袁灯坏坦丝径购阴床瞧择"
+    "墓宪峰遍鲁庙掉丹桃御舰避售怒课播拔奥延虚隐粮络遭摇潜庄混厅婆奴鼓赵访睡震予童徐韦殖抓拜吨扬址洛休纵逃染纷贸透汇灭蛋森仪塔距狐融郡缓聚盖拍迹忠释润粉涓孔岭搜紫虑促抵钢塞寺津液码虎坛珍硬梁奔累役偏迫锛凡损"
+    "壁哭替税综伦冰盟挂韩竞乌尤弱铺妹秦尊竹珠迅脉泥鬼纯睛刑途隆潮幅杯握谋剂幸奉乘抱朋谓频崇壮骑紝恐享鸡虫绍铜呈泛械摆欲奶敬措爆暴签猛郭嘉障缩亦废搞胞埃曰撤暖寒订俗绩阻盐萨勒忘奏孝贴灰梅触玩默醒胸莲篇柱裁啦"
+    "淡抢捕闹纺截讯朗誉雅忍梦伙勇峡徒丈尾迷唱泉泰佳残闪伍呀疾署剩贼冠倾豆申贫诺麦泪羊尖辈镜涉贡爹缘摩妻殊贝零映甘骂糖岳饮奋棉雕跃汗冒渡努赞启阁斤裂患伏池鹿洗劲晋倍圈媒箭沟锋胆凭挑抬闯隔弄曹汤苗迁叹唯振储贯"
+    "彻桌祭符僧衡炸旋喊凤黎郎援肥磁忌赏辽祥董仁辛瑞询敏浪貌毁昨巧腿抽荷陷焦净腹弃乃湘亩滑狗冬宏皆番尸伟桂览恢龄绕趣晶坡魏摸伴墨浓绪舍蓝荡阅井鸿旦惯症鸟窗扎辞聘穷堰宇键荒递恨隶厉杜闲腰袭侍灾涨叔湿寨幕豪郑磨"
+)
+
+
 def alien_chars(raw: list[str], df: dict[str, int]) -> int:
-    """问题里有几个汉字在整个库里一次都没出现过（虚字不算）。"""
-    chars = {c for t in raw if is_cjk_bigram(t) for c in t if c not in FUNCTION_CHARS}
+    """问题里有几个汉字在整个库里一次都没出现过、且不是通用常用字（虚字不算）。"""
+    chars = {c for t in raw if is_cjk_bigram(t) for c in t if c not in FUNCTION_CHARS and c not in COMMON_CHARS}
     return sum(1 for c in chars if not df.get(c, 0))
 
 
@@ -607,7 +634,7 @@ def best_lines(path: Path, qtok: list[str], k: int = 1) -> list[tuple[int, str]]
         lt = set(tokens(line))
         n = sum(1 for t in qtok if t in lt)
         if n:
-            scored.append((n, i, line.strip()[:160]))
+            scored.append((n, i, redact(line.strip())[:160]))
     scored.sort(key=lambda x: (-x[0], x[1]))
     return sorted((i, text) for _n, i, text in scored[:k])
 

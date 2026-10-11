@@ -109,7 +109,7 @@ def main() -> int:
         blocks = []
         for it in items:
             lines = "\n".join(f"  - {h['rel']} ｜ {h['how'][:70]}" for h in it["cands"])
-            blocks.append(f"### id={it['id']} 查询：{it['q']}\n候选：\n{lines}\n")
+            blocks.append(f"### id={it['id']} 查询：{ri.redact(it['q'])}\n候选：\n{lines}\n")
         try:
             verdict = ask(vault, PROMPT + "\n".join(blocks))
         except llm.NoModel as exc:

@@ -207,7 +207,9 @@ def log_query(route: str, query: str, status: str, top: str = "", confidence: st
 
         base = Path(os.environ.get("KROUTER_STATE_DIR") or Path.home() / ".local" / "state" / "krouter")
         base.mkdir(parents=True, exist_ok=True)
-        row = {"ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "route": route, "q": query,
+        from krouter_redact import redact
+
+        row = {"ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "route": route, "q": redact(query),
                "status": status, "top": top, "confidence": confidence}
         with (base / "queries.jsonl").open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -289,11 +291,13 @@ def md_search(needle: str, scope: Path, max_per_file: int = 4, max_lines: int = 
                     lines.append(f"{path}:{j + 1}:{body[j]}")
                 if hits >= max_per_file:
                     break
+    from krouter_redact import redact
+
     for i, line in enumerate(lines):
         if i >= max_lines:
             print("[truncated after 24 lines]")
             return
-        print(line)
+        print(redact(line))  # 字面搜索打出来的原文行也不能带出密钥
 
 
 def print_recall(res: dict, vault: Path, lines: int) -> None:
