@@ -289,6 +289,8 @@ def print_recall(res: dict, vault: Path, lines: int) -> None:
     for h in res["hits"]:
         flag = f" status={h['status']}" if h["status"] else ""
         print(f"- {h['rel']} tier={h['tier']}{flag} score={h['score']}")
+        if h.get("answer"):
+            print(f"  answer: {h['answer']}")
         if h["how"]:
             print(f"  how: {h['how']}")
         for ln, text in best_lines(vault / h["rel"], res["query_tokens"], lines):

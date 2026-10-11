@@ -19,7 +19,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-SCHEMA_VERSION = "recall-v8"
+SCHEMA_VERSION = "recall-v9"
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
 SCORE_MIN = 8.5  # bm25×分层权重的绝对下限
@@ -109,7 +109,8 @@ def first_rule_line(body: str) -> str:
     return plain[: HOW_MAX - 1] + "…" if len(plain) > HOW_MAX else plain
 
 
-TRIGGER_GLOB = "下意识触发词*.psv"  # 人工/生成的触发词 + 夜间自学习的触发词
+TRIGGER_GLOB = "下意识触发词*.psv"
+CARD_GLOB = "下意识问答*.jsonl"  # answer_cards.py  # 人工/生成的触发词 + 夜间自学习的触发词
 
 
 def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
@@ -121,6 +122,7 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
     sources = [Path(raw)]
     if vault is not None and (vault / "90 系统文件").is_dir():
         sources += sorted((vault / "90 系统文件").rglob(TRIGGER_GLOB))
+        sources += sorted((vault / "90 系统文件").rglob(CARD_GLOB))
     out: dict[str, list[str]] = {}
     digest = hashlib.sha1()
     for path in sources:
@@ -130,6 +132,13 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
         digest.update(data)
         for line in data.decode("utf-8", errors="replace").splitlines():
             if not line or line.startswith("#"):
+                continue
+            if line.startswith("{"):  # answer card: its question is a trigger for its page
+                try:
+                    card = json.loads(line)
+                    out.setdefault(card["rel"], []).append(card["q"])
+                except (json.JSONDecodeError, KeyError):
+                    pass
                 continue
             parts = line.split("|")
             if len(parts) == 4:  # canonical map: id|aliases|source|anchor
@@ -159,13 +168,21 @@ def tier_of(rel: str, status: str) -> str:
     return "other"
 
 
-def iter_markdown(vault: Path):
-    for root, dirs, files in os.walk(vault, followlinks=True):
+def walk_md(vault: Path):
+    """(absolute path, vault-relative posix path) as plain strings: no per-file pathlib work."""
+    base = str(vault).rstrip("/")
+    cut = len(base) + 1
+    for root, dirs, files in os.walk(base, followlinks=True):
         dirs[:] = [d for d in dirs if d not in SKIP_PARTS and not d.startswith(".")]
+        reldir = root[cut:]
         for name in files:
             if name.endswith(".md"):
-                path = Path(root) / name
-                yield path, path.relative_to(vault).as_posix()
+                yield f"{root}/{name}", (f"{reldir}/{name}" if reldir else name)
+
+
+def iter_markdown(vault: Path):
+    for full, rel in walk_md(vault):
+        yield Path(full), rel
 
 
 def connect(db: Path) -> sqlite3.Connection:
@@ -179,7 +196,7 @@ def connect(db: Path) -> sqlite3.Connection:
             """
             DROP TABLE IF EXISTS vcol; DROP TABLE IF EXISTS vinst; DROP TABLE IF EXISTS vrow; DROP TABLE IF EXISTS docs; DROP TABLE IF EXISTS files;
             CREATE VIRTUAL TABLE docs USING fts5(
-                rel UNINDEXED, title, triggers, body, uni, tier UNINDEXED, status UNINDEXED, how UNINDEXED,
+                rel UNINDEXED, title, triggers, body, uni, tier UNINDEXED, status UNINDEXED, how UNINDEXED, name UNINDEXED,
                 tokenize='unicode61');
             CREATE VIRTUAL TABLE vrow USING fts5vocab(docs, 'row');
             CREATE VIRTUAL TABLE vinst USING fts5vocab(docs, 'instance');
@@ -194,12 +211,12 @@ def connect(db: Path) -> sqlite3.Connection:
 
 def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
     seen: dict[str, tuple[int, int, Path]] = {}
-    for path, rel in iter_markdown(vault):
+    for full, rel in walk_md(vault):
         try:
-            st = path.stat()
+            st = os.stat(full)
         except OSError:
             continue
-        seen[rel] = (st.st_mtime_ns, st.st_size, path)
+        seen[rel] = (st.st_mtime_ns, st.st_size, full)
     known = {rel: (m, s, rid) for rel, m, s, rid in con.execute("SELECT rel, mtime_ns, size, rid FROM files")}
     aliases, map_sha = alias_map(vault)
     old_sha = (con.execute("SELECT v FROM meta WHERE k='map_sha'").fetchone() or [""])[0]
@@ -217,6 +234,7 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
         old = known.get(rel)
         if old and old[0] == mtime and old[1] == size:
             continue
+        path = Path(path)
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
@@ -233,7 +251,7 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
         else:
             added += 1
         cur = con.execute(
-            "INSERT INTO docs(rel, title, triggers, body, uni, tier, status, how) VALUES(?,?,?,?,?,?,?,?)",
+            "INSERT INTO docs(rel, title, triggers, body, uni, tier, status, how, name) VALUES(?,?,?,?,?,?,?,?,?)",
             (
                 rel,
                 " ".join(tokens(title + " " + path.stem + " " + meta.get("topic_terms", ""))),
@@ -243,6 +261,7 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
                 tier_of(rel, status),
                 status,
                 how,
+                compact(title + "|" + path.stem + "|" + meta.get("topic_terms", "")),
             ),
         )
         con.execute("INSERT OR REPLACE INTO files VALUES(?,?,?,?)", (rel, mtime, size, cur.lastrowid))
@@ -255,6 +274,9 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
 TIER_BOOST = {"rule": 1.6, "topic": 1.4, "project": 1.0, "other": 0.9, "log": 0.8, "dead": 0.25}
 # 主题档案只在问题点到这个主题时才相关；没点名就大幅降权，免得大页靠泛词抢第一
 TOPIC_UNNAMED = 0.35
+TOPIC_NAMED = 1.25
+TITLE_HIT = 2.0
+CARD_MIN = 0.5  # 问答卡至少覆盖问题一半的实词分量才输出
 
 
 def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_first: bool = True,
@@ -279,19 +301,24 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
         return {"hits": [], "stats": stats, "query_tokens": [], "confidence": "none", "margin": 0.0}
     match = "{title triggers body} : (" + " OR ".join('"' + t.replace('"', "") + '"' for t in qtok) + ")"
     rows = con.execute(
-        "SELECT rowid, rel, tier, status, how, title, bm25(docs, 0, 4.0, 4.0, 1.0, 0, 0, 0, 0) AS s "
+        "SELECT rowid, rel, tier, status, how, title, name, bm25(docs, 0, 4.0, 4.0, 1.0, 0, 0, 0, 0, 0) AS s "
         "FROM docs WHERE docs MATCH ? ORDER BY s LIMIT 80",
         (match,),
     ).fetchall()
     scope = scope.strip("/")
     hits = []
     qset = set(raw)
-    for rid, rel, tier, status, how, title, s in rows:
+    qname = compact(query)
+    single = is_single_concept(query)
+    for rid, rel, tier, status, how, title, name, s in rows:
         if scope and not (rel == scope or rel.startswith(scope + "/")):
             continue
         boost = TIER_BOOST.get(tier, 1.0)
-        if tier == "topic" and not (set(title.split()) & qset):
-            boost *= TOPIC_UNNAMED
+        if tier == "topic":
+            # 点名的主题档案是这个主题的总入口，排在同名的零散规则页前面；没点名就大幅降权
+            boost *= TOPIC_NAMED if set(title.split()) & qset else TOPIC_UNNAMED
+        if qname and len(qname) >= 2 and qname in (name or ""):
+            boost *= TITLE_HIT  # 问的就是这页的名字（`DSH`、`SyGJ`、`封账`）
         hits.append({"rid": rid, "rel": rel, "tier": tier, "status": status, "how": how,
                      "score": round(-s * boost, 3)})
     hits.sort(key=lambda h: -h["score"])
@@ -309,8 +336,13 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     need = min(MIN_STRONG_MATCH, query_content_terms(raw, df, titled))
     # 问题的核心词库里一次都没出现（`Kubernetes`），只靠一两个边角词凑上的，判为库外
     unknown = unknown_content_terms(raw, df)
-    if gate and (top < SCORE_MIN * scale or (strong < need and top < SINGLE_TERM_SCORE * scale) or strong == 0
-                 or (unknown and strong <= 2)):
+    if single:
+        # 一个概念的短查询：只有一个词可比，不按"至少两个实词"拦；但仍要过（减半的）分数下限
+        refuse = top < SCORE_MIN * scale * 0.5 or (unknown and strong == 0)
+    else:
+        refuse = (top < SCORE_MIN * scale or (strong < need and top < SINGLE_TERM_SCORE * scale) or strong == 0
+                  or (unknown and strong <= 2))
+    if gate and refuse:
         conf = "none"
     elif margin >= 1.5 and hits[0]["tier"] in ("rule", "topic"):
         conf = "high"
@@ -320,6 +352,8 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
         conf = "low"
     for h in hits:
         h.pop("rid", None)
+    if hits and conf != "none":
+        attach_answers(vault, hits, raw, df)
     return {"hits": hits, "stats": stats, "query_tokens": qtok, "margin": round(margin, 2),
             "strong": strong, "confidence": conf}
 
@@ -383,6 +417,62 @@ def phrase_terms(con: sqlite3.Connection, terms: list[str], cols: tuple[str, ...
     return {t for (t,) in con.execute(
         f"SELECT DISTINCT term FROM vcol WHERE term IN ({marks}) AND col IN ({','.join('?' * len(cols))})",
         terms + list(cols))}
+
+
+def compact(text: str) -> str:
+    text = unicodedata.normalize("NFKC", text or "").lower()
+    return re.sub(r"[\s\W_]+", "", text)
+
+
+def is_single_concept(query: str) -> bool:
+    """`DSH`、`发版`、`自动化`：一个英文词，或不超过 4 个汉字、没有空格。"""
+    q = (query or "").strip()
+    if not q or re.search(r"\s", q) or q.isdigit():
+        return False  # 纯数字（年份、序号）不是一个概念
+    if re.fullmatch(r"[A-Za-z0-9._+-]+", q):
+        return True
+    return bool(CJK_RE.fullmatch(q)) and len(q) <= 4
+
+
+def load_cards(vault: Path) -> dict[str, list[dict]]:
+    by: dict[str, list[dict]] = {}
+    base = vault / "90 系统文件"
+    for path in sorted(base.rglob(CARD_GLOB)) if base.is_dir() else []:
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            try:
+                card = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if card.get("rel") and card.get("q") and card.get("a"):
+                by.setdefault(card["rel"], []).append(card)
+    return by
+
+
+def attach_answers(vault: Path, hits: list[dict], raw: list[str], df: dict[str, int]) -> None:
+    """Pick the card on each hit page whose question/answer share most of the query's content words."""
+    cards = load_cards(vault)
+    if not cards:
+        return
+    weights = {t: (0.0 if is_cjk_bigram(t) and set(t) & FUNCTION_CHARS else soft_weight(t, df)) for t in raw}
+    total = sum(weights.values()) or 1.0
+    for h in hits:
+        page = vault / h["rel"]
+        options = cards.get(h["rel"])
+        if not options or not page.is_file():
+            continue
+        current = hashlib.sha1(page.read_bytes()).hexdigest()[:16]
+        best, best_cov = None, 0.0
+        for card in options:
+            if card.get("sha") != current:
+                continue  # 页面改过，旧卡作废，等夜间重写
+            have = set(tokens(card["q"] + " " + card["a"]))
+            cov = sum(w for t, w in weights.items() if t in have) / total
+            strong = any(t in have and w >= STRONG_W for t, w in weights.items())
+            if strong and cov > best_cov:
+                best, best_cov = card, cov
+        if best and best_cov >= CARD_MIN:
+            h["answer"] = best["a"]
+            h["answer_q"] = best["q"]
 
 
 def is_cjk_bigram(t: str) -> bool:
@@ -457,6 +547,8 @@ def main() -> int:
     for h in res["hits"]:
         flag = f" status={h['status']}" if h["status"] else ""
         print(f"- {h['rel']} tier={h['tier']}{flag} score={h['score']}")
+        if h.get("answer"):
+            print(f"  answer: {h['answer']}")
         if h["how"]:
             print(f"  how: {h['how']}")
         for ln, text in best_lines(vault / h["rel"], res["query_tokens"], args.lines):

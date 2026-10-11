@@ -144,7 +144,8 @@ def test_route_widens_from_single_file_scope(vault, monkeypatch, tmp_path):
 
     root = Path(__file__).resolve().parents[1] / "skill/krouter-obsidian/scripts/route_knowledge.py"
     write(vault, "02 经验与方法/Agent/用户偏好与工作约束.md", "---\ntitle: 用户偏好\n---\n\n名称要能看懂。\n")
-    env = {**__import__("os").environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_STATE_DIR": str(tmp_path / "state")}
+    env = {**__import__("os").environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_STATE_DIR": str(tmp_path / "state"),
+           "KROUTER_NO_QUERY_LOG": "0"}
     out = subprocess.run([sys.executable, str(root), "preference", "封账 时间日志"], capture_output=True, text=True, env=env).stdout
     assert "scope_widened: vault" in out
     assert "封账先看时间日志文件.md" in out
@@ -223,3 +224,31 @@ def test_consolidate_topics_writes_cited_provisional_page(vault, monkeypatch):
     assert "`不存在的页`（未找到此页）" in page and "[[05 时间日志/2026-10/02｜修补丁]]" in page
     assert "05 时间日志/2026-10/02｜修补丁.md" in seen["prompt"]
     assert ct.build(vault, ct.load_list(vault)[0], "cli", "m", False)["status"] == "unchanged"
+
+
+def test_single_concept_detection():
+    assert r.is_single_concept("DSH") and r.is_single_concept("发版") and r.is_single_concept("grok-fixed")
+    assert not r.is_single_concept("DSH 桌面端") and not r.is_single_concept("封账要看时间日志吗")
+
+
+def test_title_hit_and_single_keyword(vault):
+    res = r.recall(vault, "封账", limit=3)
+    assert res["confidence"] != "none"
+    assert hits(res)[0] == "02 经验与方法/搜索与知识库/封账先看时间日志文件.md"
+
+
+def test_answer_card_is_attached_and_expires_with_its_page(vault):
+    import hashlib
+    import json
+
+    rel = "02 经验与方法/搜索与知识库/封账先看时间日志文件.md"
+    sha = hashlib.sha1((vault / rel).read_bytes()).hexdigest()[:16]
+    write(vault, "90 系统文件/自动化/下意识问答.jsonl", json.dumps(
+        {"rel": rel, "sha": sha, "q": "怎么判断哪天封账了", "a": "那天的时间日志存在且不叫待总结就算封账。"},
+        ensure_ascii=False) + "\n")
+    res = r.recall(vault, "怎么判断哪天封账了", limit=3)
+    top = res["hits"][0]
+    assert top["rel"] == rel and top["answer"].startswith("那天的时间日志存在")
+    write(vault, rel, "---\ntitle: 封账先看时间日志文件\nstatus: active\n---\n\n规则改了。\n")
+    res = r.recall(vault, "怎么判断哪天封账了", limit=3)
+    assert all("answer" not in h for h in res["hits"])
