@@ -42,7 +42,7 @@ def resolve(vault: Path, ref: str) -> str | None:
 def supersede_pairs(vault: Path) -> list[tuple[str, str]]:
     pairs = []
     for path, rel in ri.iter_markdown(vault):
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = path.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n")
         if not text.startswith("---\n"):
             continue
         fm = text[4 : text.find("\n---", 4)]

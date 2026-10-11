@@ -75,6 +75,8 @@ def tokens(text: str) -> list[str]:
 
 
 def split_frontmatter(text: str) -> tuple[dict[str, str], str]:
+    # Windows 编辑器常存 CRLF：不规范化的话 frontmatter 整个读不出来，`status: superseded` 也就失效
+    text = (text or "").replace("\r\n", "\n")
     if not text.startswith("---\n"):
         return {}, text
     end = text.find("\n---", 4)

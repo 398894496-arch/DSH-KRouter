@@ -1,3 +1,5 @@
+import os
+
 from resolve import (
     distill_gate,
     is_key_name,
@@ -172,7 +174,8 @@ def test_pasted_page_key_moves_into_the_keys_file(tmp_path, monkeypatch):
     assert "sk-live-page" not in page.read_text(encoding="utf-8")
     assert "DEEPSEEK_API_KEY=sk-live-page" in keys_file.read_text(encoding="utf-8")
     assert "sk-live-file" not in keys_file.read_text(encoding="utf-8")
-    assert oct(keys_file.stat().st_mode & 0o777) == "0o600"
+    if os.name != "nt":  # POSIX permissions; Windows keeps the file in the user's profile
+        assert oct(keys_file.stat().st_mode & 0o777) == "0o600"
 
 
 def test_collect_keys_ignores_placeholders(tmp_path, monkeypatch):

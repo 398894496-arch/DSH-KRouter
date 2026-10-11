@@ -419,6 +419,7 @@ def test_llm_plan_order(monkeypatch, tmp_path):
         llm.complete("hi")
 
 
+@pytest.mark.skipif(__import__("os").name == "nt", reason="the fake CLI is a shell script")
 def test_llm_no_key_uses_the_writers_cli_detection(monkeypatch, tmp_path):
     """Only grok installed, no key: the nightly lane finds what the writer finds and gets text back."""
     import llm
