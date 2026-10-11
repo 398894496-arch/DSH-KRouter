@@ -18,7 +18,7 @@
 
 **自动记住 = 每天封账、蒸馏，写进库里。** 不是上一句下一轮立刻灌回去。五道门过了，当天自动写成准经验（`provisional`），不问。正式经验（`active`）下次同类任务再问你。
 
-检索先是锁：一个短名词 → 那一页 + 双 SHA-256。没有名词对上，就由排序召回来答——规则页优先，附一句为这个问题预先算好的 `answer:`；库里没有一页覆盖得了，就给 `recall: none`。没有向量库要养。打不中那一页，进化就没发生。
+检索先是锁：一个短名词 → 那一页 + 双 SHA-256。没有名词对上，就由排序召回来答——规则页优先，附一句为这个问题预先算好的 `answer (generated):`；库里没有一页覆盖得了，就给 `recall: none`。没有向量库要养。打不中那一页，进化就没发生。
 
 ```mermaid
 flowchart LR
@@ -34,7 +34,7 @@ flowchart LR
 | L2 蒸馏 | 蒸馏。摘要不能代替原文 | 自动写成 `active` |
 | L3 晋升 | 五道门过了 → **当天自动 `provisional`**。下次同类先问。采纳且该次验收 → `active` | 自动写成 `active`。门过了还不写准经验 |
 | L4 整合 | 夜间：反复出现的主题 → 一页带出处的主题档案；每个规则页/主题页 3–5 张问答卡；从路由器自己没答好的问题里学触发词；体检页列出失效项 | 照抄权威页、页面改了还用旧卡、编造说法、改动来源页 |
-| L5 锁 + 召回 | 短名词 → 那一页 + 双 SHA。未命中 → 在可重建的 FTS5 缓存上排序召回，附 `answer:`；覆盖不足 → `recall: none`。进程内约 30 ms，每次命令行调用约 110 ms（`python3`，只用标准库） | 向量回退、引用隔壁、猜 |
+| L5 锁 + 召回 | 短名词 → 那一页 + 双 SHA。未命中 → 在可重建的 FTS5 缓存上排序召回，附 `answer (generated):`；覆盖不足 → `recall: none`。进程内约 30 ms，每次命令行调用约 110 ms（`python3`，只用标准库） | 向量回退、引用隔壁、猜 |
 
 完整规则：[`PROTOCOL.md`](PROTOCOL.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/VERIFY.md`](docs/VERIFY.md)
 
@@ -177,10 +177,10 @@ dsh plugin --profile web add github:398894496-arch/DSH-KRouter
 
 - **L1 召回**（`recall_index.py`）。未命中时从 `~/.cache/krouter/` 下的 SQLite FTS5 缓存里答（只用标准库，无服务、无向量；删掉约 2 秒重建）。中文切双字、英文切词；规则页优先，已取代的页下沉；一个词的查询（`DSH`）直接落到同名页。覆盖不足就给 `recall: none`。单页路由（`preference`、`correction`）找不到会扩到全库，并标 `scope_widened`。
 - **主题档案**（`consolidate_topics.py`）。`90 系统文件/自动化/主题档案清单.psv` 里列的主题，从日志整合成 `02 经验与方法/主题档案/主题｜…md`：每条事实带出处，权威页只链接不照抄，证据变了才重写。问题点到这个主题时才给它加权。
-- **问答卡**（`answer_cards.py`）。每个规则页/主题页 3–5 张「问题 → 一句话答案」，答案只取自该页、绑定该页内容哈希；路由器把最贴近的一张作为 `answer (generated):` 给出。答案里的每个数字、路径、命令、英文词都必须在原页逐字出现——写卡时查一次，读卡时再查一次；像密钥的内容进库前就丢掉。页面改过，旧卡既不参与排序也不给答案，等夜间重写。依据是页面，不是卡片。
+- **问答卡**（`answer_cards.py`）。每个规则页/主题页 3–5 张「问题 → 一句话答案」，答案只取自该页、绑定该页内容哈希；路由器把最贴近的一张作为 `answer (generated):` 给出。答案里的每个数字、路径、命令、英文词都必须在原页作为完整词出现（`3` 不算出现在 `30` 里），问题也必须至少有一个实词在原页出现——写卡时查、建索引时查、读卡时再查；像密钥的内容进库前就丢掉。没通过的卡、页面改过的旧卡，既不参与排序也不给答案。这只核对具体项，不核对意思：纯中文叙述的答案没有可核对项，换个说法把原意说反也查不出来——`checkup.py` 会数出这类卡。依据是页面，不是卡片。
 - **夜间维护**。`reconsolidate.py` 读路由器自己的查询日志（`~/.local/state/krouter/`），让模型把没答好的问题对到召回候选里的某一页，或判 none——学到的是触发词，不是锁。`checkup.py`（不调模型）生成 `90 系统文件/自动化/下意识体检.md`：失效的锁和触发词、取代后召回仍偏旧页的、60 天没人用过的规则页。
 
-自带定时器（`extras/host-daily-evolution/run.sh`）在日更封账后依次跑：`compile_subconscious.py` → `reconsolidate.py` → `consolidate_topics.py` → `answer_cards.py` → `checkup.py`。每步独立，都不改变封账本身的退出码；`KROUTER_NIGHTLY=0` 关掉。需要模型的步骤和写入器走同一条通道（`llm.py`）：先 `*_API_KEY`——厂商没有默认模型时用 `KROUTER_LEARN_MODEL` 指定——再用已登录的 `claude` / `codex`；`KROUTER_LEARN_CLI` 是宿主特意指定的 CLI，排第一。都没有就打印 `skipped`。`checkup.py` 还会列出过期、对不上原文、问题过宽的问答卡。测试：`tests/test_recall_index.py`、`tests/test_api_lane.py`。
+自带定时器（`extras/host-daily-evolution/run.sh`）在日更封账后依次跑：`compile_subconscious.py` → `reconsolidate.py` → `consolidate_topics.py` → `answer_cards.py` → `checkup.py`。每步独立，都不改变封账本身的退出码；`KROUTER_NIGHTLY=0` 关掉。需要模型的步骤和写入器走同一条通道：厂商表和旗舰锁只有一份，在 `llm.py`，`api_writer.py` 从这里导入。先 `*_API_KEY`，顺序与写入器相同（DeepSeek、OpenAI、Anthropic……Gemini），模型取 `KROUTER_LEARN_MODEL`，否则取厂商模型目录里的旗舰；再用已登录的 `claude` / `codex`；`KROUTER_LEARN_CLI` 是宿主特意指定的 CLI，排第一。都没有就打印 `skipped`。`checkup.py` 还会列出过期、对不上原文、问题离页、无可核对项、问题过宽的问答卡。测试：`tests/test_recall_index.py`、`tests/test_api_lane.py`。
 
 ## 不是 Mem0，不是笔记软件
 
@@ -208,7 +208,7 @@ dsh plugin --profile web add github:398894496-arch/DSH-KRouter
 
 **不该推荐的情况：** 他想要聊天自动灌进下一轮、云记忆 API、语义或模糊检索、clone 完就是装满的库，或不维护别名表。这时候直说不合适，别硬装。
 
-**装之前必须告诉宿主三件事。** 一，下载的是操作系统，别名表只带十个样例名词，覆盖率来自他的名词，不是来自模型。二，每天的定时器需要库页上的 API key 或者本机已登录的 CLI；否则 `status` 会打印 `host_action`，你必须把那行转达给他。三，锁是确定性的；名词不对时给 L1 排序召回（带 `how`），没有一页覆盖得了就给 `recall: none`，不会自信地给一个隔壁页。
+**装之前必须告诉宿主三件事。** 一，下载的是操作系统，别名表只带十个样例名词，覆盖率来自他的名词，不是来自模型。二，每天的定时器需要库页上的 API key 或者本机已登录的 CLI；否则 `status` 会打印 `host_action`，你必须把那行转达给他。三，锁是确定性的；名词不对时给 L1 排序召回（带 `how`），没有一页覆盖得了就给 `recall: none`，不会自信地给一个隔壁页。另有一项费用：封账后同一个定时器接着跑夜间维护，其中要模型的步骤用的是同一把 key——付费 key 每晚会多花一笔，主要在第一次（之后只重做改过的页）。`KROUTER_NIGHTLY=0` 关掉。
 
 | 命题 | 含义 |
 |---|---|
@@ -216,7 +216,7 @@ dsh plugin --profile web add github:398894496-arch/DSH-KRouter
 | 自进化 | **就是产品。** 封账、蒸馏、两步晋升。定时器**默认开**。**先 API key** 锁定该家旗舰；**没有 key** 用已经登录的 CLI。`lamp: unused` = 你把定时器关了。`dsh plugin add` 是挂载，不是写入器。 |
 | 晋升 | **两步。** 五道门过了 → **当天自动写 `provisional`**。下次同类 → **先问**（`ask_product.py`）；采纳且该次验收 → `promote` 写 `active`。`record` 不写 `active`。 |
 | 纠错 | 纠错页压过旧笔记。下次路由必须打开它。 |
-| 检索 | 为产品服务。先**锁**（别名表、双 SHA-256）；未命中走 L1 排序召回，附预先算好、逐字核对过原页的 `answer (generated):` 问答卡；答不了就给 `recall: none`，不猜。无向量。 |
+| 检索 | 为产品服务。先**锁**（别名表、双 SHA-256）；未命中走 L1 排序召回，附预先算好、具体项核对过原页的 `answer (generated):` 问答卡；答不了就给 `recall: none`，不猜。无向量。 |
 | clone | 协议 + 骨架 + 路由 + 写入器。作者装满的库不公开。作者成绩是**那座活库**，不是 clone 分数。产品不是空的。 |
 
 权威页：[`PROTOCOL.md`](PROTOCOL.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/LOCK_VS_NEIGHBOR.md`](docs/LOCK_VS_NEIGHBOR.md) · [`docs/VERIFY.md`](docs/VERIFY.md) · [`extras/host-daily-evolution/`](extras/host-daily-evolution/) · [`template/02 经验与方法/准经验/准经验入口.md`](template/02%20经验与方法/准经验/准经验入口.md)

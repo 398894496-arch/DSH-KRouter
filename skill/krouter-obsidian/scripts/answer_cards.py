@@ -5,7 +5,9 @@ Real router traffic repeats itself (half the calls repeat an earlier question), 
 predictable. For every rule / topic page, a model writes 3–5 `question → one-line answer` pairs taken
 only from that page. Cards live in `90 系统文件/自动化/下意识问答.jsonl` (machine file; no source page
 is edited), carry the page's content hash, and are rewritten only when the page changes. The router
-uses card questions as recall triggers and prints the best-matching card as `answer:` with its source.
+uses card questions as recall triggers and prints the best-matching card as `answer (generated):`.
+A card is kept only if its specifics appear in the page as whole tokens and its question shares a
+content word with the page (recall_index.grounded); meaning is not checked.
 """
 
 from __future__ import annotations
@@ -97,6 +99,8 @@ def accept(item: object, page_text: str) -> str:
         return "secret-like"
     if not ri.faithful(item["a"], page_text):
         return "not-verbatim"
+    if not ri.grounded(item, page_text):
+        return "question-off-page"
     return ""
 
 

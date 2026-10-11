@@ -125,10 +125,11 @@ def main() -> int:
         else:
             tenure_bad.append((title, new, old))
 
-    # 3. answer cards: stale (page changed), not verbatim (specifics missing from the page), too broad
+    # 3. answer cards: stale (page changed), not verbatim (specifics missing from the page), question off the page,
+    #    nothing checkable (pure prose: only a human can tell if it says what the page says), too broad
     import hashlib
 
-    stale_cards, unfaithful_cards, broad_cards = 0, [], []
+    stale_cards, unfaithful_cards, offpage_cards, unchecked_cards, broad_cards = 0, [], [], [], []
     page_hash: dict[str, str] = {}
     page_text: dict[str, str] = {}
     for rel, cards in ri.load_cards(vault).items():
@@ -145,6 +146,10 @@ def main() -> int:
                 continue
             if not ri.faithful(card["a"], page_text[rel]):
                 unfaithful_cards.append((rel, card["q"]))
+            elif not ri.grounded(card, page_text[rel]):
+                offpage_cards.append((rel, card["q"]))
+            elif not ri.card_specifics(card["a"]):
+                unchecked_cards.append((rel, card["q"]))
             raw = [t for t in ri.tokens(card["q"]) if not (len(t) == 1 and ri.CJK_RE.fullmatch(t))]
             df = ri.term_df(con, raw + [c for t in raw if ri.is_cjk_bigram(t) for c in t])
             titled = ri.phrase_terms(con, [t for t in raw if ri.is_cjk_bigram(t)], ("title",))
@@ -167,6 +172,8 @@ def main() -> int:
         "unused_rule_pages": unused,
         "stale_cards": stale_cards,
         "unfaithful_cards": unfaithful_cards,
+        "offpage_cards": offpage_cards,
+        "unchecked_cards": unchecked_cards,
         "broad_cards": broad_cards,
         "window_days": args.days,
     }
@@ -176,7 +183,8 @@ def main() -> int:
         "---", "title: 下意识体检", "status: generated", f"generated_at: {report['generated_at']}",
         f"tenure: \"{tenure_ok}/{report['tenure_pairs']}\"", f"stale_locks: {len(stale_locks)}",
         f"unused_rule_pages: {len(unused)}", f"stale_cards: {stale_cards}",
-        f"unfaithful_cards: {len(unfaithful_cards)}", f"broad_cards: {len(broad_cards)}", "---", "",
+        f"unfaithful_cards: {len(unfaithful_cards)}", f"offpage_cards: {len(offpage_cards)}",
+        f"unchecked_cards: {len(unchecked_cards)}", f"broad_cards: {len(broad_cards)}", "---", "",
         "# 下意识体检", "",
         "机器生成，不改任何来源页。只列需要人看的项。", "",
         "## 锁指向失效页", "",
@@ -190,6 +198,9 @@ def main() -> int:
         f"- 过期（页面改过、卡未重写，已不参与排序和答案）：{stale_cards} 张",
         f"- 答案里的数字/路径/命令在原文找不到（读取时已拦下）：{len(unfaithful_cards)} 张",
         *[f"  - `{r}`：{q}" for r, q in unfaithful_cards[:20]],
+        f"- 问题跟这页无关（问题里没有一个实词在原页出现，读取时已拦下）：{len(offpage_cards)} 张",
+        *[f"  - `{r}`：{q}" for r, q in offpage_cards[:20]],
+        f"- 答案没有可核对的数字/路径/英文词（只能人看；意思被说反也查不出来）：{len(unchecked_cards)} 张",
         f"- 问题过宽（实词不到 2 个，可能把无关提问召回到这一页）：{len(broad_cards)} 张",
         *[f"  - `{r}`：{q}" for r, q in broad_cards[:30]], "",
         f"## 近 {args.days} 天没人读、也没被召回的规则页（{len(unused)}/{len(rules)}）", "",

@@ -8,13 +8,13 @@ or the key page.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
 import subprocess
 import sys
 import urllib.error
-import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -24,55 +24,29 @@ MAX_ROUNDS = 12
 MAX_FILE_BYTES = 120_000
 DENIED_NAMES = frozenset({"canonical_sources.psv", "自进化钥匙.md"})
 
-# (env name, chat url, flagship default, style)
-CHAT_SPECS: list[tuple[str, str, str, str]] = [
-    ("DEEPSEEK_API_KEY", "https://api.deepseek.com/chat/completions", "deepseek-reasoner", "openai"),
-    ("OPENAI_API_KEY", "https://api.openai.com/v1/chat/completions", "gpt-4.1", "openai"),
-    ("ANTHROPIC_API_KEY", "https://api.anthropic.com/v1/messages", "claude-opus-4-20250514", "anthropic"),
-    ("XAI_API_KEY", "https://api.x.ai/v1/chat/completions", "grok-4", "openai"),
-    ("GROQ_API_KEY", "https://api.groq.com/openai/v1/chat/completions", "openai/gpt-oss-120b", "openai"),
-    ("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1/chat/completions", "anthropic/claude-sonnet-4", "openai"),
-    ("MOONSHOT_API_KEY", "https://api.moonshot.ai/v1/chat/completions", "kimi-k2-0711-preview", "openai"),
-    ("KIMI_API_KEY", "https://api.moonshot.ai/v1/chat/completions", "kimi-k2-0711-preview", "openai"),
-    ("DASHSCOPE_API_KEY", "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "qwen-max", "openai"),
-    ("ZHIPUAI_API_KEY", "https://open.bigmodel.cn/api/paas/v4/chat/completions", "glm-4-plus", "openai"),
-    ("GLM_API_KEY", "https://open.bigmodel.cn/api/paas/v4/chat/completions", "glm-4-plus", "openai"),
-    ("SILICONFLOW_API_KEY", "https://api.siliconflow.cn/v1/chat/completions", "deepseek-ai/DeepSeek-R1", "openai"),
-    ("TOGETHER_API_KEY", "https://api.together.xyz/v1/chat/completions", "deepseek-ai/DeepSeek-R1", "openai"),
-    ("FIREWORKS_API_KEY", "https://api.fireworks.ai/inference/v1/chat/completions", "accounts/fireworks/models/deepseek-r1", "openai"),
-    ("MISTRAL_API_KEY", "https://api.mistral.ai/v1/chat/completions", "mistral-large-latest", "openai"),
-    ("CEREBRAS_API_KEY", "https://api.cerebras.ai/v1/chat/completions", "gpt-oss-120b", "openai"),
-    ("NVIDIA_API_KEY", "https://integrate.api.nvidia.com/v1/chat/completions", "deepseek-ai/deepseek-r1", "openai"),
-    ("PERPLEXITY_API_KEY", "https://api.perplexity.ai/chat/completions", "sonar-pro", "openai"),
-    ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent", "gemini-2.5-pro", "gemini"),
-    ("GOOGLE_API_KEY", "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent", "gemini-2.5-pro", "gemini"),
-    ("GOOGLE_GENERATIVE_AI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent", "gemini-2.5-pro", "gemini"),
-]
-
-FLAGSHIP_NEEDLES = (
-    ("opus-4", 100),
-    ("claude-opus", 98),
-    ("grok-4.6", 96),
-    ("grok-4", 92),
-    ("gpt-5", 90),
-    ("o3", 86),
-    ("deepseek-reasoner", 85),
-    ("deepseek-r1", 84),
-    ("claude-sonnet-4", 82),
-    ("gpt-4.1", 80),
-    ("gemini-2.5-pro", 78),
-    ("qwen-max", 76),
-    ("kimi-k2", 74),
-    ("glm-4.5", 72),
-    ("glm-4-plus", 70),
-    ("mistral-large", 68),
-    ("deepseek-chat", 60),
-    ("sonar-pro", 58),
-)
-FLAGSHIP_PENALTY = ("mini", "nano", "haiku", "lite", "small", "instant", "flash-lite", "tiny")
-
 HERE = Path(__file__).resolve().parent
 PROMPT = HERE / "PROMPT.md"
+
+
+def _load_lane():
+    """The provider table and flagship lock live in the skill's llm.py: one table for the writer and the
+    nightly steps. Loaded by file path so an unrelated `llm` package on sys.path cannot stand in for it."""
+    for scripts in (HERE.parents[1] / "skill/krouter-obsidian/scripts",
+                    Path.home() / ".agents/skills/krouter-obsidian/scripts"):
+        path = scripts / "llm.py"
+        if path.is_file():
+            spec = importlib.util.spec_from_file_location("krouter_llm", path)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod
+    raise SystemExit("DSH-KRouter: skill/krouter-obsidian/scripts/llm.py not found")
+
+
+_lane = _load_lane()
+CHAT_SPECS = _lane.CHAT_SPECS
+lock_flagship = _lane.lock_flagship
+openai_headers = _lane.openai_headers
+catalog_ids = _lane.catalog_ids
 TOOLS = [
     {
         "type": "function",
@@ -136,30 +110,6 @@ def vault_root() -> Path:
     if not raw:
         raise SystemExit("OBSIDIAN_VAULT is not set")
     return Path(raw).resolve()
-
-
-def lock_flagship(model_ids: list[str], fallback: str = "") -> str:
-    """Pick the flagship id from a provider catalog. Never prefers mini/haiku/flash-lite."""
-    best_id = fallback
-    best_score = -10_000
-    for raw in model_ids:
-        mid = (raw or "").strip()
-        if not mid:
-            continue
-        lower = mid.lower()
-        score = 1
-        for needle, pts in FLAGSHIP_NEEDLES:
-            if needle in lower:
-                score = max(score, pts)
-                break
-        if any(p in lower for p in FLAGSHIP_PENALTY):
-            score -= 40
-        if "flash" in lower and "pro" not in lower:
-            score -= 20
-        if score > best_score:
-            best_score = score
-            best_id = mid
-    return best_id or fallback
 
 
 def model_override(keys: dict[str, str], extra: dict[str, str]) -> str:
@@ -373,18 +323,6 @@ def _http_json(url: str, payload: dict, headers: dict[str, str]) -> dict:
         raise SystemExit("DSH-KRouter: chat API returned non-JSON") from exc
 
 
-def openai_headers(key: str, name: str) -> dict[str, str]:
-    headers = {
-        "Authorization": f"Bearer {key}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-    if name == "OPENROUTER_API_KEY":
-        headers["HTTP-Referer"] = "https://github.com/398894496-arch/DSH-KRouter"
-        headers["X-Title"] = "DSH-KRouter"
-    return headers
-
-
 def write_pending(vault: Path, day: date, reason: str) -> None:
     month = vault / "05 时间日志" / day.strftime("%Y-%m")
     path = month / f"{day.strftime('%d')}｜待总结.md"
@@ -468,13 +406,10 @@ def run_single_shot(vault: Path, spec: dict[str, str], key: str, user: str) -> i
         blocks = data.get("content") or []
         text = "".join(b.get("text") or "" for b in blocks if isinstance(b, dict))
     elif spec["style"] == "gemini":
-        url = spec["url"]
-        if "key=" not in url:
-            url += ("&" if "?" in url else "?") + urllib.parse.urlencode({"key": key})
         data = _http_json(
-            url,
+            spec["url"],
             {"contents": [{"parts": [{"text": prompt_text}]}]},
-            {"Content-Type": "application/json"},
+            {"Content-Type": "application/json", "x-goog-api-key": key},
         )
         cands = data.get("candidates") or []
         parts = (((cands[0] if cands else {}).get("content") or {}).get("parts") or [])
@@ -487,48 +422,6 @@ def run_single_shot(vault: Path, spec: dict[str, str], key: str, user: str) -> i
         )
         text = (((data.get("choices") or [{}])[0].get("message") or {}).get("content")) or ""
     return apply_files(vault, parse_files_payload(text))
-
-
-def _http_get_json(url: str, headers: dict[str, str]) -> dict:
-    req = urllib.request.Request(url, headers=headers, method="GET")
-    try:
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            raw = resp.read()
-    except (urllib.error.URLError, TimeoutError, OSError, urllib.error.HTTPError):
-        return {}
-    try:
-        return json.loads(raw.decode("utf-8"))
-    except json.JSONDecodeError:
-        return {}
-
-
-def catalog_ids(spec: dict[str, str], key: str) -> list[str]:
-    style = spec.get("style")
-    if style == "anthropic":
-        data = _http_get_json(
-            "https://api.anthropic.com/v1/models",
-            {"x-api-key": key, "anthropic-version": "2023-06-01", "Accept": "application/json"},
-        )
-        rows = data.get("data") or []
-        return [str(r.get("id") or "") for r in rows if isinstance(r, dict)]
-    if style == "gemini":
-        q = urllib.parse.urlencode({"key": key})
-        data = _http_get_json(
-            f"https://generativelanguage.googleapis.com/v1beta/models?{q}",
-            {"Accept": "application/json"},
-        )
-        rows = data.get("models") or []
-        ids = []
-        for r in rows:
-            if not isinstance(r, dict):
-                continue
-            name = str(r.get("name") or "")
-            ids.append(name.split("/")[-1] if name else "")
-        return ids
-    url = spec["url"].replace("/chat/completions", "/models")
-    data = _http_get_json(url, openai_headers(key, spec["name"]))
-    rows = data.get("data") or []
-    return [str(r.get("id") or "") for r in rows if isinstance(r, dict)]
 
 
 def apply_flagship_lock(spec: dict[str, str], key: str) -> dict[str, str]:
