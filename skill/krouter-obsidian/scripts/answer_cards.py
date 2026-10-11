@@ -85,7 +85,11 @@ def targets(vault: Path) -> list[str]:
     con = ri.connect(ri.cache_path(vault))
     ri.refresh(vault, con)
     rels = [r for (r,) in con.execute("SELECT rel FROM docs WHERE tier IN ('rule', 'topic') ORDER BY rel")]
-    return [r for r in rels if not ri.is_secret_page(ri.zones.canon(vault, r))]  # 钥匙页永不外发
+    def secret(rel: str) -> bool:
+        meta, _ = ri.split_frontmatter((vault / rel).read_text(encoding="utf-8", errors="replace"))
+        return ri.is_secret_page(ri.zones.canon(vault, rel), meta)
+
+    return [r for r in rels if not secret(r)]  # 机密页（钥匙页、凭据页、secret: true）永不外发
 
 
 def block(vault: Path, rel: str) -> str:

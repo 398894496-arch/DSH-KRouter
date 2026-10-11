@@ -156,7 +156,7 @@ def test_collect_keys_reads_install_keys_file(tmp_path, monkeypatch):
     assert collect_keys(vault)["DEEPSEEK_API_KEY"] == "sk-live-looking"
 
 
-def test_vault_page_beats_keys_file(tmp_path, monkeypatch):
+def test_pasted_page_key_moves_into_the_keys_file(tmp_path, monkeypatch):
     from resolve import collect_keys, key_page
 
     vault = tmp_path / "vault"
@@ -167,7 +167,12 @@ def test_vault_page_beats_keys_file(tmp_path, monkeypatch):
     keys_file.write_text("DEEPSEEK_API_KEY=sk-live-file\n", encoding="utf-8")
     monkeypatch.setenv("KROUTER_KEYS_ENV", str(keys_file))
 
-    assert collect_keys(vault)["DEEPSEEK_API_KEY"] == "sk-live-page"
+    assert collect_keys(vault)["DEEPSEEK_API_KEY"] == "sk-live-page"  # a newly pasted key still wins
+    # …but it no longer lives in the vault: it moved into the keys file, which only the host can read
+    assert "sk-live-page" not in page.read_text(encoding="utf-8")
+    assert "DEEPSEEK_API_KEY=sk-live-page" in keys_file.read_text(encoding="utf-8")
+    assert "sk-live-file" not in keys_file.read_text(encoding="utf-8")
+    assert oct(keys_file.stat().st_mode & 0o777) == "0o600"
 
 
 def test_collect_keys_ignores_placeholders(tmp_path, monkeypatch):

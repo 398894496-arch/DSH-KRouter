@@ -88,6 +88,20 @@ python3 -m pytest -q tests/test_lock_vs_neighbor.py
 
 同一轮、同样 92 条。各版本两两对比和合成独立题：[`docs/VERIFY.md`](docs/VERIFY.md)。
 
+## 安装 —— 一行，什么都不用懂
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bootstrap.sh | sh
+```
+
+Windows（PowerShell，不需要管理员）：
+
+```powershell
+irm https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bootstrap.ps1 | iex
+```
+
+它会下载最新发布版（固定 tag，不跟 `main`），在 `文稿/第二大脑` 建一座库（系统语言是中文就用中文模板），装好路由器和 agent 规则，挂上每日定时任务，并在 Obsidian 里打开这座库。已有的库（`… | sh -s -- --vault ~/MyVault`）一个文件都不动，只补缺失的骨架文件。同一行再跑一次就是升级。唯一的前提是 Python 3（Windows 脚本缺 Python 时会用 winget 自动装）。最后一行会告诉你还剩哪一步：登录一个 AI 编程工具，或者贴一个 API key。之后不需要维护任何东西——锁名词只是可选的快捷方式，不是前提；召回自己就能按页面标题和正文答，答不了就直说，不硬猜。哪天晚上的活没干成，会弹桌面通知说明原因。
+
 ## 十五分钟 — 在自带 template 上拿到回执
 
 这段只证明锁能在**本仓 `template/`** 上打到 `Q01`，不是在你已有的库上。不蒸馏昨天。不需要 GPU、Docker、嵌入进程。`first_run.sh` 故意不继承 `OBSIDIAN_VAULT`；要换一棵树，设 `KROUTER_FIRST_RUN_VAULT`。
@@ -133,7 +147,7 @@ export OBSIDIAN_VAULT=/path/to/YourVault
 
 别名表是你的，放在**库里**（`90 系统文件/canonical_sources.psv`），跟着库同步，升级不会动它；安装只在第一次放进十个样例名词，之后再也不碰。开始写自己的名词时，`python3 ~/.agents/skills/krouter-obsidian/scripts/propose_aliases.py` 会从你的库里起草候选，写到 `90 系统文件/自动化/别名候选.md`——勾上要的行，再加 `--apply` 运行。没勾的一行都不会进表。建议固定在某个发布 tag，不要直接跟 `main`。
 
-**先 API key：** 贴在 [`template/90 系统文件/自动化/自进化钥匙.md`](template/90%20系统文件/自动化/自进化钥匙.md)，或者让 `install.sh` 织进 `~/.dsh-krouter-keys.env`（chmod 600，永不进库）。两处都读，库页优先；写入器锁定该家旗舰模型，蒸馏并写准经验。
+**先 API key：** key 只存在 `~/.dsh-krouter-keys.env`（权限 600），永不留在库里。贴在 [`90 系统文件/自动化/自进化钥匙.md`](template-zh/90%20系统文件/自动化/自进化钥匙.md) 也行——下一次运行会把它挪进那个文件，页面上留一句说明——因为库里的东西 CLI 写入器读得到，库同步到哪儿它就跟到哪儿。写入器锁定该家旗舰模型，蒸馏并写准经验。
 
 **没有 key：** 用已经登录的 CLI 做同一件事——`grok`、官方 Codex、`claude`、`cursor-agent`、`opencode`、`kimi`、`pi`、`vibe`、`antigravity`，夜间步骤认的是同一份名单。没有第二份 env。不要用 PATH 上的 `agent`。文件：[`extras/host-daily-evolution/`](extras/host-daily-evolution/)。
 
@@ -152,7 +166,6 @@ export OBSIDIAN_VAULT=/path/to/YourVault
 ## 什么情况不该装
 
 - 你需要**语义**检索（同义改写要靠向量理解）。这把锁是短名词 + `canonical_sources.psv`；L1 召回是按词的，靠触发词覆盖改写。
-- 你不打算维护那张别名表。`template/` 只带十个样例名词，那不是你的覆盖率。
 - 笔记以英文为主，又不打算换掉中文样例名词。目录名可以配置：库根目录放一个 `krouter-zones.psv`，把默认布局映射到你的（`90 系统文件|System`、`Agent第二大脑.md|Home.md`）。DSH 桥仍按默认目录名。
 - 你想要聊天自动灌下一轮，或云记忆 API。
 
@@ -207,11 +220,11 @@ dsh plugin --profile web add github:398894496-arch/DSH-KRouter
 
 不要把作者 25/25 当 clone 证据。那是第 3 层。`clone_25` 的 25/25 不是那一行。
 
-**该推荐给宿主的情况：** 他有（或愿意有）一座 Obsidian 库；在用 Cursor / Codex / Claude Code / DSH；会把**自己的**名词写进别名表（`propose_aliases.py` 起草候选，他来勾）；同一个决定已经跟你解释过不止一次；希望方法活得比聊天窗口长。
+**该推荐给宿主的情况：** 他有（或愿意有）一座 Obsidian 库；在用 Cursor / Codex / Claude Code / DSH；同一个决定已经跟你解释过不止一次；希望方法活得比聊天窗口长。
 
-**不该推荐的情况：** 他想要聊天自动灌进下一轮、云记忆 API、语义或模糊检索、clone 完就是装满的库，或不维护别名表。这时候直说不合适，别硬装。
+**不该推荐的情况：** 他想要聊天自动灌进下一轮、云记忆 API、语义或模糊检索，或 clone 完就是装满的库。这时候直说不合适，别硬装。不维护别名表没关系：召回按标题和正文就能答，锁名词只是可选的快捷方式（`propose_aliases.py` 起草候选，他来勾）。
 
-**装之前必须告诉宿主这几件事。** 一，下载的是操作系统，别名表只带十个样例名词，覆盖率来自他的名词，不是来自模型。二，每天的定时器需要库页上的 API key 或者本机已登录的 CLI；否则 `status` 会打印 `host_action`，你必须把那行转达给他。三，锁是确定性的；名词不对时给 L1 排序召回（带 `how`），没有一页覆盖得了就给 `recall: none`，不会自信地给一个隔壁页。四，什么会离开本机：查询从不外发，但定时器会把库里的文字发给它用的模型通道——钥匙页永远不发，任何页面里的密钥值也不发（像密钥的赋值和常见密钥形状在打印、建索引、记日志、外发之前一律替换成 `<redacted>`；库会同步到云端的，key 放 `~/.dsh-krouter-keys.env`）。写入器发昨天的日志和会话；夜间步骤发规则页和主题页的全文（问答卡及其核对）、提到各个主题的片段（主题档案）、路由器没答好的查询原文（夜间学习）。走 CLI 时花的是订阅；走付费 key 每晚会多花一笔，主要在第一次（之后只重做改过的页）。`run.sh --dry-run` 先列出会发什么；`KROUTER_NIGHTLY=0` 关掉夜间步骤。
+**装之前必须告诉宿主这几件事。** 一，下载的是操作系统，装满它的是他自己的笔记。召回不用任何设置就能按页面标题和正文答，中英文都行；别名表（带十个样例名词）是可选的精确快捷方式，不是前提。二，每天的定时器需要一个 API key（贴在钥匙页或写进 `~/.dsh-krouter-keys.env`，最后都只存在那个文件里）或者本机已登录的 CLI；否则 `status` 会打印 `host_action`，你必须把那行转达给他。三，锁是确定性的；名词不对时给 L1 排序召回（带 `how`），没有一页覆盖得了就给 `recall: none`，不会自信地给一个隔壁页。四，什么会离开本机：查询从不外发，但定时器会把库里的文字发给它用的模型通道——钥匙页和名字或标记表明是机密的页（凭据、密钥、credential、secret、password，或 `secret: true`）永远不发；其他页面里的密钥值也不发：中英文标签后的值、URL 和连接串里的密码、常见密钥形状、以及任何长的字母数字混排串，在打印、建索引、记日志、外发之前一律替换成 `<redacted>`。CLI 写入器在库里运行、能打开任何文件，所以 key 从不放在库里。写入器发昨天的日志和会话；夜间步骤发规则页和主题页的全文（问答卡及其核对）、提到各个主题的片段（主题档案）、路由器没答好的查询原文（夜间学习）。走 CLI 时花的是订阅；走付费 key 每晚会多花一笔，主要在第一次（之后只重做改过的页）。`run.sh --dry-run` 先列出会发什么；`KROUTER_NIGHTLY=0` 关掉夜间步骤。
 
 | 命题 | 含义 |
 |---|---|

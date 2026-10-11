@@ -46,7 +46,7 @@ def _load_lane():
 
 _lane = _load_lane()
 import zones  # noqa: E402  (skill scripts dir, appended by _load_lane)
-from krouter_redact import redact  # noqa: E402
+from krouter_redact import is_secret_page, redact  # noqa: E402
 CHAT_SPECS = _lane.CHAT_SPECS
 lock_flagship = _lane.lock_flagship
 openai_headers = _lane.openai_headers
@@ -284,6 +284,8 @@ def tool_impl(vault: Path, name: str, args: dict) -> str:
         path = safe_vault_path(vault, zones.real(vault, str(args.get("path") or "")))
         if path is None or not path.is_file():
             return "denied or missing"
+        if is_secret_page(zones.canon(vault, path.relative_to(vault).as_posix())):
+            return "denied: secret page"
         return redact(path.read_text(encoding="utf-8", errors="replace")[:MAX_FILE_BYTES])
     if name == "write_file":
         files = [{"path": str(args.get("path") or ""), "content": str(args.get("content") or "")}]

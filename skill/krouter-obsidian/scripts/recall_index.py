@@ -26,7 +26,7 @@ import krouter_redact  # noqa: E402
 redact = krouter_redact.redact
 is_secret_page = krouter_redact.is_secret_page  # 其他夜间脚本经 ri.is_secret_page 用它
 
-SCHEMA_VERSION = "recall-v12"  # v12：索引存脱敏后的文字，旧缓存必须重建
+SCHEMA_VERSION = "recall-v13"  # v13：机密页不存 how、脱敏规则扩大，旧缓存必须重建
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
 SCORE_MIN = 8.5  # bm25×分层权重的绝对下限
@@ -264,7 +264,8 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
         terms = set(tokens(text)) if mine else set()
         live_cards = [c["q"] for c in mine if grounded(c, text, terms)]
         trig = " ".join([meta.get("triggers") or meta.get("aliases") or ""] + aliases.get(rel, []) + live_cards)
-        how = meta.get("how") or first_rule_line(body)
+        secret = is_secret_page(zones.canon(vault, rel), meta)
+        how = "（机密页：只给路径，不引用原文）" if secret else (meta.get("how") or first_rule_line(body))
         dirs = " ".join(rel.split("/")[:-1])
         if old:
             con.execute("DELETE FROM docs WHERE rowid=?", (old[2],))
@@ -348,12 +349,12 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     hits = hits[:limit]
     if not hits:
         return {"hits": [], "stats": stats, "query_tokens": qtok, "confidence": "none", "margin": 0.0}
-    strong = strong_matches(con, hits[0]["rid"], present, df, titled)
+    n_docs = con.execute("SELECT count(*) FROM files").fetchone()[0] or 1
+    strong = strong_matches(con, hits[0]["rid"], present, df, titled, small=n_docs < SMALL_VAULT, known=named)
     top = hits[0]["score"]
     second = hits[1]["score"] if len(hits) > 1 else 0.0
     margin = top / second if second else 9.9
     # bm25 的量级随库大小变化：小库按文档数等比缩放下限，千篇以上用满额
-    n_docs = con.execute("SELECT count(*) FROM files").fetchone()[0] or 1
     scale = min(1.0, n_docs / 1000)
     # 关键词式查询（`DSH`、`SyGJ`）本身只有一个实词，命中它就够；整句问题仍要求至少两个实词
     need = min(MIN_STRONG_MATCH, query_content_terms(raw, df, titled))
@@ -362,12 +363,15 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     # 问题里有库里一次都没出现过的汉字（`咖啡`、`除垢`），而首条只对上一个实词：问的是库外的事，
     # 只是借了库里的一个词（`定时`）。字比词稳：换个说法会产生库里没有的双字，但不会凭空多出库里没有的字
     alien = alien_chars(raw, df)
+    # 问题里的真词有两个以上整库都没有，而且比首条页对上的真词还多：问的主要是库外的事（`纠错之后的房贷利率`）
+    absent_words, top_words = outside_words(con, hits[0]["rid"], raw, df)
+    off_vault = absent_words >= 2 and absent_words > top_words
     if single:
         # 一个概念的短查询：只有一个词可比，不按"至少两个实词"拦；但仍要过（减半的）分数下限
         refuse = top < SCORE_MIN * scale * 0.5 or (unknown and strong == 0)
     else:
         refuse = (top < SCORE_MIN * scale or (strong < need and top < SINGLE_TERM_SCORE * scale) or strong == 0
-                  or (unknown and strong <= 2) or (strong < need and alien >= ALIEN_MIN))
+                  or (unknown and strong <= 2) or (strong < need and alien >= ALIEN_MIN) or off_vault)
     if gate and refuse:
         conf = "none"
     elif margin >= 1.5 and hits[0]["tier"] in ("rule", "topic"):
@@ -385,7 +389,7 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
 
 
 def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict[str, int],
-                   named: set[str] = frozenset()) -> int:
+                   named: set[str] = frozenset(), small: bool = False, known: set[str] = frozenset()) -> int:
     """首条命中页里出现了几个"像词"的查询词。只碰上一个泛词的，多半是巧合。"""
     if not terms:
         return 0
@@ -395,8 +399,14 @@ def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict
         terms + [rid],
     )}
     # 纯数字（年份、日期、序号）到处都有，只参与排序，不算实词
+    content, generic = lexicon() if small else (set(), set())
+
+    def wordlike(t: str) -> bool:
+        # 小库里 `天会` 这种跨词碎片看起来也"像词"；只认通用词表里的词和标题、触发词里出现过的词
+        return not small or not is_cjk_bigram(t) or t in named or t in known or t in content or t in generic
+
     return sum(1 for t in hit if (soft_weight(t, df) >= STRONG_W or t in named) and not t.isdigit()
-               and not set(t) & FUNCTION_CHARS)
+               and not set(t) & FUNCTION_CHARS and wordlike(t))
 
 
 # 通用汉字频率前 1500（由 jieba 0.42.1 自带词典 dict.txt 的词频累加得出，MIT）。小库里没有「知道」「已经」
@@ -418,6 +428,39 @@ COMMON_CHARS = frozenset(
     "淡抢捕闹纺截讯朗誉雅忍梦伙勇峡徒丈尾迷唱泉泰佳残闪伍呀疾署剩贼冠倾豆申贫诺麦泪羊尖辈镜涉贡爹缘摩妻殊贝零映甘骂糖岳饮奋棉雕跃汗冒渡努赞启阁斤裂患伏池鹿洗劲晋倍圈媒箭沟锋胆凭挑抬闯隔弄曹汤苗迁叹唯振储贯"
     "彻桌祭符僧衡炸旋喊凤黎郎援肥磁忌赏辽祥董仁辛瑞询敏浪貌毁昨巧腿抽荷陷焦净腹弃乃湘亩滑狗冬宏皆番尸伟桂览恢龄绕趣晶坡魏摸伴墨浓绪舍蓝荡阅井鸿旦惯症鸟窗扎辞聘穷堰宇键荒递恨隶厉杜闲腰袭侍灾涨叔湿寨幕豪郑磨"
 )
+
+
+LEXICON_FILE = Path(__file__).resolve().parent / "lexicon_zh2.txt"
+COUNT_CHARS = set("一二两三四五六七八九十百千几每这那哪某各")
+SMALL_VAULT = 300  # 页数少于这个，库内统计判断不了一个双字是不是词，改用通用词表和标题
+GENERIC_WORDS = 1000  # 词表前 1000 个（之后、以后、正常、项目……）太常见，不作库外证据
+_LEX: dict[str, set[str]] = {}
+
+
+def lexicon() -> tuple[set[str], set[str]]:
+    """(content words, generic words) from the bundled general-Chinese two-character word list."""
+    if not _LEX:
+        words = []
+        if LEXICON_FILE.is_file():
+            words = [w for w in LEXICON_FILE.read_text(encoding="utf-8").splitlines() if w and not w.startswith("#")]
+        _LEX["generic"] = set(words[:GENERIC_WORDS])
+        _LEX["content"] = set(words[GENERIC_WORDS:])
+    return _LEX["content"], _LEX["generic"]
+
+
+def outside_words(con: sqlite3.Connection, rid: int, raw: list[str], df: dict[str, int]) -> tuple[int, int]:
+    """(真词里整库都没有的个数, 真词里首条页有的个数)。真词按通用词表判断，不靠库内统计——小库的统计判断不了
+    `天会` 是不是词，也说明不了 `房贷`、`报销` 不在库里意味着什么；通用词表都能。"""
+    content, _generic = lexicon()
+    # 「两条」「这次」「每天」是数量和指代，不是在问什么东西
+    words = [t for t in dict.fromkeys(raw) if is_cjk_bigram(t) and t in content and t[0] not in COUNT_CHARS]
+    if not words:
+        return 0, 0
+    absent = sum(1 for t in words if not df.get(t, 0))
+    marks = ",".join("?" * len(words))
+    on_top = {t for (t,) in con.execute(
+        f"SELECT DISTINCT term FROM vinst WHERE term IN ({marks}) AND doc = ?", words + [rid])}
+    return absent, len(on_top)
 
 
 def alien_chars(raw: list[str], df: dict[str, int]) -> int:
@@ -587,6 +630,8 @@ def attach_answers(vault: Path, hits: list[dict], raw: list[str], df: dict[str, 
         page_bytes = page.read_bytes()
         current = hashlib.sha1(page_bytes).hexdigest()[:16]
         page_text = page_bytes.decode("utf-8", errors="replace")
+        if is_secret_page(zones.canon(vault, h["rel"]), split_frontmatter(page_text)[0]):
+            continue  # 机密页不附答案（旧卡要到下次夜间才会被清掉）
         best, best_cov = None, 0.0
         page_terms: set[str] | None = None
         for card in options:
@@ -626,9 +671,12 @@ def wordness(bigram: str, df: dict[str, int]) -> float:
 
 def best_lines(path: Path, qtok: list[str], k: int = 1) -> list[tuple[int, str]]:
     try:
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return []
+    if is_secret_page(path.name, split_frontmatter(text)[0]):
+        return []  # 机密页只给路径
+    lines = text.splitlines()
     scored = []
     for i, line in enumerate(lines, 1):
         lt = set(tokens(line))
@@ -679,7 +727,7 @@ def main() -> int:
         flag = f" status={h['status']}" if h["status"] else ""
         print(f"- {h['rel']} tier={h['tier']}{flag} score={h['score']}")
         if h.get("answer"):
-            print(f"  answer (generated): {h['answer']}")
+            print(f"  answer (generated): {redact(h['answer'])}")
         if h["how"]:
             print(f"  how: {h['how']}")
         for ln, text in best_lines(vault / h["rel"], res["query_tokens"], args.lines):

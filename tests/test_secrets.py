@@ -17,7 +17,9 @@ REPO = Path(__file__).resolve().parents[1]
 SCRIPTS = REPO / "skill/krouter-obsidian/scripts"
 FAKE = "sk-FAKEFAKEFAKE1234567890abcdef"
 KEY_PAGE = "90 系统文件/自动化/自进化钥匙.md"
-OTHER = "90 系统文件/Agent记忆/DeepSeek 凭据.md"
+OTHER = "90 系统文件/Agent记忆/DeepSeek 凭据.md"  # secret by its name: never sent, never quoted
+PLAIN = "02 经验与方法/模型服务.md"  # an ordinary name with a key written the way people write it
+BARE = "Ab3dEf7hIj9kLm2nOp4qRs6t"  # no known prefix (Mistral-style)
 
 
 @pytest.fixture()
@@ -30,6 +32,8 @@ def keyed_vault(tmp_path: Path) -> Path:
                            count=1, flags=re.M), encoding="utf-8")
     (vault / OTHER).write_text("---\ntitle: DeepSeek 凭据\nstatus: active\n---\n\n# DeepSeek 凭据\n\n"
                                f"脚本读环境变量 DEEPSEEK_API_KEY。\nDEEPSEEK_API_KEY={FAKE}\n", encoding="utf-8")
+    (vault / PLAIN).write_text("---\ntitle: 模型服务\nstatus: active\n---\n\n# 模型服务\n\n"
+                               f"用 Mistral 跑摘要，额度每月 5 美元。\nMistral 密钥：{BARE}\n", encoding="utf-8")
     return vault
 
 
@@ -61,8 +65,9 @@ def test_cards_and_topics_never_send_a_key(keyed_vault, monkeypatch, tmp_path):
     assert ac.main() == 0
     assert sent, "answer cards sent nothing at all"
     assert KEY_PAGE not in ac.targets(keyed_vault)  # the key page is never a card target
-    assert not any(FAKE in p for p in sent)
-    assert any(OTHER in p for p in sent)  # the other page still goes, with its key redacted
+    assert not any(FAKE in p or BARE in p for p in sent)
+    assert not any(OTHER in p for p in sent)  # a 凭据 page is secret by name: not sent at all
+    assert any(PLAIN in p and "额度每月" in p for p in sent)  # an ordinary page still goes, its key redacted
     evidence, sources, _ = ct.gather(keyed_vault, {"slug": "k", "title": "密钥", "terms": ["DEEPSEEK_API_KEY"], "auth": []})
     assert FAKE not in evidence and KEY_PAGE not in sources
 
@@ -74,15 +79,16 @@ def test_router_never_prints_or_logs_a_key(keyed_vault, tmp_path, sh_only):
     env = {**os.environ, "OBSIDIAN_VAULT": str(keyed_vault), "KROUTER_SH_ONLY": sh_only, "KROUTER_STATE_DIR": str(state),
            "KROUTER_CACHE_DIR": str(cache), "KROUTER_NO_QUERY_LOG": "0"}
     for route, q in (("search", "DEEPSEEK API key 怎么填"), ("search", "DEEPSEEK_API_KEY"), ("memory", "DeepSeek 凭据"),
-                     ("search", f"我的 key 是 {FAKE}")):
+                     ("search", f"我的 key 是 {FAKE}"), ("search", "Mistral 密钥"), ("search", "模型服务")):
         out = subprocess.run(["/bin/sh", str(SCRIPTS / "route_knowledge.sh"), route, q], env=env,
                              capture_output=True, text=True, timeout=60)
-        assert FAKE not in out.stdout.replace(q, ""), (route, q)
+        shown = out.stdout.replace(q, "")
+        assert FAKE not in shown and BARE not in shown, (route, q)
     log = state / "queries.jsonl"
     if log.is_file():
         assert FAKE not in log.read_text(encoding="utf-8")
     for db in cache.rglob("*.sqlite*"):
-        assert FAKE.encode() not in db.read_bytes()
+        assert FAKE.encode() not in db.read_bytes() and BARE.encode() not in db.read_bytes()
 
 
 def test_upgrade_rebuilds_a_cache_built_before_redaction(keyed_vault, tmp_path, monkeypatch):
@@ -104,3 +110,34 @@ def test_upgrade_rebuilds_a_cache_built_before_redaction(keyed_vault, tmp_path, 
     con.close()
     for db in (tmp_path / "cache").rglob("*.sqlite*"):
         assert FAKE.encode() not in db.read_bytes(), db  # not left behind in free pages either
+
+
+REDACT_CASES = [  # the shapes an outside review found leaking, plus the ones 0.10.2 already caught
+    "密钥：{v}", "凭据 {v}", "Key: {v}", "| DeepSeek | {v} |", "https://api.example.com/v1?key={v}&a=1",
+    "postgres://admin:{v}@db.local:5432/app", "Together a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4", "智谱 0f3e2d1c0f3e2d1c.{v}",
+    "fw_{v}", "pplx-{v}{v}", "nvapi-{v}{v}", "csk-{v}", "Mistral 密钥：{v}", "DEEPSEEK_API_KEY=sk-{v}",
+    "Authorization: Bearer {v}", 'secret = "{v}"',
+]
+KEEP_CASES = [
+    "tokens: 158386", "max_tokens=8000", "# DEEPSEEK_API_KEY=YOUR_DEEPSEEK_API_KEY", "凭据 页面在 90 系统文件",
+    "会话 20260811-090406-v4-flash-abcdefgh", "路径 short-video-governance-contract.md",
+    "UUID 123e4567-e89b-12d3-a456-426614174000", "OPENAI_BASE_URL=https://api.example/v1", "版本 v0.10.2，端口 8080",
+    "key 读 DEEPSEEK_API_KEY 变量", "api_key: <your key>",
+]
+
+
+@pytest.mark.parametrize("case", REDACT_CASES)
+def test_redact_catches_the_common_shapes(case):
+    sys.path.insert(0, str(SCRIPTS))
+    from krouter_redact import redact
+
+    out = redact(case.format(v=BARE))
+    assert BARE[:12] not in out and "a1b2c3d4a1b2c3d4" not in out and "0f3e2d1c0f3e" not in out, out
+
+
+@pytest.mark.parametrize("case", KEEP_CASES)
+def test_redact_leaves_ordinary_text_alone(case):
+    sys.path.insert(0, str(SCRIPTS))
+    from krouter_redact import redact
+
+    assert redact(case) == case

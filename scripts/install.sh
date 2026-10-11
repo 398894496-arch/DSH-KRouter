@@ -188,7 +188,7 @@ else
   esac
   python3 "$ROOT/extras/host-daily-evolution/resolve.py" --sync-health --offline >/dev/null || true
 fi
-printf '%s\n' "next: run ./scripts/first_run.sh against the template, then point OBSIDIAN_VAULT at your vault."
+[ "${KROUTER_BOOTSTRAP:-}" = "1" ] || printf '%s\n' "next: run ./scripts/first_run.sh against the template, then point OBSIDIAN_VAULT at your vault."
 
 if [ "$WITH_HOOKS" -eq 1 ]; then
   HOOK_DST="${KROUTER_HOOK_HOME:-$HOME/.cursor/hooks/krouter-exec-gate.py}"

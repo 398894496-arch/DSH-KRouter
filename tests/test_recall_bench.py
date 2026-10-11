@@ -37,3 +37,29 @@ def test_recall_bench(tmp_path, monkeypatch):
     assert not wrong_answers, wrong_answers  # off-topic and half-off-topic: every one refused
     assert pos_ok >= POS_TOP1_MIN, pos_ok
     assert pos_zh_ok >= POS_ZH_TOP1_MIN, pos_zh_ok
+
+
+ZH_BENCH = REPO / "tests/fixtures/recall_bench_zh.jsonl"
+ZH_POS_MIN, ZH_SEMI_REFUSED_MIN = 9, 5  # of 12 and of 6 (0.10.2: 9 and 1 — a small Chinese vault let borrowed words through)
+
+
+def test_recall_bench_chinese_template(tmp_path, monkeypatch):
+    """The Chinese template is what a Chinese-speaking host starts with: a small vault, Chinese questions."""
+    vault = tmp_path / "vault"
+    shutil.copytree(REPO / "template-zh", vault)
+    monkeypatch.setenv("KROUTER_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.delenv("KROUTER_MAP", raising=False)
+    rows = [json.loads(x) for x in ZH_BENCH.read_text(encoding="utf-8").splitlines() if x.strip()]
+    pos_ok, semi_refused, off_answered = 0, 0, []
+    for it in rows:
+        res = ri.recall(vault, it["q"], limit=3)
+        top = res["hits"][0]["rel"] if res["hits"] and res["confidence"] != "none" else None
+        if it["kind"] == "pos":
+            pos_ok += top == it["expect"]
+        elif it["kind"] == "semi":
+            semi_refused += res["confidence"] == "none"
+        elif res["confidence"] != "none":
+            off_answered.append((it["q"], top))
+    assert not off_answered, off_answered
+    assert pos_ok >= ZH_POS_MIN, pos_ok
+    assert semi_refused >= ZH_SEMI_REFUSED_MIN, semi_refused

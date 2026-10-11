@@ -4,6 +4,9 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseReceipt, resolveRouter, runRoute } from "./lib/route.js";
 
+// Tests are not the host's traffic: the nightly learning reads the query log.
+process.env.KROUTER_NO_QUERY_LOG = "1";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "../..");
 const VAULT = join(ROOT, "template");

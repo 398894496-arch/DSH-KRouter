@@ -28,7 +28,6 @@ from resolve import (  # noqa: E402
     extra_urls,
     is_config_name,
     is_key_name,
-    key_page,
     keys_env_path,
     models_url,
     parse_vault_page,
@@ -56,19 +55,19 @@ HEADER = (
 
 
 def candidate_keys() -> dict[str, str]:
-    """Process env plus the existing keys file. The vault page is read by the timer."""
+    """Process env plus the keys file (a key pasted on the vault page is moved there first)."""
     found: dict[str, str] = {}
     for name, val in os.environ.items():
         if (is_key_name(name) or is_config_name(name)) and usable(val):
             found[name] = val.strip().strip('"').strip("'")
+    vault = os.environ.get("OBSIDIAN_VAULT", "").strip()
+    if vault:
+        from resolve import _lane
+
+        _lane.move_page_keys(Path(vault))  # 钥匙页上的 key 挪进钥匙文件，库里不留
     path = keys_env_path()
     if path.is_file():
         found.update(parse_vault_page(path.read_text(encoding="utf-8", errors="replace")))
-    vault = os.environ.get("OBSIDIAN_VAULT", "").strip()
-    if vault:
-        page = key_page(Path(vault))
-        if page.is_file():
-            found.update(parse_vault_page(page.read_text(encoding="utf-8", errors="replace")))
     return found
 
 

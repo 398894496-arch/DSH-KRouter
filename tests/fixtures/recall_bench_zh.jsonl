@@ -1,0 +1,24 @@
+{"q": "定时任务到底跑没跑", "expect": "02 经验与方法/准经验/定时器响了不等于活干完了.md", "kind": "pos"}
+{"q": "怎么判断某一天已经封账了", "expect": "02 经验与方法/自动化/按日志文件判断封账.md", "kind": "pos"}
+{"q": "待总结的占位页算封账吗", "expect": "02 经验与方法/自动化/按日志文件判断封账.md", "kind": "pos"}
+{"q": "剪藏原件能不能移动", "expect": "02 经验与方法/Agent/用户偏好与工作约束.md", "kind": "pos"}
+{"q": "文件名要能看出用途吗", "expect": "02 经验与方法/Agent/用户偏好与工作约束.md", "kind": "pos"}
+{"q": "两条纠正冲突时听哪条", "expect": "90 系统文件/Agent记忆/纠错与取代记录.md", "kind": "pos"}
+{"q": "低可信的记忆能当指令用吗", "expect": "90 系统文件/Agent记忆/可靠记忆索引.md", "kind": "pos"}
+{"q": "原件和结果证据放哪里", "expect": "03 资料与证据/资料与证据.md", "kind": "pos"}
+{"q": "示例项目是做什么的", "expect": "01 项目/示例项目/示例项目.md", "kind": "pos"}
+{"q": "写准经验之前要过哪五道门", "expect": "02 经验与方法/经验与方法.md", "kind": "pos"}
+{"q": "API key 写在哪一页", "expect": "90 系统文件/自动化/自进化钥匙.md", "kind": "pos"}
+{"q": "日更健康页的灯是什么意思", "expect": "90 系统文件/自动化/日更健康.md", "kind": "pos"}
+{"q": "怎么做红烧肉", "expect": null, "kind": "off"}
+{"q": "今天天气怎么样", "expect": null, "kind": "off"}
+{"q": "推荐一部科幻电影", "expect": null, "kind": "off"}
+{"q": "比特币明天会涨吗", "expect": null, "kind": "off"}
+{"q": "孩子发烧了吃什么药", "expect": null, "kind": "off"}
+{"q": "Kubernetes 怎么扩容", "expect": null, "kind": "off"}
+{"q": "咖啡机的定时器多久除垢一次", "expect": null, "kind": "semi"}
+{"q": "猫咪的日志里记了几次喂食", "expect": null, "kind": "semi"}
+{"q": "示例项目的股票代码是多少", "expect": null, "kind": "semi"}
+{"q": "纠错之后的房贷利率是多少", "expect": null, "kind": "semi"}
+{"q": "健康页显示血压多少正常", "expect": null, "kind": "semi"}
+{"q": "封账以后去哪里报销机票", "expect": null, "kind": "semi"}

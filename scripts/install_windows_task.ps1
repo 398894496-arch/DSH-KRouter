@@ -1,5 +1,5 @@
 # DSH-KRouter daily timer on Windows: one scheduled task, 09:10 local time, runs extras\host-daily-evolution\run.py.
-# Usage (PowerShell, as yourself — no admin needed):
+# Usage (PowerShell, as yourself - no admin needed):
 #   $env:OBSIDIAN_VAULT = "D:\Obsidian\MyVault"; .\scripts\install_windows_task.ps1
 #   .\scripts\install_windows_task.ps1 -Uninstall
 # Output goes to %LOCALAPPDATA%\dsh-krouter\daily.log. The vault is never touched by this script.

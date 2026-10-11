@@ -70,9 +70,12 @@ def gather(vault: Path, topic: dict) -> tuple[str, list[str], str]:
     latest = ""
     for path, real_rel in ri.iter_markdown(vault):
         rel = ri.zones.canon(vault, real_rel)  # 分类用默认区名；出处写库里的真实路径
-        if rel.startswith(out_prefix) or rel.startswith(SKIP) or ri.is_secret_page(rel):
+        if rel.startswith(out_prefix) or rel.startswith(SKIP):
             continue
-        text = ri.redact(path.read_text(encoding="utf-8", errors="replace"))
+        raw_text = path.read_text(encoding="utf-8", errors="replace")
+        if ri.is_secret_page(rel, ri.split_frontmatter(raw_text)[0]):
+            continue
+        text = ri.redact(raw_text)
         is_auth = real_rel in topic["auth"] or real_rel[:-3] in topic["auth"]
         if is_auth:
             auth_blocks.append((real_rel, text[:3500]))

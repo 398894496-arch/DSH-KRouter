@@ -73,6 +73,7 @@ def _load_lane():
 
 _lane = _load_lane()
 import zones  # noqa: E402  (skill scripts dir, appended by _load_lane)
+import notify  # noqa: E402
 CLI_KIND_RE = _lane.CLI_KIND_RE
 GENERIC_PROBE_TAILS = _lane.GENERIC_PROBE_TAILS
 CLI_FLAGSHIP = _lane.CLI_FLAGSHIP
@@ -136,20 +137,17 @@ def parse_vault_page(text: str) -> dict[str, str]:
 
 
 def collect_keys(vault: Path) -> dict[str, str]:
-    """Process env, then the keys file install.sh writes, then the vault page.
-
-    Later sources win. Values are never printed.
+    """Process env, then the keys file. A key pasted on the vault page is moved into the keys file first
+    (so a newly pasted key still wins), and the vault is never read for keys. Values are never printed.
     """
     keys: dict[str, str] = {}
     for name, val in os.environ.items():
         if (is_key_name(name) or is_config_name(name)) and usable(val):
             keys[name] = val.strip().strip('"').strip("'")
+    _lane.move_page_keys(vault)  # 钥匙页上贴的 key 先挪进钥匙文件；之后只读文件，永不从库里读
     path = keys_env_path()
     if path.is_file():
         keys.update(parse_vault_page(path.read_text(encoding="utf-8", errors="replace")))
-    page = key_page(vault)
-    if page.is_file():
-        keys.update(parse_vault_page(page.read_text(encoding="utf-8", errors="replace")))
     return keys
 
 
@@ -501,6 +499,8 @@ def exec_distill(probe: bool) -> int:
     payload = status_payload(detect=True, probe=probe)
     patch_health(vault, payload["key"], payload["writer"])
     ok, code, msg = distill_gate(payload)
+    if not ok and "network" not in msg:
+        notify.send(notify.NO_WRITER, kind="no-writer")  # 没有模型：宿主不看终端也要知道
     if not ok:
         print(msg, file=sys.stderr)
         return code
@@ -522,6 +522,7 @@ def exec_distill(probe: bool) -> int:
         return run_api(live, extra)
     if writer_ok(probe_result) and not probe_result.startswith("api-writer") and writer:
         return run_cli_writer(writer, vault, router)
+    notify.send(notify.NO_WRITER, kind="no-writer")
     print(
         f"DSH-KRouter: timer on; distill skipped. "
         f"Put *_API_KEY on {payload.get('key_page', 'the vault key page')} "

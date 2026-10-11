@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import zones
+from krouter_redact import redact
 from canonical_lookup import (
     map_for,
     load_rows,
@@ -207,8 +208,6 @@ def log_query(route: str, query: str, status: str, top: str = "", confidence: st
 
         base = Path(os.environ.get("KROUTER_STATE_DIR") or Path.home() / ".local" / "state" / "krouter")
         base.mkdir(parents=True, exist_ok=True)
-        from krouter_redact import redact
-
         row = {"ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "route": route, "q": redact(query),
                "status": status, "top": top, "confidence": confidence}
         with (base / "queries.jsonl").open("a", encoding="utf-8") as fh:
@@ -291,13 +290,15 @@ def md_search(needle: str, scope: Path, max_per_file: int = 4, max_lines: int = 
                     lines.append(f"{path}:{j + 1}:{body[j]}")
                 if hits >= max_per_file:
                     break
-    from krouter_redact import redact
+    from krouter_redact import is_secret_page
 
+    hit = re.compile(r"^(.*?\.md)[:-]\d+[:-]")
+    lines = [ln for ln in lines if not ((m := hit.match(ln)) and is_secret_page(m.group(1).rsplit("/", 1)[-1]))]
     for i, line in enumerate(lines):
         if i >= max_lines:
             print("[truncated after 24 lines]")
             return
-        print(redact(line))  # 字面搜索打出来的原文行也不能带出密钥
+        print(redact(line))  # 字面搜索打出来的原文行也不能带出密钥；机密页的行整行不出
 
 
 def print_recall(res: dict, vault: Path, lines: int) -> None:
@@ -311,7 +312,7 @@ def print_recall(res: dict, vault: Path, lines: int) -> None:
         flag = f" status={h['status']}" if h["status"] else ""
         print(f"- {h['rel']} tier={h['tier']}{flag} score={h['score']}")
         if h.get("answer"):
-            print(f"  answer (generated): {h['answer']}")
+            print(f"  answer (generated): {redact(h['answer'])}")
         if h["how"]:
             print(f"  how: {h['how']}")
         for ln, text in best_lines(vault / h["rel"], res["query_tokens"], lines):
