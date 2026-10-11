@@ -15,17 +15,19 @@ import hashlib
 import json
 import os
 import re
-import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import llm  # noqa: E402
 import recall_index as ri  # noqa: E402
 
 CARDS = "90 系统文件/自动化/下意识问答.jsonl"
 PAGE_MAX = 3500
 BATCH = 6
+# 卡片写进库前过滤：像密钥、token、口令的串一律丢弃（prompt 里的"不写密钥"不算保证）
+SECRET_RE = re.compile(r"(sk-[A-Za-z0-9_-]{12,}|\b[A-Za-z0-9_-]{32,}\b|bearer\s+\S+|api[_-]?key\s*[=:]|password\s*[=:]|token\s*[=:])", re.I)
 PROMPT = """下面是个人知识库里的若干页面。为每一页写 3–5 张「问答卡」：用户以后最可能怎么问这一页能回答的问题，以及一句话答案。
 规则：
 - 问题：口语化中文，像用户随口问 Agent，6–20 字；覆盖这一页不同的要点，不要五张卡问同一件事。
@@ -49,7 +51,7 @@ def load_cards(vault: Path) -> list[dict]:
                 row = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if row.get("rel") and row.get("q") and row.get("a"):
+            if row.get("rel") and (row.get("empty") or (row.get("q") and row.get("a"))):
                 out.append(row)
     return out
 
@@ -66,57 +68,93 @@ def block(vault: Path, rel: str) -> str:
     return f"### 页面路径: {rel}\n{body}\n"
 
 
-def ask(cli: str, model: str, vault: Path, rels: list[str]) -> dict:
-    argv = [cli, "--print", "--tools", "", "--output-format", "text", "--no-session-persistence"]
-    if model:
-        argv += ["--model", model]
+def ask(vault: Path, rels: list[str]) -> dict:
     prompt = PROMPT + "\n".join(block(vault, r) for r in rels)
+    last = ""
     for _ in range(2):
-        proc = subprocess.run(argv + [prompt], capture_output=True, text=True, timeout=900)
-        m = re.search(r"\{.*\}", proc.stdout, re.S)
-        if proc.returncode == 0 and m:
+        try:
+            text = llm.complete(prompt, vault)
+        except RuntimeError as exc:  # NoModel is a RuntimeError: propagate so the run is skipped, not emptied
+            if isinstance(exc, llm.NoModel):
+                raise
+            last = str(exc)
+            continue
+        m = re.search(r"\{.*\}", text, re.S)
+        if m:
             try:
                 return {k: v for k, v in json.loads(m.group(0)).items() if k in rels and isinstance(v, list)}
             except json.JSONDecodeError:
-                pass
-    print(f"batch failed at {rels[0]}: {(proc.stderr or proc.stdout)[-200:]}", file=sys.stderr)
+                last = "model output was not JSON"
+    print(f"batch failed at {rels[0]}: {last[-200:]}", file=sys.stderr)
     return {}
+
+
+def accept(item: object, page_text: str) -> str:
+    """'' if the card is kept, else the reason it is dropped."""
+    if not isinstance(item, dict) or not item.get("q") or not item.get("a"):
+        return "malformed"
+    if SECRET_RE.search(item["q"] + " " + item["a"]):
+        return "secret-like"
+    if not ri.faithful(item["a"], page_text):
+        return "not-verbatim"
+    return ""
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--vault", default=os.environ.get("OBSIDIAN_VAULT", ""))
-    ap.add_argument("--cli", default=os.environ.get("KROUTER_LEARN_CLI", "/opt/homebrew/bin/claude"))
-    ap.add_argument("--model", default=os.environ.get("KROUTER_LEARN_MODEL", ""))
+    ap.add_argument("--cli", default="", help="pick a CLI explicitly (goes before any API key)")
+    ap.add_argument("--model", default="")
     ap.add_argument("--jobs", type=int, default=3)
     ap.add_argument("--limit", type=int, default=0, help="only the first N stale pages (0 = all)")
     args = ap.parse_args()
+    if args.cli:
+        os.environ["KROUTER_LEARN_CLI"] = args.cli
+    if args.model:
+        os.environ["KROUTER_LEARN_MODEL"] = args.model
     vault = Path(args.vault)
     out = vault / CARDS
     cards = load_cards(vault)
     pages = targets(vault)
     sha = {rel: page_sha(vault / rel) for rel in pages}
-    fresh = {(c["rel"]) for c in cards if sha.get(c["rel"]) == c.get("sha")}
+    fresh = {c["rel"] for c in cards if sha.get(c["rel"]) == c.get("sha")}
     keep = [c for c in cards if c["rel"] in fresh]
     stale = [rel for rel in pages if rel not in fresh]
     if args.limit:
         stale = stale[: args.limit]
     batches = [stale[i : i + BATCH] for i in range(0, len(stale), BATCH)]
     made = empty = 0
-    with ThreadPoolExecutor(max_workers=args.jobs) as ex:
-        for part in ex.map(lambda b: ask(args.cli, args.model, vault, b), batches):
-            for rel, items in part.items():
-                good = [it for it in items if isinstance(it, dict) and it.get("q") and it.get("a")]
-                empty += not good
-                for it in good[:5]:
-                    keep.append({"rel": rel, "sha": sha[rel], "q": it["q"].strip(), "a": it["a"].strip()[:160]})
-                    made += 1
+    dropped: dict[str, int] = {}
+    try:
+        with ThreadPoolExecutor(max_workers=args.jobs) as ex:
+            parts = list(ex.map(lambda b: ask(vault, b), batches))
+    except llm.NoModel as exc:
+        print(f"answer cards skipped: {exc}", file=sys.stderr)
+        return 0
+    for part in parts:
+        for rel, items in part.items():
+            page_text = (vault / rel).read_text(encoding="utf-8", errors="replace")
+            good = []
+            for it in items:
+                why = accept(it, page_text)
+                if why:
+                    dropped[why] = dropped.get(why, 0) + 1
+                else:
+                    good.append(it)
+            if not good:
+                # 导航页或全被拦下：记下这页的哈希，页面不变就不再每晚重问
+                keep.append({"rel": rel, "sha": sha[rel], "empty": True})
+                empty += 1
+            for it in good[:5]:
+                keep.append({"rel": rel, "sha": sha[rel], "q": it["q"].strip(), "a": it["a"].strip()[:160]})
+                made += 1
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix(".tmp")
     tmp.write_text("".join(json.dumps(c, ensure_ascii=False) + "\n" for c in keep), encoding="utf-8")
     tmp.replace(out)
-    print(json.dumps({"pages": len(pages), "stale": len(stale), "cards_written": made,
-                      "pages_without_cards": empty, "cards_total": len(keep)}, ensure_ascii=False))
+    print(json.dumps({"pages": len(pages), "stale": len(stale), "cards_written": made, "dropped": dropped,
+                      "pages_without_cards": empty, "cards_total": sum(1 for c in keep if not c.get("empty"))},
+                     ensure_ascii=False))
     return 0
 
 

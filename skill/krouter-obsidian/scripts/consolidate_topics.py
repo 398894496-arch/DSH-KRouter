@@ -17,12 +17,12 @@ import hashlib
 import json
 import os
 import re
-import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import llm  # noqa: E402
 import recall_index as ri  # noqa: E402
 
 LIST = "90 系统文件/自动化/主题档案清单.psv"
@@ -137,17 +137,22 @@ def clean_links(vault: Path, body: str) -> tuple[str, int]:
     return LINK.sub(fix, body), bad
 
 
-def call_model(cli: str, model: str, prompt: str) -> str:
-    argv = [cli, "--print", "--tools", "", "--output-format", "text", "--no-session-persistence"]
-    if model:
-        argv += ["--model", model]
-    proc = subprocess.run(argv + [prompt], capture_output=True, text=True, timeout=900)
-    if proc.returncode != 0 or "## 一句话" not in proc.stdout:
-        raise RuntimeError((proc.stderr or proc.stdout)[-300:])
-    return proc.stdout[proc.stdout.index("## 一句话"):].strip()
+def call_model(vault: Path, prompt: str) -> str:
+    text = llm.complete(prompt, vault)
+    if "## 一句话" not in text:
+        raise RuntimeError("model output had no 「## 一句话」 section")
+    return text[text.index("## 一句话"):].strip()
 
 
-def build(vault: Path, topic: dict, cli: str, model: str, force: bool) -> dict:
+def llm_label(vault: Path) -> str:
+    steps = llm.plan(vault)
+    if not steps:
+        return "no model"
+    kind, detail = steps[0]
+    return f"{kind} {Path(detail).name if kind == 'cli' else detail}"
+
+
+def build(vault: Path, topic: dict, force: bool) -> dict:
     name = f"主题｜{topic['title']}"
     dest = vault / OUT_DIR / f"{name}.md"
     evidence, sources, latest = gather(vault, topic)
@@ -156,7 +161,7 @@ def build(vault: Path, topic: dict, cli: str, model: str, force: bool) -> dict:
     sha = hashlib.sha1(evidence.encode("utf-8")).hexdigest()[:16]
     if dest.is_file() and not force and f"evidence_sha: {sha}" in dest.read_text(encoding="utf-8"):
         return {"slug": topic["slug"], "status": "unchanged"}
-    body = call_model(cli, model, PROMPT.format(title=topic["title"], sections="、".join(SECTIONS), evidence=evidence))
+    body = call_model(vault, PROMPT.format(title=topic["title"], sections="、".join(SECTIONS), evidence=evidence))
     triggers = ""
     m = re.search(r"^TRIGGERS:\s*(.+)$", body, re.M)
     if m:
@@ -171,7 +176,7 @@ def build(vault: Path, topic: dict, cli: str, model: str, force: bool) -> dict:
         f"topic_terms: {';'.join(topic['terms'])}",
         f"evidence_through: {latest or '无日志'}", f"evidence_sha: {sha}", f"evidence_sources: {len(sources)}",
         f"generated_at: {datetime.now().strftime('%Y-%m-%dT%H:%M:%S')}",
-        f"generated_by: consolidate_topics.py ({model or 'default model'})",
+        f"generated_by: consolidate_topics.py ({llm_label(vault)})",
         "last_change_writer: krouter-topic-consolidator", "source_kind: vault-evidence-merge", "---", "",
         f"# {name}", "",
         f"> 机器整合的主题档案（provisional），只用库内证据，每条带出处；证据截至 {latest or '—'}。"
@@ -186,12 +191,16 @@ def build(vault: Path, topic: dict, cli: str, model: str, force: bool) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--vault", default=os.environ.get("OBSIDIAN_VAULT", ""))
-    ap.add_argument("--cli", default=os.environ.get("KROUTER_LEARN_CLI", "/opt/homebrew/bin/claude"))
-    ap.add_argument("--model", default=os.environ.get("KROUTER_LEARN_MODEL", ""))
+    ap.add_argument("--cli", default="", help="pick a CLI explicitly (goes before any API key)")
+    ap.add_argument("--model", default="")
     ap.add_argument("--only", default="", help="comma-separated slugs")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--jobs", type=int, default=2)
     args = ap.parse_args()
+    if args.cli:
+        os.environ["KROUTER_LEARN_CLI"] = args.cli
+    if args.model:
+        os.environ["KROUTER_LEARN_MODEL"] = args.model
     vault = Path(args.vault)
     topics = load_list(vault)
     if args.only:
@@ -201,7 +210,7 @@ def main() -> int:
 
     def run(t):
         try:
-            return build(vault, t, args.cli, args.model, args.force)
+            return build(vault, t, args.force)
         except Exception as exc:  # 单个主题失败不影响其它主题
             return {"slug": t["slug"], "status": "failed", "error": str(exc)[:200]}
 

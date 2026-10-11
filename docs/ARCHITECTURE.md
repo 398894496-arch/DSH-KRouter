@@ -155,6 +155,10 @@ Hit: receipt `canonical_match: true`. The agent **must** open and cite `canonica
 
 Miss: **L1 recall** (`recall_index.py`). Ranked over the route’s scope; rule pages first, a topic dossier only when the question names its topic, superseded pages sunk; each hit prints its `how`, the best matching line, and an `answer:` card when one fits the question. Weak overlap prints `recall: none` — then, and only then, literal `rg` in that scope. Skip `Clippings/`, backups, and cold mirrors. Recall never claims a page; only the lock does.
 
+### Nightly upkeep (bundled timer)
+
+After the daily seal, `extras/host-daily-evolution/run.sh` runs `compile_subconscious.py` → `reconsolidate.py` → `consolidate_topics.py` → `answer_cards.py` → `checkup.py`; `KROUTER_NIGHTLY=0` turns them off. Each is independent and none changes the seal's exit code. Model steps go through `llm.py` — `*_API_KEY` first (model from `KROUTER_LEARN_MODEL` or the provider default), then a logged-in `claude` / `codex`; `KROUTER_LEARN_CLI` is the host's explicit pick and goes first; with neither the step prints `skipped`. Machine output is recall-only and `provisional`: learned triggers, topic dossiers, and answer cards (verbatim-checked, keyed to the page hash, printed as `answer (generated):`). None of it can claim a page.
+
 ### Receipt
 
 Every call emits `knowledge-route-v2`: time, route, hit status, source path, source SHA-256, map SHA-256. “I remember the vault had that” without a receipt is not retrieval.

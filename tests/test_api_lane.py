@@ -72,7 +72,7 @@ class _Stub(BaseHTTPRequestHandler):
         self._json({"choices": [{"message": {"role": "assistant", "content": content}}]})
 
 
-def _run(tmp_path: Path, fail_chat: bool) -> tuple[subprocess.CompletedProcess, Path, dict]:
+def _run(tmp_path: Path, fail_chat: bool, extra_env: dict | None = None) -> tuple[subprocess.CompletedProcess, Path, dict]:
     vault = tmp_path / "MySecondBrain"
     shutil.copytree(REPO / "template", vault)
 
@@ -93,6 +93,7 @@ def _run(tmp_path: Path, fail_chat: bool) -> tuple[subprocess.CompletedProcess, 
                 "OPENAI_BASE_URL": base,
                 "KROUTER_KEYS_ENV": str(tmp_path / "keys.env"),
                 "NO_PROXY": "127.0.0.1,localhost",
+                **(extra_env or {}),
             },
             capture_output=True,
             text=True,
@@ -124,3 +125,19 @@ def test_api_lane_failure_leaves_pending(tmp_path: Path):
     assert not (vault / SEAL_REL).exists()
     assert (vault / PENDING_REL).is_file(), "failed API run left no to-summarize note"
     assert proc.returncode != 0
+
+
+@pytest.mark.skipif(os.name == "nt", reason="run.sh is POSIX")
+def test_timer_runs_nightly_upkeep_without_touching_the_seal(tmp_path: Path):
+    proc, vault, seen = _run(tmp_path, fail_chat=False)
+    assert proc.returncode == 0, proc.stderr
+    assert (vault / "90 系统文件/自动化/下意识体检.md").is_file(), "checkup did not run"
+    assert seen.get("model") == "gpt-4.1", "nightly steps must not call the writer's API without a model"
+    assert "answer cards skipped" in proc.stderr  # key without a named model + no CLI: skipped, not guessed
+
+
+@pytest.mark.skipif(os.name == "nt", reason="run.sh is POSIX")
+def test_timer_nightly_can_be_turned_off_and_keeps_failure_exit(tmp_path: Path):
+    proc, vault, _seen = _run(tmp_path, fail_chat=True, extra_env={"KROUTER_NIGHTLY": "0"})
+    assert proc.returncode != 0
+    assert not (vault / "90 系统文件/自动化/下意识体检.md").exists()

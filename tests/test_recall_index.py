@@ -210,20 +210,20 @@ def test_consolidate_topics_writes_cited_provisional_page(vault, monkeypatch):
     write(vault, ct.LIST, "cn|中文补丁|中文补丁|\n")
     seen = {}
 
-    def fake(cli, model, prompt):
+    def fake(v, prompt):
         seen["prompt"] = prompt
         return ("## 一句话\n补丁反复掉。[[05 时间日志/2026-10/02｜修补丁]]\n## 当前状态\n截至 2026-10-02 未修好。[[不存在的页]]\n"
                 "## 关键事实\n- x\n## 用户纠错与踩过的坑\n- y\n## 时间线\n- z\n## 未决与不确定\n- w\n## 相关页面\n- v\nTRIGGERS: 中文又丢了;汉化补丁")
 
     monkeypatch.setattr(ct, "call_model", fake)
-    res = ct.build(vault, ct.load_list(vault)[0], "cli", "m", False)
+    res = ct.build(vault, ct.load_list(vault)[0], False)
     assert res["status"] == "written" and res["bad_links"] == 1 and not res["missing_sections"]
     page = (vault / ct.OUT_DIR / "主题｜中文补丁.md").read_text(encoding="utf-8")
     assert "status: provisional" in page and "topic_terms: 中文补丁" in page
     assert "triggers: 中文补丁;中文又丢了;汉化补丁" in page
     assert "`不存在的页`（未找到此页）" in page and "[[05 时间日志/2026-10/02｜修补丁]]" in page
     assert "05 时间日志/2026-10/02｜修补丁.md" in seen["prompt"]
-    assert ct.build(vault, ct.load_list(vault)[0], "cli", "m", False)["status"] == "unchanged"
+    assert ct.build(vault, ct.load_list(vault)[0], False)["status"] == "unchanged"
 
 
 def test_single_concept_detection():
@@ -252,3 +252,110 @@ def test_answer_card_is_attached_and_expires_with_its_page(vault):
     write(vault, rel, "---\ntitle: 封账先看时间日志文件\nstatus: active\n---\n\n规则改了。\n")
     res = r.recall(vault, "怎么判断哪天封账了", limit=3)
     assert all("answer" not in h for h in res["hits"])
+
+
+def _card(vault, rel, q, a, sha=None):
+    import hashlib
+    import json
+
+    sha = sha or hashlib.sha1((vault / rel).read_bytes()).hexdigest()[:16]
+    path = vault / "90 系统文件/自动化/下意识问答.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"rel": rel, "sha": sha, "q": q, "a": a}, ensure_ascii=False) + "\n")
+
+
+def test_stale_card_question_stops_ranking_its_page(vault):
+    rel = "02 经验与方法/搜索与知识库/封账先看时间日志文件.md"
+    _card(vault, rel, "火星殖民飞船燃料配比", "时间日志存在就算封账。")
+    fresh = [h["rel"] for h in r.recall(vault, "火星殖民飞船燃料配比", limit=5, gate=False)["hits"]]
+    assert rel in fresh  # the card question is a live trigger
+    write(vault, rel, "---\ntitle: 封账先看时间日志文件\nstatus: active\n---\n\n规则改了，现在看健康页。\n")
+    stale = [h["rel"] for h in r.recall(vault, "火星殖民飞船燃料配比", limit=5, gate=False)["hits"]]
+    assert rel not in stale  # page changed: the old card no longer ranks it
+
+
+def test_faithful_requires_specifics_verbatim():
+    page = "日更用本机 09:10（上海 00:10）+ `automations/obsidian-daily-evolution/run.sh`。Codex cron 保持 PAUSED。"
+    assert r.faithful("本机 09:10 跑 `automations/obsidian-daily-evolution/run.sh`。", page)
+    assert not r.faithful("本机 08:00 跑。", page)
+    assert not r.faithful("用 launchd 每天跑。", page)
+    assert r.faithful("Codex 那边暂停了。", page)
+
+
+def test_faithful_joined_words_pass_but_derived_numbers_do_not():
+    page = "原来 32px 文案配 104px 主标题。打开 TUN（utun1、utun7）。push 和 release 之前实测。用 /opt/homebrew/bin/claude。"
+    assert r.faithful("utun1/utun7", page) and r.faithful("push/release 前实测", page)
+    assert r.faithful("TUN：/opt/homebrew/bin/claude", page)  # full-width colon is punctuation
+    assert not r.faithful("Opus：/opt/homebrew/bin/claude", page)  # "Opus" is not in the page
+    assert not r.faithful("约 1:3.3", page)  # a ratio the model computed is not in the page
+
+
+def test_unfaithful_card_is_not_printed_as_answer(vault):
+    rel = "02 经验与方法/搜索与知识库/封账先看时间日志文件.md"
+    _card(vault, rel, "怎么判断哪天封账了", "看 `05 时间日志/2099` 目录。")
+    top = r.recall(vault, "怎么判断哪天封账了", limit=3)["hits"][0]
+    assert top["rel"] == rel and "answer" not in top
+
+
+def test_answer_cards_generation_filters_and_remembers_empty_pages(vault, monkeypatch):
+    import json
+    import re
+
+    import answer_cards as ac
+    import llm
+
+    asked = []
+
+    def fake(prompt, v=None):
+        rels = re.findall(r"### 页面路径: (.+)", prompt)
+        asked.extend(rels)
+        out = {}
+        for rel in rels:
+            if rel.endswith("封账先看时间日志文件.md"):
+                out[rel] = [
+                    {"q": "怎么算封账", "a": "时间日志文件存在且不是待总结就算封账。"},
+                    {"q": "几点跑", "a": "每天 03:00 跑。"},
+                    {"q": "key 是什么", "a": "api_key=abc 写在页里。"},
+                ]
+            else:
+                out[rel] = []
+        return json.dumps(out, ensure_ascii=False)
+
+    monkeypatch.setattr(llm, "complete", fake)
+    monkeypatch.setattr("sys.argv", ["answer_cards.py", "--vault", str(vault), "--jobs", "1"])
+    assert ac.main() == 0
+    rows = [json.loads(x) for x in (vault / ac.CARDS).read_text(encoding="utf-8").splitlines()]
+    real = [x for x in rows if not x.get("empty")]
+    assert [x["q"] for x in real] == ["怎么算封账"]  # 03:00 not in page; api_key line dropped
+    assert any(x.get("empty") for x in rows)  # nav pages remembered
+    first = len(asked)
+    asked.clear()
+    assert ac.main() == 0
+    assert asked == [] and first > 0  # nothing changed: nothing re-asked
+
+
+def test_llm_plan_order(monkeypatch, tmp_path):
+    import llm
+
+    for k in list(__import__("os").environ):
+        if k.endswith(("_API_KEY", "_BASE_URL", "_MODEL")) or k == "KROUTER_LEARN_CLI":
+            monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("KROUTER_KEYS_ENV", str(tmp_path / "none.env"))
+    monkeypatch.setenv("PATH", str(tmp_path))
+    assert llm.plan(None) == []
+    monkeypatch.setenv("OPENAI_API_KEY", "x")
+    assert llm.plan(None) == []  # no model named for OpenAI: skipped, not guessed
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "y")
+    assert llm.plan(None) == [("openai-compatible:DEEPSEEK_API_KEY", "deepseek-chat")]
+    cli = tmp_path / "claude"
+    cli.write_text("#!/bin/sh\necho ok\n")
+    cli.chmod(0o755)
+    monkeypatch.setenv("KROUTER_LEARN_CLI", str(cli))
+    assert llm.plan(None)[0] == ("cli", str(cli))  # the host's explicit pick goes first
+    monkeypatch.delenv("KROUTER_LEARN_CLI")
+    monkeypatch.delenv("DEEPSEEK_API_KEY")
+    monkeypatch.delenv("OPENAI_API_KEY")
+    with pytest.raises(llm.NoModel):
+        monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+        llm.complete("hi")
