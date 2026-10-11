@@ -22,6 +22,7 @@ It fetches the latest release (a tag, never `main`) and checks its SHA-256 again
 
 - **Queries never leave.** Lookup is local: a SQLite full-text cache and Python's standard library, ~110 ms per call.
 - **The nightly run sends vault text to one model** — the AI coding CLI you are logged into (your subscription) or the API key you gave it. It sends yesterday's logs (to distill them), the rule and topic pages (to precompute answers), excerpts about listed topics, and questions the router could not answer. `extras/host-daily-evolution/run.sh --dry-run` lists exactly what, and how many tokens, before anything is sent. `KROUTER_NIGHTLY=0` turns the nightly steps off.
+- **The nightly writer runs confined, and the API-key lane runs nothing locally.** grok runs in a kernel sandbox (the vault and the router only), claude with tools allow-listed to the vault and the router; Codex can read your account, other CLIs everything — the install prompt says which. Details: [`SECURITY.md`](SECURITY.md).
 - **Keys never live in the vault, and are never sent or printed.** A key pasted on the key page moves into `~/.dsh-krouter-keys.env` (chmod 600) on the next run. Pages named or marked as secret (凭据 / 密钥 / credential / secret / password, or `secret: true`) are never sent and never quoted; key-shaped text anywhere else prints as `<redacted>`.
 - **Cost**: the first night on the bundled template is about 4,000 tokens; on a vault with ~100 rule and topic pages, about 160,000. Later nights redo only pages that changed. With a CLI subscription this is quota, not money.
 

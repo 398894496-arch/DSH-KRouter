@@ -99,7 +99,7 @@ def test_grok_invoke_uses_vault_cwd(tmp_path):
     assert "bypassPermissions" in argv
     assert "acceptEdits" not in argv
     assert "--always-approve" in argv
-    assert "--sandbox" in argv
+    assert "--sandbox" in argv and argv[argv.index("--sandbox") + 1] != "off"
 
 
 def test_timer_router_skips_live_skill(monkeypatch, tmp_path):
@@ -231,3 +231,35 @@ def test_distill_gate_api_key_alone_is_enough():
     assert ok is True
     assert code == 0
     assert msg == ""
+
+
+def test_cli_writers_are_confined(tmp_path, monkeypatch):
+    """grok runs in a kernel sandbox profile; claude with an allow-list (vault only, router only, nothing else)."""
+    from resolve import GROK_PROFILE, write_grok_sandbox
+
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    router = tmp_path / "skill/scripts/route_knowledge.sh"
+    router.parent.mkdir(parents=True)
+    router.write_text("#!/bin/sh\n", encoding="utf-8")
+    monkeypatch.setenv("KROUTER_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("KROUTER_STATE_DIR", str(tmp_path / "state"))
+    prompt = vault / ".krouter/runtime-prompt.md"
+    prompt.parent.mkdir()
+    prompt.write_text("x", encoding="utf-8")
+    grok = writer_invoke("/Users/x/.grok/bin/grok", prompt, vault, router)
+    assert grok[grok.index("--sandbox") + 1] == GROK_PROFILE and "off" not in grok
+    sandbox = vault / ".grok/sandbox.toml"
+    sandbox.parent.mkdir()
+    sandbox.write_text('[profiles.mine]\nextends = "workspace"\n', encoding="utf-8")
+    write_grok_sandbox(vault, router)
+    write_grok_sandbox(vault, router)  # idempotent: our block once, the host's own profile kept
+    text = sandbox.read_text(encoding="utf-8")
+    assert text.count(f"[profiles.{GROK_PROFILE}]") == 1 and "[profiles.mine]" in text
+    assert 'extends = "strict"' in text and str(router.parent) in text and str(tmp_path / "cache") in text
+    claude = writer_invoke("/opt/homebrew/bin/claude", prompt, vault, router)
+    assert "--dangerously-skip-permissions" not in claude and "bypassPermissions" not in claude
+    assert claude[claude.index("--permission-mode") + 1] == "dontAsk"
+    allowed = claude[claude.index("--allowedTools") + 1:]
+    assert f"Edit(/{vault}/**)" in allowed and f"Bash(sh {router}:*)" in allowed
+    assert not any(a == "Bash" or a.startswith("Bash(*") for a in allowed)  # no free shell

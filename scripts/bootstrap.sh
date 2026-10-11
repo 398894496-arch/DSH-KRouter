@@ -32,8 +32,13 @@ if [ ! -f "$DEST/scripts/bootstrap.py" ]; then
   TMP=$(mktemp -d "${TMPDIR:-/tmp}/krouter-dl.XXXXXX")
   VER=${TAG#v}
   BASE="${KROUTER_RELEASE_BASE:-https://github.com/$REPO/releases/download/$TAG}"
-  if curl -fsSL "$BASE/dsh-krouter-$VER.tgz" -o "$TMP/pkg.tgz" && curl -fsSL "$BASE/SHA256SUMS" -o "$TMP/SHA256SUMS"; then
-    # 发布包带校验和：对不上就停，不装
+  if curl -fsSL "$BASE/SHA256SUMS" -o "$TMP/SHA256SUMS"; then
+    # 这个 release 带校验和：包必须下得到、对得上，否则停，绝不降级去装未校验的源码
+    if ! curl -fsSL "$BASE/dsh-krouter-$VER.tgz" -o "$TMP/pkg.tgz"; then
+      printf '%s\n' "下载失败，已停止 / could not download dsh-krouter-$VER.tgz; nothing installed."
+      rm -rf "$TMP"
+      exit 1
+    fi
     WANT=$(grep " dsh-krouter-$VER.tgz\$" "$TMP/SHA256SUMS" | cut -d' ' -f1)
     GOT=$( (sha256sum "$TMP/pkg.tgz" 2>/dev/null || shasum -a 256 "$TMP/pkg.tgz") | cut -d' ' -f1)
     if [ -z "$WANT" ] || [ "$WANT" != "$GOT" ]; then
@@ -45,12 +50,16 @@ if [ ! -f "$DEST/scripts/bootstrap.py" ]; then
     rm -rf "$DEST"
     mv "$TMP/package" "$DEST"
     printf '%s\n' "sha256 verified: dsh-krouter-$VER.tgz"
-  else
-    printf '%s\n' "注意：$TAG 没有带校验和的发布包，改用源码归档（未校验） / note: $TAG has no checksummed package; using the source archive (unverified)."
+  elif [ "${KROUTER_ALLOW_UNVERIFIED:-}" = "1" ]; then
+    printf '%s\n' "注意：按 KROUTER_ALLOW_UNVERIFIED=1 安装未校验的源码归档 / installing the unverified source archive (KROUTER_ALLOW_UNVERIFIED=1)."
     curl -fsSL "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" -o "$TMP/src.tar.gz"
     tar -xzf "$TMP/src.tar.gz" -C "$TMP"
     rm -rf "$DEST"
-    mv "$TMP"/DSH-KRouter-* "$DEST"
+    mv "$TMP"/*-* "$DEST"
+  else
+    printf '%s\n' "$TAG 没有校验文件，已停止；确需安装未校验的版本请设 KROUTER_ALLOW_UNVERIFIED=1 / $TAG has no SHA256SUMS; stopped (set KROUTER_ALLOW_UNVERIFIED=1 to install it unverified)."
+    rm -rf "$TMP"
+    exit 1
   fi
   rm -rf "$TMP"
 fi

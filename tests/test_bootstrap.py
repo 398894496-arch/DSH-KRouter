@@ -103,7 +103,9 @@ def test_consent_prompt_says_what_runs_and_what_is_sent(tmp_path, monkeypatch):
     monkeypatch.setattr(bs, "ask_tty", lambda prompt: asked.append(prompt) or "y")
     args = bs.argparse.Namespace(timer=False, no_timer=False)
     assert bs.decide_timer(args, tmp_path, bs.MSG["zh"]) == (True, True)
-    assert "claude" in asked[0] and "跳过权限" in asked[0] and "12 页" in asked[0] and "4000" in asked[0]
+    assert "claude" in asked[0] and "12 页" in asked[0] and "4000" in asked[0]
+    assert "API key" in asked[0].splitlines()[0]  # the safer lane is offered first
+    assert "没有内核沙箱" in asked[0]  # and what the CLI lane can still do is said plainly
     monkeypatch.setattr(bs, "ask_tty", lambda prompt: "")
     assert bs.decide_timer(args, tmp_path, bs.MSG["en"]) == (False, True)  # Enter alone means no
 
@@ -136,6 +138,10 @@ def test_bootstrap_sh_verifies_the_release_checksum(tmp_path):
         (pkg_dir / "SHA256SUMS").write_text("0" * 64 + f"  {tgz.name}\n", encoding="utf-8")
         bad = subprocess.run(["/bin/sh", str(script), "--dry-run"], env=env, capture_output=True, text=True, timeout=300)
         assert bad.returncode == 1 and "checksum mismatch" in bad.stdout
+        assert not (tmp_path / "kh" / f"v{ver}").exists()
+        (pkg_dir / "SHA256SUMS").unlink()  # no checksum file: stop, never fall back silently
+        none = subprocess.run(["/bin/sh", str(script), "--dry-run"], env=env, capture_output=True, text=True, timeout=300)
+        assert none.returncode == 1 and "KROUTER_ALLOW_UNVERIFIED" in none.stdout
         assert not (tmp_path / "kh" / f"v{ver}").exists()
         (pkg_dir / "SHA256SUMS").write_text(f"{digest}  {tgz.name}\n", encoding="utf-8")
         good = subprocess.run(["/bin/sh", str(script), "--dry-run", "--lang", "en", "--vault", str(tmp_path / "v")],

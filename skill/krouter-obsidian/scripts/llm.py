@@ -289,8 +289,23 @@ NAMED_LINE = re.compile(r"^(?:export\s+)?([A-Z][A-Z0-9_]+)\s*[=:：]\s*[\"'`]?([
 PENDING = "KROUTER_PENDING_KEY_"
 
 
-def _key_in_line(line: str) -> tuple[str, str] | None:
-    """(name or "", value) for a key pasted on this line in any common shape, else None."""
+def _name_for(value: str, before: str) -> str:
+    """The provider of a pasted key: its prefix, else the nearest provider word written before it."""
+    name = next((n for p, n in KEY_PREFIXES if value.startswith(p)), "")
+    if name:
+        return name
+    low = before.lower()
+    best, at = "", -1
+    for word, n in PROVIDER_WORDS:
+        i = low.rfind(word)
+        if i > at:
+            best, at = n, i
+    return best
+
+
+def _keys_in_line(line: str) -> tuple[list[tuple[str, str]], bool]:
+    """([(name or "", value), …] for every key pasted on this line, leftover). `leftover` is True when the line
+    still holds something key-shaped that could not be taken out — then the whole line is kept, not dropped."""
     import sys
 
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -298,30 +313,30 @@ def _key_in_line(line: str) -> tuple[str, str] | None:
 
     body = re.sub(r"^\s*(?:[-*+]|\d+[.)])\s+", "", line.strip())  # 列表项
     if not body or body.startswith(("#", "```", ">")):
-        return None
+        return [], False
     m = NAMED_LINE.match(body)
     if m and _usable(m.group(2)) and not kr.PLACEHOLDER.match(m.group(2)):
-        return m.group(1), m.group(2)
-    value = ""
-    for rx in (kr.KNOWN, kr.RUN):
-        for hit in rx.finditer(body):
-            v = hit.group(0)
-            if rx is kr.KNOWN or kr._high_entropy(v):
-                value = v
-                break
-        if value:
-            break
-    if not value:
-        a = kr.ASSIGN.search(body)
-        if a and kr._value_is_secret(a.group("v")):
-            value = a.group("v")
-    if not value:
-        return None
-    name = next((n for p, n in KEY_PREFIXES if value.startswith(p)), "")
-    if not name:
-        low = body.lower()
-        name = next((n for w, n in PROVIDER_WORDS if w in low), "")
-    return name, value
+        return [(m.group(1), m.group(2))], False
+    found: list[tuple[int, int, str]] = []
+    for hit in kr.KNOWN.finditer(body):
+        found.append((hit.start(), hit.end(), hit.group(0)))
+    for hit in kr.RUN.finditer(body):
+        v = hit.group(0)
+        if kr._high_entropy(v) and not any(a <= hit.start() < b for a, b, _ in found):
+            found.append((hit.start(), hit.end(), v))
+    for hit in kr.ASSIGN.finditer(body):
+        v = hit.group("v")
+        if kr._value_is_secret(v) and not any(a <= hit.start("v") < b for a, b, _ in found):
+            found.append((hit.start("v"), hit.end("v"), v))
+    found.sort()
+    keys = []
+    rest = body
+    for i, (a, b, v) in enumerate(found):
+        prev_end = found[i - 1][1] if i else 0
+        keys.append((_name_for(v, body[prev_end:a]), v))  # 同一行的多把 key：各自看前面紧挨着的那段文字
+        rest = rest.replace(v, " ")
+    leftover = bool(keys) and kr.redact(rest) != rest
+    return keys, leftover
 
 
 def _write_private(path: Path, text: str) -> None:
@@ -369,19 +384,23 @@ def move_page_keys(vault: Path | None) -> list[str]:
     moved: dict[str, str] = {}
     today = date.today().isoformat()
     for i, raw in enumerate(lines):
-        found = _key_in_line(raw)
-        if not found:
+        keys, leftover = _keys_in_line(raw)
+        if not keys:
             continue
-        name, value = found
-        if name:
+        notes = []
+        for name, value in keys:
+            if not name or leftover:
+                name = f"{PENDING}{pending_n}"
+                pending_n += 1
             moved[name] = value.strip().strip('"').strip("'")
-            lines[i] = f"# {name}=（已移到 {target}，{today}）\n"
-        else:
-            name = f"{PENDING}{pending_n}"
+            notes.append(name)
+        if leftover:  # 这一行还有认不全的东西：整行原样存进钥匙文件，页面上不留，也不丢
+            moved[f"{PENDING}{pending_n}_LINE"] = raw.strip().replace("\n", " ")
             pending_n += 1
-            moved[name] = value
-            lines[i] = (f"# 一个认不出是哪家服务的 key 已移到 {target}（{name}，{today}）。请在那个文件里把 {name} "
-                        f"改成对应的名字，如 DEEPSEEK_API_KEY，或者在这里按 `DEEPSEEK_API_KEY=…` 的格式重贴一次。\n")
+        pending = [n for n in notes if n.startswith(PENDING)]
+        lines[i] = (f"# 已移到 {target}（{today}）：{'、'.join(notes)}"
+                    + (f"。其中 {'、'.join(pending)} 认不出是哪家服务：请在那个文件里改成对应的名字，如 DEEPSEEK_API_KEY，"
+                       f"或者在这里按 `DEEPSEEK_API_KEY=…` 的格式一行一个重贴" if pending else "") + "\n")
     if not moved:
         return []
     kept = [ln for ln in existing if not ((m := KEY_LINE.match(ln.strip())) and m.group(1) in moved)]

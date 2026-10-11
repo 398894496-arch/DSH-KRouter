@@ -22,6 +22,7 @@ irm https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bo
 
 - **查询从不外发。** 查找全在本地：一个 SQLite 全文缓存加 Python 标准库，每次约 110 ms。
 - **夜间任务会把库里的文字发给一个模型**——你登录的那个 AI 编程工具（花你的订阅额度），或你给的 API key。发出去的是：昨天的日志（用来蒸馏）、规则页和主题页（用来预先算答案）、和各个主题相关的片段、路由器没答好的问题。`extras/host-daily-evolution/run.sh --dry-run` 会先列出要发什么、多少 token，什么都不发。`KROUTER_NIGHTLY=0` 关掉夜间步骤。
+- **夜间写手受限运行；API key 通道在本机什么都不运行。** grok 在内核沙箱里跑（只能碰知识库和路由器）；claude 的工具被限定为读写知识库、运行路由器；Codex 能读你的账户，其他 CLI 什么都能碰——安装时的提示会说清你选的是哪种。细节：[`SECURITY.md`](SECURITY.md)。
 - **key 从不放在库里，也从不外发、从不打印。** 贴在钥匙页上的 key 下次运行会挪进 `~/.dsh-krouter-keys.env`（权限 600）。名字或标记表明是机密的页（凭据、密钥、credential、secret、password，或 `secret: true`）从不外发、从不引用；其他地方像 key 的文字一律显示为 `<redacted>`。
 - **花费**：自带模板第一晚约 4,000 token；有一百来个规则页和主题页的库约 16 万 token。之后每晚只重做改过的页。用订阅的 CLI，花的是额度不是钱。
 

@@ -43,13 +43,15 @@ if (-not (Test-Path (Join-Path $Dest "scripts\bootstrap.py"))) {
     $Base = "https://github.com/$Repo/releases/download/$Tag"
     $Pkg = Join-Path $Tmp "pkg.tgz"
     $Sums = Join-Path $Tmp "SHA256SUMS"
-    $haveAsset = $true
-    try {
-        Invoke-WebRequest "$Base/dsh-krouter-$Ver.tgz" -OutFile $Pkg -UseBasicParsing
-        Invoke-WebRequest "$Base/SHA256SUMS" -OutFile $Sums -UseBasicParsing
-    } catch { $haveAsset = $false }
-    if ($haveAsset) {
-        # The release package carries a checksum: a mismatch stops the install
+    $haveSums = $true
+    try { Invoke-WebRequest "$Base/SHA256SUMS" -OutFile $Sums -UseBasicParsing } catch { $haveSums = $false }
+    if ($haveSums) {
+        # This release carries a checksum: the package must download and match, or the install stops
+        try { Invoke-WebRequest "$Base/dsh-krouter-$Ver.tgz" -OutFile $Pkg -UseBasicParsing } catch {
+            Write-Output "Could not download dsh-krouter-$Ver.tgz; nothing installed."
+            Remove-Item $Tmp -Recurse -Force
+            return
+        }
         $want = (Get-Content $Sums | Where-Object { $_ -like "* dsh-krouter-$Ver.tgz" } | ForEach-Object { ($_ -split " ")[0] })
         $got = (Get-FileHash $Pkg -Algorithm SHA256).Hash.ToLower()
         if (-not $want -or $want.ToLower() -ne $got) {
@@ -61,13 +63,17 @@ if (-not (Test-Path (Join-Path $Dest "scripts\bootstrap.py"))) {
         if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force }
         Move-Item (Join-Path $Tmp "package") $Dest
         Write-Output "sha256 verified: dsh-krouter-$Ver.tgz"
-    } else {
-        Write-Output "Note: $Tag has no checksummed package; using the source archive (unverified)."
+    } elseif ($env:KROUTER_ALLOW_UNVERIFIED -eq "1") {
+        Write-Output "Installing the unverified source archive (KROUTER_ALLOW_UNVERIFIED=1)."
         $Zip = Join-Path $Tmp "src.zip"
         Invoke-WebRequest "https://github.com/$Repo/archive/refs/tags/$Tag.zip" -OutFile $Zip -UseBasicParsing
         Expand-Archive $Zip -DestinationPath $Tmp -Force
         if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force }
-        Move-Item (Get-ChildItem $Tmp -Directory | Where-Object { $_.Name -like "DSH-KRouter-*" } | Select-Object -First 1).FullName $Dest
+        Move-Item (Get-ChildItem $Tmp -Directory | Where-Object { $_.Name -like "*-*" } | Select-Object -First 1).FullName $Dest
+    } else {
+        Write-Output "$Tag has no SHA256SUMS; stopped. Set KROUTER_ALLOW_UNVERIFIED=1 to install it unverified."
+        Remove-Item $Tmp -Recurse -Force
+        return
     }
     Remove-Item $Tmp -Recurse -Force
 }
