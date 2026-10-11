@@ -197,7 +197,8 @@ def walk_md(vault: Path):
     cut = len(base) + 1
     for root, dirs, files in os.walk(base, followlinks=True):
         dirs[:] = [d for d in dirs if d not in SKIP_PARTS and not d.startswith(".")]
-        reldir = root[cut:]
+        # 库内相对路径一律用 `/`：Windows 上 os.walk 给的是 `\`，分级、区名映射、卡片、别名表都按 `/` 比对
+        reldir = root[cut:].replace(os.sep, "/")
         for name in files:
             if name.endswith(".md"):
                 yield f"{root}/{name}", (f"{reldir}/{name}" if reldir else name)

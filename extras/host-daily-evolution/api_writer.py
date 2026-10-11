@@ -236,7 +236,7 @@ def collect_snapshot(vault: Path, day: date) -> str:
     if logs.is_dir():
         for p in sorted(logs.rglob("*.md")):
             try:
-                rel = str(p.relative_to(vault))
+                rel = p.relative_to(vault).as_posix()
             except ValueError:
                 continue
             names.append(rel)
@@ -303,7 +303,7 @@ def tool_impl(vault: Path, name: str, args: dict) -> str:
         names = []
         for p in sorted(root.rglob("*.md")):
             try:
-                names.append(str(p.relative_to(vault)))
+                names.append(p.relative_to(vault).as_posix())
             except ValueError:
                 continue
             if len(names) >= 60:

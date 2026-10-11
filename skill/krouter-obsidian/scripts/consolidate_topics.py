@@ -221,7 +221,7 @@ def main() -> int:
             same = dest.is_file() and not args.force and f"evidence_sha: {sha}" in dest.read_text(encoding="utf-8")
             print(json.dumps({"slug": t["slug"], "would": "skip-unchanged" if same or not sources else "send",
                               "chars": 0 if same or not sources else len(PROMPT) + len(evidence),
-                              "writes": [] if same or not sources else [str(dest.relative_to(vault))]}, ensure_ascii=False))
+                              "writes": [] if same or not sources else [dest.relative_to(vault).as_posix()]}, ensure_ascii=False))
         return 0
 
     def run(t):
