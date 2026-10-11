@@ -256,7 +256,8 @@ def test_cli_writers_are_confined(tmp_path, monkeypatch):
     write_grok_sandbox(vault, router)  # idempotent: our block once, the host's own profile kept
     text = sandbox.read_text(encoding="utf-8")
     assert text.count(f"[profiles.{GROK_PROFILE}]") == 1 and "[profiles.mine]" in text
-    assert 'extends = "strict"' in text and str(router.parent) in text and str(tmp_path / "cache") in text
+    assert 'extends = "strict"' in text and router.parent.resolve().as_posix() in text
+    assert (tmp_path / "cache").as_posix() in text
     claude = writer_invoke("/opt/homebrew/bin/claude", prompt, vault, router)
     assert "--dangerously-skip-permissions" not in claude and "bypassPermissions" not in claude
     assert claude[claude.index("--permission-mode") + 1] == "dontAsk"

@@ -343,8 +343,8 @@ def write_grok_sandbox(vault: Path, router: Path) -> None:
     skill = router.resolve().parent
     block = "\n".join([
         GROK_MARK, f"[profiles.{GROK_PROFILE}]", 'extends = "strict"',
-        "read_only = " + json.dumps(sorted({str(skill), str(skill.parent)})),
-        "read_write = " + json.dumps([str(cache), str(state)]), "",
+        "read_only = " + json.dumps(sorted({skill.as_posix(), skill.parent.as_posix()})),
+        "read_write = " + json.dumps([cache.as_posix(), state.as_posix()]), "",
     ])
     path = vault / ".grok" / "sandbox.toml"
     path.parent.mkdir(parents=True, exist_ok=True)
