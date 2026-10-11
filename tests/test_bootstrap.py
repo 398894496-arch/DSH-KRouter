@@ -145,3 +145,12 @@ def test_bootstrap_sh_verifies_the_release_checksum(tmp_path):
         assert (tmp_path / "kh" / f"v{ver}" / "scripts/bootstrap.py").is_file()
     finally:
         server.shutdown()
+
+
+def test_powershell_scripts_are_ascii_and_never_exit_the_users_session():
+    """PS 5.1 reads BOM-less scripts in the ANSI code page; `exit` under `irm | iex` closes the user's window."""
+    for name in ("bootstrap.ps1", "install_windows_task.ps1"):
+        data = (REPO / "scripts" / name).read_bytes()
+        assert all(b < 128 for b in data), name
+    lines = (REPO / "scripts/bootstrap.ps1").read_text(encoding="ascii").splitlines()
+    assert not [ln for ln in lines if ln.strip().startswith("exit")]
