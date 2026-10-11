@@ -1,4 +1,4 @@
-# DSH-KRouter daily timer on Windows: one scheduled task, 09:10 local time, runs extras\host-daily-evolution\run.py.
+# KRouter daily timer on Windows: one scheduled task, 09:10 local time, runs extras\host-daily-evolution\run.py.
 # Usage (PowerShell, as yourself - no admin needed):
 #   $env:OBSIDIAN_VAULT = "D:\Obsidian\MyVault"; .\scripts\install_windows_task.ps1
 #   .\scripts\install_windows_task.ps1 -Uninstall
@@ -10,7 +10,7 @@ param(
     [string]$At = "09:10"
 )
 $ErrorActionPreference = "Stop"
-$TaskName = "DSH-KRouter daily evolution"
+$TaskName = "KRouter daily evolution"
 
 if ($Uninstall) {
     if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {

@@ -455,8 +455,8 @@ def lock_flagship(model_ids: list[str], fallback: str = "") -> str:
 def openai_headers(key: str, name: str) -> dict[str, str]:
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json", "Accept": "application/json"}
     if name == "OPENROUTER_API_KEY":
-        headers["HTTP-Referer"] = "https://github.com/398894496-arch/DSH-KRouter"
-        headers["X-Title"] = "DSH-KRouter"
+        headers["HTTP-Referer"] = "https://github.com/398894496-arch/KRouter"
+        headers["X-Title"] = "KRouter"
     return headers
 
 

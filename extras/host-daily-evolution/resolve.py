@@ -68,7 +68,7 @@ def _load_lane():
             if str(scripts) not in sys.path:
                 sys.path.append(str(scripts))
             return mod
-    raise SystemExit("DSH-KRouter: skill/krouter-obsidian/scripts/llm.py not found")
+    raise SystemExit("KRouter: skill/krouter-obsidian/scripts/llm.py not found")
 
 
 _lane = _load_lane()
@@ -195,8 +195,8 @@ def probe_key(name: str, key: str, extra: dict[str, str] | None = None) -> str:
             return "unprobed"
         headers = {"Authorization": f"Bearer {key}", "Accept": "application/json"}
         if name == "OPENROUTER_API_KEY":
-            headers["HTTP-Referer"] = "https://github.com/398894496-arch/DSH-KRouter"
-            headers["X-Title"] = "DSH-KRouter"
+            headers["HTTP-Referer"] = "https://github.com/398894496-arch/KRouter"
+            headers["X-Title"] = "KRouter"
     req = urllib.request.Request(url, headers=headers, method="GET")
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
@@ -328,7 +328,7 @@ def write_runtime_prompt(base: Path, vault: Path, router: Path) -> Path:
 
 
 GROK_PROFILE = "krouter"
-GROK_MARK = "# krouter: written by DSH-KRouter for the nightly writer; regenerated every run"
+GROK_MARK = "# krouter: written by KRouter for the nightly writer; regenerated every run"
 
 
 def write_grok_sandbox(vault: Path, router: Path) -> None:
@@ -487,12 +487,12 @@ def distill_gate(payload: dict[str, str]) -> tuple[bool, int, str]:
         return (
             False,
             0,
-            "DSH-KRouter: timer on; key probe network failed. Distill skipped.",
+            "KRouter: timer on; key probe network failed. Distill skipped.",
         )
     return (
         False,
         0,
-        f"DSH-KRouter: timer on; distill skipped. "
+        f"KRouter: timer on; distill skipped. "
         f"Log in grok/codex/claude once, or put your *_API_KEY on {page} "
         f"or in {keys_env_path()}.",
     )
@@ -540,7 +540,7 @@ def run_cli_writer(writer: str, vault: Path, router: Path) -> int:
             f"CLI writer {kind} left no seal (exit {code}). Timer on; left to-summarize.",
         )
         print(
-            "DSH-KRouter: CLI writer left a to-summarize note.",
+            "KRouter: CLI writer left a to-summarize note.",
             file=sys.stderr,
         )
     return 0
@@ -577,7 +577,7 @@ def exec_distill(probe: bool) -> int:
         return run_cli_writer(writer, vault, router)
     notify.send(notify.NO_WRITER, kind="no-writer")
     print(
-        f"DSH-KRouter: timer on; distill skipped. "
+        f"KRouter: timer on; distill skipped. "
         f"Put *_API_KEY on {payload.get('key_page', 'the vault key page')} "
         f"or log in grok/codex/claude (Claudian-class subscription).",
         file=sys.stderr,
@@ -586,7 +586,7 @@ def exec_distill(probe: bool) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Resolve DSH-KRouter self-evolution key and writer")
+    parser = argparse.ArgumentParser(description="Resolve KRouter self-evolution key and writer")
     parser.add_argument("--exec", action="store_true", help="timer entry: detect, then run the writer")
     parser.add_argument("--status", action="store_true", help="print JSON status, no secrets")
     parser.add_argument("--sync-health", action="store_true", help="patch the health page from local detect")

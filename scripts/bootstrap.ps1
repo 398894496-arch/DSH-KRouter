@@ -1,12 +1,12 @@
 # One line for anyone on Windows (PowerShell, as yourself, no admin):
-#   irm https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bootstrap.ps1 | iex
+#   irm https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.ps1 | iex
 # Fetches the latest release into %LOCALAPPDATA%\dsh-krouter\<tag>, checks its SHA-256 against the release's SHA256SUMS,
 # and runs scripts\bootstrap.py from there. Set $env:KROUTER_TAG first to stay on one release.
 # If Python is missing it installs it for the current user with winget. Run again to upgrade.
 # Keep this file ASCII-only: Windows PowerShell 5.1 reads a BOM-less script in the ANSI code page.
 # Never `exit`: under `irm | iex` it would close the user's PowerShell window before they read the last line.
 $ErrorActionPreference = "Stop"
-$Repo = "398894496-arch/DSH-KRouter"
+$Repo = "398894496-arch/KRouter"
 $Home_ = Join-Path $env:LOCALAPPDATA "dsh-krouter"
 $BootArgs = @($args)
 
@@ -78,7 +78,7 @@ if (-not (Test-Path (Join-Path $Dest "scripts\bootstrap.py"))) {
     Remove-Item $Tmp -Recurse -Force
 }
 Set-Content -Path (Join-Path $Home_ "current.txt") -Value $Dest -Encoding ASCII
-Write-Output "DSH-KRouter $Tag -> $Dest"
+Write-Output "KRouter $Tag -> $Dest"
 $env:PYTHONUTF8 = "1"
 # Python prints UTF-8; without this the 5.1 console decodes it in the ANSI code page and Chinese turns to garbage
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

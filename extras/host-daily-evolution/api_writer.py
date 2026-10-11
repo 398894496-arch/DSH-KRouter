@@ -41,7 +41,7 @@ def _load_lane():
             if str(scripts) not in sys.path:
                 sys.path.append(str(scripts))
             return mod
-    raise SystemExit("DSH-KRouter: skill/krouter-obsidian/scripts/llm.py not found")
+    raise SystemExit("KRouter: skill/krouter-obsidian/scripts/llm.py not found")
 
 
 _lane = _load_lane()
@@ -321,13 +321,13 @@ def _http_json(url: str, payload: dict, headers: dict[str, str]) -> dict:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
             raw = resp.read()
     except urllib.error.HTTPError as exc:
-        raise SystemExit(f"DSH-KRouter: chat API HTTP {exc.code}") from exc
+        raise SystemExit(f"KRouter: chat API HTTP {exc.code}") from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise SystemExit("DSH-KRouter: chat API network failed") from exc
+        raise SystemExit("KRouter: chat API network failed") from exc
     try:
         return json.loads(raw.decode("utf-8"))
     except json.JSONDecodeError as exc:
-        raise SystemExit("DSH-KRouter: chat API returned non-JSON") from exc
+        raise SystemExit("KRouter: chat API returned non-JSON") from exc
 
 
 def write_pending(vault: Path, day: date, reason: str) -> None:
@@ -452,7 +452,7 @@ def run(keys: dict[str, str], extra: dict[str, str] | None = None) -> int:
     extra = extra or {}
     spec = pick_chat(keys, extra)
     if spec is None:
-        print("DSH-KRouter: no chat endpoint for the vault-page key.", file=sys.stderr)
+        print("KRouter: no chat endpoint for the vault-page key.", file=sys.stderr)
         return 1
     secret = keys.get(spec["name"], "")
     spec = apply_flagship_lock(spec, secret)
@@ -483,7 +483,7 @@ def run(keys: dict[str, str], extra: dict[str, str] | None = None) -> int:
         raise
     if wrote == 0:
         write_pending(vault, day, "API writer produced no files; left to-summarize.")
-        print("DSH-KRouter: API writer left a to-summarize note.", file=sys.stderr)
+        print("KRouter: API writer left a to-summarize note.", file=sys.stderr)
         return 0
-    print(f"DSH-KRouter: API writer wrote {wrote} file(s) via {spec['name']}/{spec['model']}.")
+    print(f"KRouter: API writer wrote {wrote} file(s) via {spec['name']}/{spec['model']}.")
     return 0

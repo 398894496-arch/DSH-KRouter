@@ -49,7 +49,7 @@ __all__ = [
 ]
 
 HEADER = (
-    "# DSH-KRouter self-evolution keys. chmod 600. Never commit. Never in the vault.\n"
+    "# KRouter self-evolution keys. chmod 600. Never commit. Never in the vault.\n"
     "# Written by scripts/install.sh. KROUTER_CLI_LOGIN marks a logged-in CLI, not a secret.\n"
 )
 
@@ -83,7 +83,7 @@ def write_keys(path: Path, live: dict[str, str], cli: str) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Graft the DSH-KRouter self-evolution key")
+    parser = argparse.ArgumentParser(description="Graft the KRouter self-evolution key")
     parser.add_argument("--check", action="store_true", help="probe only, never rewrite")
     parser.add_argument("--detect", action="store_true", help="print the first logged-in CLI")
     args = parser.parse_args()

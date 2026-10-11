@@ -1,13 +1,13 @@
 #!/bin/sh
 # One line for anyone on macOS / Linux:
-#   curl -fsSL https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bootstrap.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.sh | sh
 # Options pass through to bootstrap.py, e.g. `| sh -s -- --vault ~/MyVault --lang en`.
 # Fetches the latest release (a tag, never main) into ~/.dsh-krouter/<tag>, checks its SHA-256 against the release's
 # SHA256SUMS, points ~/.dsh-krouter/current at it, and runs scripts/bootstrap.py from there. Run again to upgrade;
 # `| KROUTER_TAG=v0.11.2 sh` stays on one release. From a clone, it uses the clone.
 set -eu
 
-REPO="398894496-arch/DSH-KRouter"
+REPO="398894496-arch/KRouter"
 HOME_DIR="${KROUTER_HOME:-$HOME/.dsh-krouter}"
 
 if ! command -v python3 >/dev/null 2>&1; then
@@ -64,5 +64,5 @@ if [ ! -f "$DEST/scripts/bootstrap.py" ]; then
   rm -rf "$TMP"
 fi
 ln -sfn "$DEST" "$HOME_DIR/current"
-printf '%s\n' "DSH-KRouter $TAG → $HOME_DIR/current"
+printf '%s\n' "KRouter $TAG → $HOME_DIR/current"
 exec python3 "$HOME_DIR/current/scripts/bootstrap.py" "$@"

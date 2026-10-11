@@ -14,7 +14,7 @@ for arg in "$@"; do
       printf '%s\n' "copies a Cursor always-on rule to ~/.cursor/rules/"
       printf '%s\n' "copies the ask-as-product rule to ~/.cursor/rules/ask-product.mdc"
       printf '%s\n' "self-evolution timer is on by default"
-      printf '%s\n' "DSH-KRouter writer: detect a logged-in Claudian-class CLI, or wire *_API_KEY"
+      printf '%s\n' "KRouter writer: detect a logged-in Claudian-class CLI, or wire *_API_KEY"
       printf '%s\n' "does not replace an existing skill unless --upgrade (--force is the same)"
       printf '%s\n' "never overwrites your alias table: it lives in the vault (90 系统文件/canonical_sources.psv)"
       printf '%s\n' "undo with scripts/uninstall.sh"

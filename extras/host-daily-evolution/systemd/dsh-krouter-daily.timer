@@ -1,5 +1,5 @@
 [Unit]
-Description=DSH-KRouter daily evolution, 09:10 local time
+Description=KRouter daily evolution, 09:10 local time
 
 [Timer]
 OnCalendar=*-*-* 09:10:00

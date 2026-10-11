@@ -1,19 +1,21 @@
-# DSH-KRouter
+# KRouter
+
+*Formerly **DSH-KRouter**: renamed because it is not specific to DeepSeek Harness. Old links, the old clone URL and the old one-line install still redirect.*
 
 **A second brain your coding agents share — nothing to set up, nothing to maintain.** Every night it seals yesterday into an [Obsidian](https://obsidian.md) vault (plain Markdown) and distills what is worth keeping. Tomorrow any agent — Cursor, Codex, Claude Code, DeepSeek Harness — asks it and gets **the right page with a receipt**, or is told plainly that the vault does not know. No vector database, no service to run. Chinese and English; macOS, Linux, Windows.
 
-[![ci](https://github.com/398894496-arch/DSH-KRouter/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/DSH-KRouter/actions/workflows/ci.yml) [![release](https://img.shields.io/github/v/release/398894496-arch/DSH-KRouter)](https://github.com/398894496-arch/DSH-KRouter/releases/latest) [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE) · 中文：[`README.zh.md`](README.zh.md)
+[![ci](https://github.com/398894496-arch/KRouter/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/KRouter/actions/workflows/ci.yml) [![release](https://img.shields.io/github/v/release/398894496-arch/KRouter)](https://github.com/398894496-arch/KRouter/releases/latest) [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE) · 中文：[`README.zh.md`](README.zh.md)
 
 ## Install — one line, nothing to know
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bootstrap.sh | sh
+curl -fsSL https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.sh | sh
 ```
 
 Windows (PowerShell, no admin):
 
 ```powershell
-irm https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bootstrap.ps1 | iex
+irm https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.ps1 | iex
 ```
 
 It fetches the latest release (a tag, never `main`) and checks its SHA-256 against the release's `SHA256SUMS`, makes a vault in `Documents/Second Brain` (`Documents/第二大脑` with the Chinese template when the system language is Chinese), installs the router and the agent rules, and opens the vault in Obsidian. Then it **asks** before installing the nightly job, saying in one sentence which CLI will run, with what permissions, and how many pages (and tokens) it will send — the numbers come from a dry run on your new vault. No terminal to ask on means no nightly job; `--timer` says yes up front, `--no-timer` says no. `KROUTER_TAG=v0.11.2` (before `sh`, or `$env:KROUTER_TAG` on Windows) stays on one release. An existing vault (`… | sh -s -- --vault ~/MyVault`) keeps every file; only missing skeleton files are added. Run the same line again to upgrade. Python 3 is the only requirement (the Windows script installs it with winget when missing). The last thing it prints is the one step left, if any: log in to an AI coding CLI, or paste an API key. After that nothing needs maintaining — a lock noun is an optional shortcut, not a prerequisite; recall answers from page titles and text on its own, and refuses rather than guesses. If a night's work did not happen, a desktop notification says why. Where data goes and what a CLI writer can see: [`SECURITY.md`](SECURITY.md).
@@ -123,8 +125,8 @@ Same run, same 92 queries. Per-release paired runs and the held-out synthetic se
 This proves the lock answers `Q01` on **this repo’s `template/`**, not on your existing vault. It does not distill yesterday. No GPU. No Docker. No embedding daemon. `first_run.sh` ignores `OBSIDIAN_VAULT` on purpose; point it at another tree only with `KROUTER_FIRST_RUN_VAULT`.
 
 ```bash
-git clone https://github.com/398894496-arch/DSH-KRouter.git
-cd DSH-KRouter
+git clone https://github.com/398894496-arch/KRouter.git
+cd KRouter
 python3 -m venv .venv && . .venv/bin/activate
 python3 -m pip install -r requirements.txt   # PyYAML (Homebrew Python is PEP 668)
 ./scripts/first_run.sh
@@ -194,11 +196,11 @@ Sharing is the vault — the alias table lives in it — not a second protocol. 
 | Cursor | `extras/cursor/krouter-obsidian.mdc` via `install.sh` |
 | Codex | `extras/codex/AGENTS.snippet.md` |
 | Claude Code | `extras/claude-code/CLAUDE.snippet.md` |
-| DeepSeek Harness | DSH socket. Clone: `dsh plugin add /path/to/this/repo`. Catalog: `dsh plugin --profile web add github:398894496-arch/DSH-KRouter`. Read-only tools: status, preference, **correction**, memory (vault route, not chat memory), project, search, suggest. Uninstall does not delete notes. |
+| DeepSeek Harness | DSH socket. Clone: `dsh plugin add /path/to/this/repo`. Catalog: `dsh plugin --profile web add github:398894496-arch/KRouter`. Read-only tools: status, preference, **correction**, memory (vault route, not chat memory), project, search, suggest. Uninstall does not delete notes. |
 
 ```bash
 node extras/dsh/test-bridge.mjs
-dsh plugin --profile web add github:398894496-arch/DSH-KRouter
+dsh plugin --profile web add github:398894496-arch/KRouter
 ```
 
 Requires `python3`, `rg`, PyYAML. Tests: `python3 -m pip install -r requirements-dev.txt && python3 -m pytest -q`.

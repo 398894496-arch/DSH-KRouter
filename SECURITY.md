@@ -1,6 +1,6 @@
 # Security
 
-DSH-KRouter reads and writes a personal knowledge vault and can hold model API keys, so this page says exactly
+KRouter reads and writes a personal knowledge vault and can hold model API keys, so this page says exactly
 where data goes and how to report a problem.
 
 ## Where your data goes
