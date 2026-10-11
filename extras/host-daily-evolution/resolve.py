@@ -73,6 +73,7 @@ def _load_lane():
 
 _lane = _load_lane()
 import zones  # noqa: E402  (skill scripts dir, appended by _load_lane)
+import notify  # noqa: E402
 CLI_KIND_RE = _lane.CLI_KIND_RE
 GENERIC_PROBE_TAILS = _lane.GENERIC_PROBE_TAILS
 CLI_FLAGSHIP = _lane.CLI_FLAGSHIP
@@ -498,6 +499,8 @@ def exec_distill(probe: bool) -> int:
     payload = status_payload(detect=True, probe=probe)
     patch_health(vault, payload["key"], payload["writer"])
     ok, code, msg = distill_gate(payload)
+    if not ok and "network" not in msg:
+        notify.send(notify.NO_WRITER, kind="no-writer")  # 没有模型：宿主不看终端也要知道
     if not ok:
         print(msg, file=sys.stderr)
         return code
@@ -519,6 +522,7 @@ def exec_distill(probe: bool) -> int:
         return run_api(live, extra)
     if writer_ok(probe_result) and not probe_result.startswith("api-writer") and writer:
         return run_cli_writer(writer, vault, router)
+    notify.send(notify.NO_WRITER, kind="no-writer")
     print(
         f"DSH-KRouter: timer on; distill skipped. "
         f"Put *_API_KEY on {payload.get('key_page', 'the vault key page')} "

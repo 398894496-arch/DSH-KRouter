@@ -196,3 +196,20 @@ def test_first_run_does_not_write_the_query_log(tmp_path):
                          text=True, timeout=600, cwd=REPO)
     assert res.returncode == 0, res.stdout[-800:] + res.stderr[-800:]
     assert not (state / "queries.jsonl").exists()
+
+
+def test_notify_once_a_day_and_off_switch(tmp_path, monkeypatch):
+    sys.path.insert(0, str(SCRIPTS))
+    import notify
+
+    sent = []
+    monkeypatch.setenv("KROUTER_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setattr(notify.subprocess, "run", lambda *a, **k: sent.append(a) or subprocess.CompletedProcess(a, 0))
+    monkeypatch.setattr(notify.subprocess, "Popen", lambda *a, **k: sent.append(a))
+    monkeypatch.setattr(notify.shutil, "which", lambda name: "/usr/bin/notify-send")
+    monkeypatch.setenv("KROUTER_NOTIFY", "0")
+    assert notify.send("x", kind="t") is False and not sent
+    monkeypatch.setenv("KROUTER_NOTIFY", "1")
+    assert notify.send("x", kind="t") is True and len(sent) == 1
+    assert notify.send("x", kind="t") is False and len(sent) == 1  # once per kind per day
+    assert notify.send("y", kind="other") is True

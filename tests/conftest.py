@@ -13,3 +13,4 @@ import tempfile  # noqa: E402
 _ISOLATED = Path(tempfile.mkdtemp(prefix="krouter-tests-"))
 os.environ["KROUTER_STATE_DIR"] = str(_ISOLATED / "state")
 os.environ.setdefault("KROUTER_CACHE_DIR", str(_ISOLATED / "cache"))
+os.environ["KROUTER_NOTIFY"] = "0"  # 测试不弹桌面通知
