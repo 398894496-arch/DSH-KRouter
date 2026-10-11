@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from canonical_lookup import (
+    map_for,
     load_rows,
     lookup,
     parse_frontmatter,
@@ -85,6 +86,7 @@ def emit_receipt(source: Path, retrieval_status: str, route: str, query: str, va
             print(f"source_verified_at: {meta['verified_at']}")
         print(f"source_sha256: {sha256_file(source)}")
     if map_path.is_file():
+        print(f"canonical_map: {map_path}")
         print(f"canonical_map_sha256: {sha256_file(map_path)}")
     l0 = vault / "90 系统文件/自动化/下意识.md"
     if l0.is_file():
@@ -141,6 +143,20 @@ def emit_host_action(health: Path) -> None:
             "grok / official Codex / claude (your subscription). Timer already on. "
             "Do not print secrets."
         )
+    nightly = meta.get("nightly") or ""
+    if nightly:
+        at = meta.get("nightly_at") or ""
+        print(f"nightly: {nightly}")
+        print(f"nightly_at: {at}")
+        stale = False
+        try:
+            stale = lamp == "running" and (datetime.now() - datetime.fromisoformat(at)).days >= 3
+        except ValueError:
+            pass
+        if nightly in {"skipped", "failed"} or stale:
+            why = "has not run for 3+ days" if stale and nightly not in {"skipped", "failed"} else nightly
+            print(f"host_action: Nightly upkeep {why}; see 90 系统文件/自动化/夜间维护.md for each step's reason. "
+                  "Model steps need the writer's lane (a *_API_KEY, or a logged-in grok / Codex / claude / …).")
 
 
 def emit_suggestions(query: str, vault: Path, map_path: Path) -> None:
@@ -359,7 +375,7 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
-    map_path = HERE / "canonical_sources.psv"
+    map_path = map_for(vault)
     canonical = vault / "Agent第二大脑.md"
     health = vault / "90 系统文件/自动化/日更健康.md"
     scopes = {

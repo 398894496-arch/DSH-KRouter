@@ -3,10 +3,25 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import unicodedata
 from datetime import date
 from pathlib import Path
+
+# 别名表是宿主的资产，放在库里（跟着库同步、进库的 git 快照），代码目录里那份只是样例兜底。
+MAP_REL = "90 系统文件/canonical_sources.psv"
+
+
+def map_for(vault: Path | None) -> Path:
+    """The alias table in force: `KROUTER_MAP`, else the vault's own table, else the shipped sample."""
+    raw = os.environ.get("KROUTER_MAP", "").strip()
+    if raw:
+        return Path(raw)
+    if vault is not None and (vault / MAP_REL).is_file():
+        return vault / MAP_REL
+    return Path(__file__).resolve().parent / "canonical_sources.psv"
+
 
 PARTICLES = set("的了着过地得")
 

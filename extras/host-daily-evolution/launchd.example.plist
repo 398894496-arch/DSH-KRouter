@@ -15,6 +15,10 @@
     <key>Minute</key>
     <integer>10</integer>
   </dict>
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/dsh-krouter-daily.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/dsh-krouter-daily.log</string>
   <key>EnvironmentVariables</key>
   <dict>
     <key>OBSIDIAN_VAULT</key>

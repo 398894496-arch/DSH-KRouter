@@ -1,0 +1,10 @@
+[Unit]
+Description=DSH-KRouter daily evolution (seal yesterday, then nightly upkeep)
+
+[Service]
+Type=oneshot
+Environment=OBSIDIAN_VAULT=__VAULT__
+Environment=KROUTER_ROUTER=__ROUTER__
+Environment=KROUTER_WRITER=__WRITER__
+Environment=KROUTER_KEYS_ENV=__KEYS_ENV__
+ExecStart=/bin/sh __RUN_SH__

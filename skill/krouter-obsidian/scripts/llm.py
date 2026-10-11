@@ -387,16 +387,37 @@ def _call_api(spec: dict[str, str], key: str, model: str, prompt: str) -> str:
     if spec["style"] == "anthropic":
         data = _post(spec["url"], {"x-api-key": key, "anthropic-version": "2023-06-01"},
                      {"model": model, "max_tokens": 8000, "messages": [{"role": "user", "content": prompt}]})
-        return "".join(b.get("text", "") for b in data.get("content", []) if isinstance(b, dict))
+        u = data.get("usage") or {}
+        return ("".join(b.get("text", "") for b in data.get("content", []) if isinstance(b, dict)),
+                {"tokens_in": u.get("input_tokens"), "tokens_out": u.get("output_tokens")})
     if spec["style"] == "gemini":
         data = _post(f"{GEMINI}/{model}:generateContent", {"x-goog-api-key": key},
                      {"contents": [{"parts": [{"text": prompt}]}]})
         cands = data.get("candidates") or []
         parts = ((cands[0] if cands else {}).get("content") or {}).get("parts") or []
-        return "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+        u = data.get("usageMetadata") or {}
+        return ("".join(p.get("text", "") for p in parts if isinstance(p, dict)),
+                {"tokens_in": u.get("promptTokenCount"), "tokens_out": u.get("candidatesTokenCount")})
     data = _post(spec["url"], openai_headers(key, spec["name"]),
                  {"model": model, "messages": [{"role": "user", "content": prompt}]})
-    return data["choices"][0]["message"]["content"]
+    u = data.get("usage") or {}
+    return data["choices"][0]["message"]["content"], {"tokens_in": u.get("prompt_tokens"), "tokens_out": u.get("completion_tokens")}
+
+
+def _record(kind: str, model: str, prompt: str, text: str, usage: dict | None = None) -> None:
+    """Append one call's metadata (never its content) to `KROUTER_USAGE_LOG` when the host asks for it."""
+    log = os.environ.get("KROUTER_USAGE_LOG", "")
+    if not log:
+        return
+    row = {"kind": kind.split(":", 1)[0], "provider": kind.split(":", 1)[-1] if kind.startswith("api:") else Path(model).name,
+           "model": model if kind.startswith("api:") else os.environ.get("KROUTER_LEARN_MODEL", ""),
+           "chars_in": len(prompt), "chars_out": len(text or "")}
+    row.update({k: v for k, v in (usage or {}).items() if v is not None})
+    try:
+        with open(log, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
 
 
 _LOCKED: dict[str, str] = {}  # provider → flagship id, once per process
@@ -418,7 +439,9 @@ def complete(prompt: str, vault: Path | None = None) -> str:
                     if spec["name"] not in _LOCKED:
                         _LOCKED[spec["name"]] = lock_flagship(catalog_ids(spec, key), spec["model"])
                     model = _LOCKED[spec["name"]]
-                return _call_api(spec, key, model, prompt)
+                text, usage = _call_api(spec, key, model, prompt)
+                _record(kind, model, prompt, text, usage)
+                return text
             if kind == "cli":
                 with tempfile.TemporaryDirectory(prefix="krouter-llm-") as tmp:
                     prompt_file = str(Path(tmp) / "prompt.md")
@@ -428,6 +451,7 @@ def complete(prompt: str, vault: Path | None = None) -> str:
                                           timeout=TIMEOUT, cwd=tmp, stdin=None if on_stdin else subprocess.DEVNULL)
                 if proc.returncode != 0:
                     raise RuntimeError((proc.stderr or proc.stdout)[-200:])
+                _record("cli", detail, prompt, proc.stdout)
                 return proc.stdout
         except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError, RuntimeError,
                 subprocess.TimeoutExpired) as exc:

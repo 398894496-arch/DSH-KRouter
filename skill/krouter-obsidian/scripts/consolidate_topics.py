@@ -196,6 +196,7 @@ def main() -> int:
     ap.add_argument("--only", default="", help="comma-separated slugs")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--jobs", type=int, default=2)
+    ap.add_argument("--dry-run", action="store_true", help="list what would be sent and written; no model call")
     args = ap.parse_args()
     if args.cli:
         os.environ["KROUTER_LEARN_CLI"] = args.cli
@@ -208,9 +209,22 @@ def main() -> int:
         topics = [t for t in topics if t["slug"] in wanted]
     from concurrent.futures import ThreadPoolExecutor
 
+    if args.dry_run:
+        for t in topics:
+            evidence, sources, _latest = gather(vault, t)
+            dest = vault / OUT_DIR / f"主题｜{t['title']}.md"
+            sha = hashlib.sha1(evidence.encode("utf-8")).hexdigest()[:16]
+            same = dest.is_file() and not args.force and f"evidence_sha: {sha}" in dest.read_text(encoding="utf-8")
+            print(json.dumps({"slug": t["slug"], "would": "skip-unchanged" if same or not sources else "send",
+                              "chars": 0 if same or not sources else len(PROMPT) + len(evidence),
+                              "writes": [] if same or not sources else [str(dest.relative_to(vault))]}, ensure_ascii=False))
+        return 0
+
     def run(t):
         try:
             return build(vault, t, args.force)
+        except llm.NoModel as exc:
+            return {"slug": t["slug"], "status": "skipped", "error": str(exc)[:200]}
         except Exception as exc:  # 单个主题失败不影响其它主题
             return {"slug": t["slug"], "status": "failed", "error": str(exc)[:200]}
 

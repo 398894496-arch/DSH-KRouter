@@ -1,0 +1,9 @@
+[Unit]
+Description=DSH-KRouter daily evolution, 09:10 local time
+
+[Timer]
+OnCalendar=*-*-* 09:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -18,21 +18,26 @@ case "${KROUTER_ROUTER:-}" in
 esac
 export KROUTER_ROUTER="${KROUTER_ROUTER:-$BUNDLED_ROUTER}"
 
+if [ "${1:-}" = "--dry-run" ]; then
+  # 什么都不调、不写：写手走哪条通道，夜间各步会发什么、估算多少 token、会写哪些文件
+  python3 "$RESOLVE" --status --offline
+  SK=$(dirname "$KROUTER_ROUTER")
+  [ -f "$SK/nightly.py" ] || SK="$ROOT/skill/krouter-obsidian/scripts"
+  [ -f "$SK/nightly.py" ] && python3 "$SK/nightly.py" --vault "$OBSIDIAN_VAULT" --dry-run
+  exit 0
+fi
+
 rc=0
 python3 "$RESOLVE" --exec || rc=$?
 
 # Nightly upkeep after the seal. On by default; KROUTER_NIGHTLY=0 turns it off.
-# Each step is independent: one failing does not stop the others, and none changes the seal's exit code.
-# Steps that need a model use the same lane as the writer: *_API_KEY first, then a logged-in CLI;
-# with neither they print "skipped" and exit 0.
+# nightly.py runs the five steps (each independent; none changes the seal's exit code) and writes each
+# one's outcome to 90 系统文件/自动化/夜间维护.md and the health page, where `status` reads it.
+# Model steps use the writer's lane: *_API_KEY first, then the CLI the writer would pick.
 if [ "${KROUTER_NIGHTLY:-1}" != 0 ]; then
   SK=$(dirname "$KROUTER_ROUTER")
-  [ -f "$SK/recall_index.py" ] || SK="$ROOT/skill/krouter-obsidian/scripts"
-  for step in compile_subconscious reconsolidate consolidate_topics answer_cards checkup; do
-    if [ -f "$SK/$step.py" ]; then
-      python3 "$SK/$step.py" --vault "$OBSIDIAN_VAULT" >&2 || printf '%s\n' "DSH-KRouter: nightly $step failed (rc=$?); continuing" >&2
-    fi
-  done
+  [ -f "$SK/nightly.py" ] || SK="$ROOT/skill/krouter-obsidian/scripts"
+  python3 "$SK/nightly.py" --vault "$OBSIDIAN_VAULT" >&2 || printf '%s\n' "DSH-KRouter: nightly runner failed (rc=$?)" >&2
 fi
 
 exit "$rc"

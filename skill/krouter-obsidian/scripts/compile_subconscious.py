@@ -12,7 +12,7 @@ import re
 from datetime import date, datetime
 from pathlib import Path
 
-from canonical_lookup import in_force, load_rows, parse_frontmatter
+from canonical_lookup import in_force, load_rows, map_for, parse_frontmatter
 
 REL = "90 系统文件/自动化/下意识.md"
 HOW_MAX = 80
@@ -148,8 +148,7 @@ def compile_vault(
     today: date | None = None,
 ) -> Path:
     vault = vault.resolve()
-    script_dir = Path(__file__).resolve().parent
-    map_path = (map_path or (script_dir / "canonical_sources.psv")).resolve()
+    map_path = (map_path or map_for(vault)).resolve()
     dest = out or (vault / REL)
     dest.parent.mkdir(parents=True, exist_ok=True)
     lines = compile_rows(vault, map_path, today=today)

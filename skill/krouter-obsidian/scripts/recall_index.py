@@ -118,8 +118,9 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
 
     只用于召回排序，不参与锁定；锁定仍只认人工别名表。
     """
-    raw = os.environ.get("KROUTER_MAP") or str(Path(__file__).resolve().parent / "canonical_sources.psv")
-    sources = [Path(raw)]
+    from canonical_lookup import map_for
+
+    sources = [map_for(vault)]
     if vault is not None and (vault / "90 系统文件").is_dir():
         sources += sorted((vault / "90 系统文件").rglob(TRIGGER_GLOB))
         sources += sorted((vault / "90 系统文件").rglob(CARD_GLOB))
@@ -287,6 +288,7 @@ TOPIC_UNNAMED = 0.35
 TOPIC_NAMED = 1.25
 TITLE_HIT = 2.0
 CARD_MIN = 0.5  # 问答卡至少覆盖问题一半的实词分量才输出
+ANSWER_SUPPORT_MIN = 0.3  # 答案用词至少这么多在原页出现
 
 
 def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_first: bool = True,
@@ -522,7 +524,11 @@ def grounded(card: dict, page_text: str, page_terms: set[str] | None = None) -> 
         return False
     if page_terms is None:
         page_terms = set(tokens(page_text))
-    return any(t in page_terms for t in question_terms(card.get("q", "")))
+    if not any(t in page_terms for t in question_terms(card.get("q", ""))):
+        return False
+    # 答案应当取自这一页：用词大多在原页。真卡最低 0.38（447 张），编出来的整句答案远低于此
+    words = [t for t in tokens(card.get("a", "")) if len(t) > 1 and not (is_cjk_bigram(t) and set(t) & FUNCTION_CHARS)]
+    return not words or sum(t in page_terms for t in words) / len(words) >= ANSWER_SUPPORT_MIN
 
 
 def attach_answers(vault: Path, hits: list[dict], raw: list[str], df: dict[str, int]) -> None:
