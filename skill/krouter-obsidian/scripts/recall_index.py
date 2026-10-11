@@ -26,7 +26,7 @@ import krouter_redact  # noqa: E402
 redact = krouter_redact.redact
 is_secret_page = krouter_redact.is_secret_page  # 其他夜间脚本经 ri.is_secret_page 用它
 
-SCHEMA_VERSION = "recall-v11"
+SCHEMA_VERSION = "recall-v12"  # v12：索引存脱敏后的文字，旧缓存必须重建
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
 SCORE_MIN = 8.5  # bm25×分层权重的绝对下限
@@ -217,6 +217,7 @@ def connect(db: Path) -> sqlite3.Connection:
         )
         con.execute("INSERT OR REPLACE INTO meta VALUES('schema', ?)", (SCHEMA_VERSION,))
         con.commit()
+        con.execute("VACUUM")  # 旧表的页还留在文件里（旧版本存的是未脱敏的原文），一并清掉
     return con
 
 

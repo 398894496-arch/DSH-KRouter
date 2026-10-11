@@ -83,3 +83,24 @@ def test_router_never_prints_or_logs_a_key(keyed_vault, tmp_path, sh_only):
         assert FAKE not in log.read_text(encoding="utf-8")
     for db in cache.rglob("*.sqlite*"):
         assert FAKE.encode() not in db.read_bytes()
+
+
+def test_upgrade_rebuilds_a_cache_built_before_redaction(keyed_vault, tmp_path, monkeypatch):
+    """A cache written by an older version holds raw page text; the schema bump must force a full rebuild."""
+    monkeypatch.setenv("KROUTER_CACHE_DIR", str(tmp_path / "cache"))
+    import recall_index as ri
+
+    con = ri.connect(ri.cache_path(keyed_vault))
+    ri.refresh(keyed_vault, con)
+    # simulate the old cache: same files, raw (unredacted) body, older schema tag
+    con.execute("UPDATE docs SET body = body || ' ' || ?", (FAKE,))
+    con.execute("UPDATE meta SET v='recall-v11' WHERE k='schema'")
+    con.commit()
+    con.close()
+    con = ri.connect(ri.cache_path(keyed_vault))
+    ri.refresh(keyed_vault, con)
+    assert not any(FAKE in (b or "") for (b,) in con.execute("SELECT body FROM docs"))
+    con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    con.close()
+    for db in (tmp_path / "cache").rglob("*.sqlite*"):
+        assert FAKE.encode() not in db.read_bytes(), db  # not left behind in free pages either
