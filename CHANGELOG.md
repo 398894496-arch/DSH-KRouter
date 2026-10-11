@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.3 — 2026-10-11
+
+Fixes from a second outside review, of 0.9.2. Each finding was reproduced before it was fixed.
+
+- **The faithfulness check matched substrings.** `保留 3 天`, `保留 0 天` passed against a page that says `30 天`; `端口 80` and `端口 808` passed against `8080`. A specific must now appear as a whole token: no digit or letter on either side, and a number is not part of a decimal (`3` is not in `1.3`; `0.9.2` still matches `v0.9.2`). Pieces of joined words are checked the same way. In the author vault 11 of 447 cards now fail (was 7); the four new ones all quote a truncated identifier (`sv-doma` for `sv-domain-001`).
+- **"Verified" overstated it.** The check covers specifics, not meaning: a plain-prose answer has nothing to check, and a reworded sentence that flips the page passes. The docs now say "specifics checked", and `checkup.py` lists cards with nothing checkable (89 of 447 in the author vault) so a human can read them.
+- **An off-page card could pull an unrelated page to `high`.** On the template vault, a card asking `咖啡机除垢周期是多少` on `经验与方法.md` made that page the confident answer. A card now counts only if its question shares at least one content word with its page (question words like `多少` do not count) — checked when the card is written, when the page is indexed (the question is not a trigger otherwise), and when it is read. All 447 real cards share one; the coffee card shares none. `checkup.py` lists off-page cards.
+- **Two model lanes.** The nightly `llm.py` had its own short provider table — no Gemini, Groq, Fireworks, Mistral, … — and no flagship lock, while the writer (`api_writer.py`) had both. Now there is one table and one lock, in `llm.py`; `api_writer.py` imports them (by file path, so an unrelated `llm` package cannot stand in). The nightly steps try keys in the writer's order and lock the catalog's flagship, unless `KROUTER_LEARN_MODEL` names one. The lock ranks Opus 5 above Opus 4. The Gemini key goes in a header, not the URL.
+- **Cost was not disclosed.** With a key, the nightly steps now call the same paid provider every night (mostly on the first run; later runs redo only changed pages). The README's "tell your host" facts say so, and how to turn it off (`KROUTER_NIGHTLY=0`). Two stale `answer:` labels on the front page now read `answer (generated):`.
+
+Same-run checks (author vault, installed alias table): synthetic top-1 85%, held-out gold page found 88% / first 75%, wrong locks 0 — identical to 0.9.2. On the 92 real router queries the top hit and the answer line are identical to 0.9.2 for every query (40 carry an answer), so the front-page judge number stands. Tests 119/119 on both router paths.
+
 ## 0.9.2 — 2026-10-11
 
 Fixes from an outside review of 0.9.0. Each finding was reproduced before it was fixed.

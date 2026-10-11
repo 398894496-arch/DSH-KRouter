@@ -56,6 +56,7 @@ class _Stub(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length") or 0)
         body = json.loads(self.rfile.read(length) or b"{}")
         self.seen["model"] = body.get("model", "")
+        self.seen.setdefault("models_used", []).append(body.get("model", ""))
         self.seen["auth_bearer"] = self.headers.get("Authorization") == f"Bearer {TOKEN}"
         if self.fail_chat:
             self.send_error(500)
@@ -131,9 +132,11 @@ def test_api_lane_failure_leaves_pending(tmp_path: Path):
 def test_timer_runs_nightly_upkeep_without_touching_the_seal(tmp_path: Path):
     proc, vault, seen = _run(tmp_path, fail_chat=False)
     assert proc.returncode == 0, proc.stderr
+    assert (vault / SEAL_REL).is_file(), "nightly upkeep disturbed the seal"
     assert (vault / "90 系统文件/自动化/下意识体检.md").is_file(), "checkup did not run"
-    assert seen.get("model") == "gpt-4.1", "nightly steps must not call the writer's API without a model"
-    assert "answer cards skipped" in proc.stderr  # key without a named model + no CLI: skipped, not guessed
+    # one lane: the nightly steps reach the same provider with the same flagship lock as the writer
+    assert len(seen.get("models_used", [])) > 1, "nightly steps did not use the writer's key"
+    assert set(seen["models_used"]) == {"gpt-4.1"}, seen["models_used"]
 
 
 @pytest.mark.skipif(os.name == "nt", reason="run.sh is POSIX")

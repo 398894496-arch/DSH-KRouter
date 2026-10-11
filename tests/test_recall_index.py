@@ -267,12 +267,27 @@ def _card(vault, rel, q, a, sha=None):
 
 def test_stale_card_question_stops_ranking_its_page(vault):
     rel = "02 经验与方法/搜索与知识库/封账先看时间日志文件.md"
-    _card(vault, rel, "火星殖民飞船燃料配比", "时间日志存在就算封账。")
-    fresh = [h["rel"] for h in r.recall(vault, "火星殖民飞船燃料配比", limit=5, gate=False)["hits"]]
+    _card(vault, rel, "封账以后燃料配比怎么算", "时间日志存在就算封账。")
+    fresh = [h["rel"] for h in r.recall(vault, "燃料配比", limit=5, gate=False)["hits"]]
     assert rel in fresh  # the card question is a live trigger
     write(vault, rel, "---\ntitle: 封账先看时间日志文件\nstatus: active\n---\n\n规则改了，现在看健康页。\n")
-    stale = [h["rel"] for h in r.recall(vault, "火星殖民飞船燃料配比", limit=5, gate=False)["hits"]]
+    stale = [h["rel"] for h in r.recall(vault, "燃料配比", limit=5, gate=False)["hits"]]
     assert rel not in stale  # page changed: the old card no longer ranks it
+
+
+def test_faithful_matches_whole_tokens_not_substrings():
+    page = "日志保留 30 天，端口 8080，版本 v0.9.2，倍率 1.3。"
+    assert r.faithful("保留 30 天，端口 8080", page) and r.faithful("版本 0.9.2", page)
+    for wrong in ("保留 3 天", "保留 0 天", "端口 80", "端口 808", "倍率 3"):
+        assert not r.faithful(wrong, page), wrong
+
+
+def test_off_page_card_neither_ranks_nor_answers(vault):
+    rel = "02 经验与方法/搜索与知识库/封账先看时间日志文件.md"
+    _card(vault, rel, "咖啡机除垢周期是多少", "时间日志存在就算封账。")  # answer faithful, question not about the page
+    res = r.recall(vault, "咖啡机除垢周期是多少", limit=5, gate=False)
+    assert rel not in [h["rel"] for h in res["hits"]]
+    assert r.recall(vault, "咖啡机除垢周期是多少", limit=5)["confidence"] == "none"
 
 
 def test_faithful_requires_specifics_verbatim():
@@ -344,18 +359,25 @@ def test_llm_plan_order(monkeypatch, tmp_path):
     monkeypatch.setenv("KROUTER_KEYS_ENV", str(tmp_path / "none.env"))
     monkeypatch.setenv("PATH", str(tmp_path))
     assert llm.plan(None) == []
+    monkeypatch.setenv("GEMINI_API_KEY", "g")
     monkeypatch.setenv("OPENAI_API_KEY", "x")
-    assert llm.plan(None) == []  # no model named for OpenAI: skipped, not guessed
     monkeypatch.setenv("DEEPSEEK_API_KEY", "y")
-    assert llm.plan(None) == [("openai-compatible:DEEPSEEK_API_KEY", "deepseek-chat")]
+    # the writer's table and order (api_writer imports it from llm): every provider, flagship locked at call time
+    assert [k for k, _ in llm.plan(None)] == ["api:DEEPSEEK_API_KEY", "api:OPENAI_API_KEY", "api:GEMINI_API_KEY"]
+    monkeypatch.setenv("KROUTER_LEARN_MODEL", "pinned-model")
+    assert {d for _, d in llm.plan(None)} == {"pinned-model"}
+    monkeypatch.delenv("KROUTER_LEARN_MODEL")
+    import api_writer
+    assert api_writer.CHAT_SPECS is not None and api_writer.CHAT_SPECS == llm.CHAT_SPECS
+    assert llm.lock_flagship(["claude-opus-4-20250514", "claude-opus-5-5", "claude-haiku-5-5"]) == "claude-opus-5-5"
     cli = tmp_path / "claude"
     cli.write_text("#!/bin/sh\necho ok\n")
     cli.chmod(0o755)
     monkeypatch.setenv("KROUTER_LEARN_CLI", str(cli))
     assert llm.plan(None)[0] == ("cli", str(cli))  # the host's explicit pick goes first
     monkeypatch.delenv("KROUTER_LEARN_CLI")
-    monkeypatch.delenv("DEEPSEEK_API_KEY")
-    monkeypatch.delenv("OPENAI_API_KEY")
+    for k in ("DEEPSEEK_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY"):
+        monkeypatch.delenv(k)
     with pytest.raises(llm.NoModel):
         monkeypatch.setenv("PATH", str(tmp_path / "empty"))
         llm.complete("hi")

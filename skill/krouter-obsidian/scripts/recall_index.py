@@ -19,7 +19,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-SCHEMA_VERSION = "recall-v10"
+SCHEMA_VERSION = "recall-v11"
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
 SCORE_MIN = 8.5  # bm25×分层权重的绝对下限
@@ -149,20 +149,11 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
 TOPIC_PREFIX = "02 经验与方法/主题档案/"
 
 
-def card_triggers(vault: Path | None) -> dict[str, list[tuple[str, str]]]:
-    """{rel: [(card question, page hash the card was written against)]} from 下意识问答*.jsonl."""
-    out: dict[str, list[tuple[str, str]]] = {}
+def card_triggers(vault: Path | None) -> dict[str, list[dict]]:
+    """{rel: [card]} from 下意识问答*.jsonl; refresh() keeps only cards that match and are grounded in the page."""
     if vault is None or not (vault / "90 系统文件").is_dir():
-        return out
-    for path in sorted((vault / "90 系统文件").rglob(CARD_GLOB)):
-        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-            try:
-                card = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if card.get("rel") and card.get("q"):
-                out.setdefault(card["rel"], []).append((card["q"], card.get("sha", "")))
-    return out
+        return {}
+    return load_cards(vault)
 
 
 def tier_of(rel: str, status: str) -> str:
@@ -256,8 +247,11 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
         page_hash = hashlib.sha1(raw_bytes).hexdigest()[:16]
         title = meta.get("title") or path.stem
         status = (meta.get("status") or "").lower()
-        # 卡片问题只在卡片还对得上这一页当前内容时才算触发词；页面一改，旧卡不再影响排序
-        live_cards = [q for q, card_hash in cards.get(rel, []) if card_hash == page_hash]
+        # 卡片问题只在卡片还对得上这一页当前内容、且核对得过时才算触发词：页面一改旧卡不再影响排序，
+        # 答案对不上原文或问题跟这页无关的卡也不能把这页顶上来
+        mine = [c for c in cards.get(rel, []) if c.get("sha") == page_hash]
+        terms = set(tokens(text)) if mine else set()
+        live_cards = [c["q"] for c in mine if grounded(c, text, terms)]
         trig = " ".join([meta.get("triggers") or meta.get("aliases") or ""] + aliases.get(rel, []) + live_cards)
         how = meta.get("how") or first_rule_line(body)
         dirs = " ".join(rel.split("/")[:-1])
@@ -479,21 +473,56 @@ def card_specifics(answer: str) -> list[str]:
     return found
 
 
+def occurs(spec: str, page: str) -> bool:
+    """`spec` appears in `page` as a whole token: `3` is not in `30`, `80` is not in `8080`, `3` is not in `1.3`."""
+    left = right = ""
+    if spec[:1].isdigit():
+        left = r"(?<![0-9_])(?<![0-9]\.)"  # `v0.9.2` 前面的字母可以有
+    elif spec[:1].isalpha() and spec[:1].isascii():
+        left = r"(?<![a-z0-9_])"
+    if spec[-1:].isascii() and spec[-1:].isalnum():
+        right = r"(?![a-z0-9_])(?!\.[0-9])"
+    return re.search(left + re.escape(spec) + right, page) is not None
+
+
 def faithful(answer: str, page_text: str) -> bool:
-    """Every specific in the answer appears verbatim in the page. A prompt saying "only from this page" proves nothing."""
+    """Every specific in the answer appears verbatim in the page, as a whole token.
+
+    This checks specifics only. An answer with no numbers / paths / latin words has nothing to check,
+    and a reworded sentence that flips the page's meaning still passes; checkup counts those cards.
+    """
     page = unicodedata.normalize("NFKC", page_text or "").lower()
 
     def present(spec: str) -> bool:
         spec = spec.lower()
-        if spec in page:
+        if occurs(spec, page):
             return True
         # `utun1/utun7`、`push/release`、`llm+DeepSeek`：答案把原文里分开写的词连在一起了，逐段核对。
         # 只拆带字母的词；纯数字组合（`1:3.3`、`8/16`）常是模型自己算出来的，必须整串在原文出现
         parts = [x for x in re.split(r"[/+]", spec) if x]
         words = len(parts) > 1 and all(len(x) >= 2 and re.search(r"[a-z]", x) for x in parts)
-        return bool(words) and all(x in page for x in parts)
+        return bool(words) and all(occurs(x, page) for x in parts)
 
     return all(present(spec) for spec in card_specifics(answer))
+
+
+def question_terms(question: str) -> list[str]:
+    """The card question's content words: no question words (`多少`), no function-char bigrams (`了吗`)."""
+    return [t for t in dict.fromkeys(tokens(question))
+            if len(t) > 1 and t not in QUERY_STOP and not (is_cjk_bigram(t) and set(t) & FUNCTION_CHARS)]
+
+
+def grounded(card: dict, page_text: str, page_terms: set[str] | None = None) -> bool:
+    """A card may rank its page or answer only if its answer is faithful and its question is about the page.
+
+    Real cards always share at least one content word with their page (447/447 on the reference vault);
+    a card asking about something the page never mentions (`咖啡机除垢周期是多少`) shares none.
+    """
+    if not faithful(card.get("a", ""), page_text):
+        return False
+    if page_terms is None:
+        page_terms = set(tokens(page_text))
+    return any(t in page_terms for t in question_terms(card.get("q", "")))
 
 
 def attach_answers(vault: Path, hits: list[dict], raw: list[str], df: dict[str, int]) -> None:
@@ -512,11 +541,14 @@ def attach_answers(vault: Path, hits: list[dict], raw: list[str], df: dict[str, 
         current = hashlib.sha1(page_bytes).hexdigest()[:16]
         page_text = page_bytes.decode("utf-8", errors="replace")
         best, best_cov = None, 0.0
+        page_terms: set[str] | None = None
         for card in options:
             if card.get("sha") != current:
                 continue  # 页面改过，旧卡作废，等夜间重写
-            if not faithful(card["a"], page_text):
-                continue  # 答案里的数字/路径/命令在原文里找不到，不给
+            if page_terms is None:
+                page_terms = set(tokens(page_text))
+            if not grounded(card, page_text, page_terms):
+                continue  # 答案里的数字/路径/命令在原文里找不到，或问题跟这页无关，不给
             have = set(tokens(card["q"] + " " + card["a"]))
             cov = sum(w for t, w in weights.items() if t in have) / total
             strong = any(t in have and w >= STRONG_W for t, w in weights.items())
