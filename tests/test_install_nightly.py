@@ -185,3 +185,14 @@ def test_propose_aliases_drafts_and_apply_adds_only_ticked_rows(tmp_path, monkey
     assert f"{cid}|{aliases}|{rel}|" in new and "Q98" not in new
     left = out.read_text(encoding="utf-8")
     assert first not in left and bad in left  # applied row leaves the checklist; refused one stays for review
+
+
+def test_first_run_does_not_write_the_query_log(tmp_path):
+    """The demo on the template is not the host's traffic; the nightly learning must never see it."""
+    state = tmp_path / "state"
+    env = {**os.environ, "KROUTER_STATE_DIR": str(state), "KROUTER_CACHE_DIR": str(tmp_path / "cache")}
+    env.pop("KROUTER_NO_QUERY_LOG", None)
+    res = subprocess.run(["/bin/sh", str(REPO / "scripts/first_run.sh")], env=env, capture_output=True,
+                         text=True, timeout=600, cwd=REPO)
+    assert res.returncode == 0, res.stdout[-800:] + res.stderr[-800:]
+    assert not (state / "queries.jsonl").exists()
