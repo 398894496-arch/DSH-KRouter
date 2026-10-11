@@ -272,14 +272,84 @@ def keys_file() -> Path:
     return Path(os.environ.get("KROUTER_KEYS_ENV") or Path.home() / ".dsh-krouter-keys.env")
 
 
+PROVIDER_WORDS = (  # 标签里的厂商名 → 变量名（先长后短，`openrouter` 在 `openai` 前）
+    ("openrouter", "OPENROUTER_API_KEY"), ("deepseek", "DEEPSEEK_API_KEY"), ("anthropic", "ANTHROPIC_API_KEY"),
+    ("claude", "ANTHROPIC_API_KEY"), ("openai", "OPENAI_API_KEY"), ("chatgpt", "OPENAI_API_KEY"), ("gpt", "OPENAI_API_KEY"),
+    ("gemini", "GEMINI_API_KEY"), ("google", "GEMINI_API_KEY"), ("grok", "XAI_API_KEY"), ("xai", "XAI_API_KEY"),
+    ("groq", "GROQ_API_KEY"), ("moonshot", "MOONSHOT_API_KEY"), ("kimi", "MOONSHOT_API_KEY"), ("月之暗面", "MOONSHOT_API_KEY"),
+    ("dashscope", "DASHSCOPE_API_KEY"), ("qwen", "DASHSCOPE_API_KEY"), ("通义", "DASHSCOPE_API_KEY"), ("百炼", "DASHSCOPE_API_KEY"),
+    ("zhipu", "ZHIPUAI_API_KEY"), ("glm", "ZHIPUAI_API_KEY"), ("智谱", "ZHIPUAI_API_KEY"), ("siliconflow", "SILICONFLOW_API_KEY"),
+    ("硅基", "SILICONFLOW_API_KEY"), ("together", "TOGETHER_API_KEY"), ("fireworks", "FIREWORKS_API_KEY"),
+    ("mistral", "MISTRAL_API_KEY"), ("cerebras", "CEREBRAS_API_KEY"), ("nvidia", "NVIDIA_API_KEY"), ("perplexity", "PERPLEXITY_API_KEY"),
+)
+KEY_PREFIXES = (("sk-ant-", "ANTHROPIC_API_KEY"), ("sk-or-", "OPENROUTER_API_KEY"), ("AIza", "GEMINI_API_KEY"),
+                ("xai-", "XAI_API_KEY"), ("gsk_", "GROQ_API_KEY"), ("pplx-", "PERPLEXITY_API_KEY"),
+                ("nvapi-", "NVIDIA_API_KEY"), ("csk-", "CEREBRAS_API_KEY"), ("fw_", "FIREWORKS_API_KEY"))
+NAMED_LINE = re.compile(r"^(?:export\s+)?([A-Z][A-Z0-9_]+)\s*[=:：]\s*[\"'`]?([^\s\"'`]+)[\"'`]?\s*$")
+PENDING = "KROUTER_PENDING_KEY_"
+
+
+def _key_in_line(line: str) -> tuple[str, str] | None:
+    """(name or "", value) for a key pasted on this line in any common shape, else None."""
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import krouter_redact as kr
+
+    body = re.sub(r"^\s*(?:[-*+]|\d+[.)])\s+", "", line.strip())  # 列表项
+    if not body or body.startswith(("#", "```", ">")):
+        return None
+    m = NAMED_LINE.match(body)
+    if m and _usable(m.group(2)) and not kr.PLACEHOLDER.match(m.group(2)):
+        return m.group(1), m.group(2)
+    value = ""
+    for rx in (kr.KNOWN, kr.RUN):
+        for hit in rx.finditer(body):
+            v = hit.group(0)
+            if rx is kr.KNOWN or kr._high_entropy(v):
+                value = v
+                break
+        if value:
+            break
+    if not value:
+        a = kr.ASSIGN.search(body)
+        if a and kr._value_is_secret(a.group("v")):
+            value = a.group("v")
+    if not value:
+        return None
+    name = next((n for p, n in KEY_PREFIXES if value.startswith(p)), "")
+    if not name:
+        low = body.lower()
+        name = next((n for w, n in PROVIDER_WORDS if w in low), "")
+    return name, value
+
+
+def _write_private(path: Path, text: str) -> None:
+    """Write `text` to `path` atomically, readable only by the user (tmp file in the same dir, then rename)."""
+    import tempfile
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=path.name + ".", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+
+
 def move_page_keys(vault: Path | None) -> list[str]:
     """Keys pasted on the vault's key page move to the keys file (chmod 600) and leave the vault.
 
     The page is the easiest place for anyone to paste a key, but anything in the vault is readable by the CLI
     writer, synced by Obsidian Sync / iCloud / git, and one mistake away from a model. So KRouter never reads
-    keys from the vault: on every run, a live `NAME=value` line on the key page is appended to the keys file
-    (a newer value replaces an older one) and the page line becomes a comment saying where it went.
-    Returns the names moved; values are never printed.
+    keys from the vault: on every run, a key pasted on the key page in any common shape — `NAME=value`,
+    `export NAME="…"`, `NAME: value`, a list item, `DeepSeek 密钥：sk-…`, a bare key — is written to the keys
+    file and the page line becomes a note saying where it went. The provider comes from `NAME`, the key's
+    prefix, or a provider word on the line; when none tells, the key is kept as `KROUTER_PENDING_KEY_n` and the
+    note says how to name it. Returns the names moved; values are never printed.
     """
     if vault is None:
         return []
@@ -293,27 +363,40 @@ def move_page_keys(vault: Path | None) -> list[str]:
     if not page.is_file():
         return []
     target = keys_file()
+    existing = target.read_text(encoding="utf-8", errors="replace").splitlines() if target.is_file() else []
+    pending_n = 1 + sum(1 for ln in existing if ln.startswith(PENDING))
     lines = page.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
     moved: dict[str, str] = {}
+    today = date.today().isoformat()
     for i, raw in enumerate(lines):
-        m = KEY_LINE.match(raw.strip())
-        if m and _usable(m.group(2)):
-            moved[m.group(1)] = m.group(2).strip().strip('"').strip("'")
-            lines[i] = f"# {m.group(1)}=（已移到 {target}，{date.today().isoformat()}）\n"
+        found = _key_in_line(raw)
+        if not found:
+            continue
+        name, value = found
+        if name:
+            moved[name] = value.strip().strip('"').strip("'")
+            lines[i] = f"# {name}=（已移到 {target}，{today}）\n"
+        else:
+            name = f"{PENDING}{pending_n}"
+            pending_n += 1
+            moved[name] = value
+            lines[i] = (f"# 一个认不出是哪家服务的 key 已移到 {target}（{name}，{today}）。请在那个文件里把 {name} "
+                        f"改成对应的名字，如 DEEPSEEK_API_KEY，或者在这里按 `DEEPSEEK_API_KEY=…` 的格式重贴一次。\n")
     if not moved:
         return []
-    kept = []
-    if target.is_file():
-        kept = [ln for ln in target.read_text(encoding="utf-8", errors="replace").splitlines()
-                if not ((m := KEY_LINE.match(ln.strip())) and m.group(1) in moved)]
-    target.parent.mkdir(parents=True, exist_ok=True)
-    body = "\n".join(kept + [f"{k}={v}" for k, v in moved.items()]) + "\n"
-    fd = os.open(str(target), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        fh.write(body)
-    os.chmod(target, 0o600)
+    kept = [ln for ln in existing if not ((m := KEY_LINE.match(ln.strip())) and m.group(1) in moved)]
+    _write_private(target, "\n".join(kept + [f"{k}={v}" for k, v in moved.items()]) + "\n")
     page.write_text("".join(lines), encoding="utf-8")  # 先写好钥匙文件，再从页面上抹掉
     return sorted(moved)
+
+
+def pending_keys() -> list[str]:
+    """Names of keys the host pasted whose provider could not be told (they are not used until renamed)."""
+    path = keys_file()
+    if not path.is_file():
+        return []
+    return [ln.split("=", 1)[0] for ln in path.read_text(encoding="utf-8", errors="replace").splitlines()
+            if ln.startswith(PENDING) and "=" in ln]
 
 
 def collect_keys(vault: Path | None) -> dict[str, str]:

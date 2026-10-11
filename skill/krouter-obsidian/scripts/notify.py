@@ -63,5 +63,8 @@ NIGHTLY = {
                " / Nightly upkeep skipped: no model. Log in to an AI coding CLI or paste an API key on the key page.",
     "failed": "今晚的夜间整理出错了，原因在知识库「90 系统文件/自动化/夜间维护」。 / Nightly upkeep failed; see 夜间维护 in the vault.",
 }
+PENDING_KEY = ("你贴的 key 认不出是哪家服务，还没生效：打开 ~/.dsh-krouter-keys.env，把 KROUTER_PENDING_KEY_1 改成对应的名字"
+               "（如 DEEPSEEK_API_KEY），或在知识库的「自进化钥匙」页按 DEEPSEEK_API_KEY=… 的格式重贴。"
+               " / A pasted key's provider is unknown, so it is not used yet: rename KROUTER_PENDING_KEY_1 in ~/.dsh-krouter-keys.env.")
 NO_WRITER = ("昨天没有封账：没有可用的模型。登录一个 AI 编程工具（如 Claude Code），或把 API key 贴到知识库的「自进化钥匙」页。"
              " / Yesterday was not sealed: no model. Log in to an AI coding CLI or paste an API key on the key page.")

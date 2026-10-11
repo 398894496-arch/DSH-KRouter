@@ -37,18 +37,32 @@ MSG = {
         "vault_ours": "已是第二大脑知识库（升级）", "added": "补上的文件", "skill": "路由器", "timer": "每日定时任务",
         "model_ok": "模型通道", "model_none": "还没有可用的模型：登录一个 AI 编程工具（Claude Code 运行 `claude`、Codex、grok 等任选其一），"
         "或把 API key 写进 {keys}（一行，如 DEEPSEEK_API_KEY=sk-…）。之后每晚自动整理，不用再做任何事。",
-        "done": "装好了。知识库在：{vault}\n每天 09:10 自动封账、整理、学习；出问题会弹通知。agent 查询走：{router}",
+        "done": "装好了。知识库在：{vault}\nagent 查询走：{router}",
         "obsidian": "已在 Obsidian 里打开这个知识库。", "obsidian_none": "装上 Obsidian（https://obsidian.md）后，选「打开本地仓库」→ {vault}",
         "py_old": "需要 Python 3.9 或更新版本，当前是 {v}。",
+        "ask": "要开启每晚自动整理吗？开启后每天 09:10：{lane}整理昨天的记录{perm}；并把 {pages} 页规则页和主题页（约 {tokens} token）发给它，预先算好常见问题的答案。之后随时可以用 uninstall.sh 关掉。开启？[y/N] ",
+        "lane_cli": "用 {cli} ", "lane_key": "用你的 API key ", "lane_none": "（等你登录一个 AI 编程工具或贴好 key 之后）",
+        "perm_claude": "（它会在知识库目录里以跳过权限确认的模式运行，能读写这个库里的任何文件）",
+        "perm_grok": "（它会在知识库目录里以跳过权限确认的模式运行，能读写这个库里的任何文件）",
+        "perm_codex": "（Codex 在只能写这个库的沙箱里运行）", "perm_key": "（直接调用 API，不运行任何本地程序）", "perm_other": "（在知识库目录里运行）",
+        "timer_off": "没有开启每晚自动整理。想开的时候运行：{cmd}",
+        "timer_skip_noninteractive": "不是在交互终端里运行，所以没有开启每晚自动整理（需要你明确同意）。想开的时候运行：{cmd}",
     },
     "en": {
         "plan": "Plan", "vault_new": "New vault", "vault_merge": "Existing vault (adds only missing skeleton files; overwrites nothing)",
         "vault_ours": "Already a Second Brain vault (upgrade)", "added": "files added", "skill": "Router", "timer": "Daily timer",
         "model_ok": "Model lane", "model_none": "No model yet: log in to one AI coding CLI (`claude`, Codex, grok, …), "
         "or put an API key in {keys} (one line, e.g. DEEPSEEK_API_KEY=sk-…). After that it runs every night on its own.",
-        "done": "Done. Your vault: {vault}\nEvery day at 09:10 it seals, distills and learns; problems show up as notifications. Agents query: {router}",
+        "done": "Done. Your vault: {vault}\nAgents query: {router}",
         "obsidian": "Opened the vault in Obsidian.", "obsidian_none": "Install Obsidian (https://obsidian.md), then “Open folder as vault” → {vault}",
         "py_old": "Python 3.9 or newer is required; this is {v}.",
+        "ask": "Turn on the nightly upkeep? Every day at 09:10 it will {lane}distill yesterday{perm}, and send {pages} rule and topic pages (about {tokens} tokens) to it to precompute answers. uninstall.sh turns it off any time. Turn on? [y/N] ",
+        "lane_cli": "use {cli} to ", "lane_key": "use your API key to ", "lane_none": "(once you log in to an AI coding CLI or paste a key) ",
+        "perm_claude": " (it runs in the vault folder with permission prompts skipped, so it can read and write any file in the vault)",
+        "perm_grok": " (it runs in the vault folder with permission prompts skipped, so it can read and write any file in the vault)",
+        "perm_codex": " (Codex runs in a sandbox that can write only the vault)", "perm_key": " (a direct API call; no local program runs)", "perm_other": " (it runs in the vault folder)",
+        "timer_off": "Nightly upkeep is off. To turn it on later: {cmd}",
+        "timer_skip_noninteractive": "Not run from an interactive terminal, so the nightly upkeep was not turned on (it needs your yes). To turn it on: {cmd}",
     },
 }
 KEEP = ("canonical_sources.psv", "canonical_alias_ledger.jsonl")
@@ -175,6 +189,72 @@ def model_lane(vault: Path) -> str:
     return ""
 
 
+def ask_tty(prompt: str) -> str | None:
+    """Ask on the terminal even when stdin is the piped install script (`curl … | sh`). None: no terminal."""
+    if os.environ.get("KROUTER_NO_PROMPT") == "1":
+        return None
+    if WINDOWS:
+        if not sys.stdin or not sys.stdin.isatty():
+            return None
+        try:
+            return input(prompt)
+        except EOFError:
+            return None
+    try:
+        with open("/dev/tty", "r+", encoding="utf-8") as tty:
+            tty.write(prompt)
+            tty.flush()
+            return tty.readline()
+    except OSError:
+        return None
+
+
+def nightly_preview(vault: Path) -> tuple[str, str, int, int]:
+    """(lane kind, CLI name, pages that would be sent, est tokens) — from resolve --status and nightly --dry-run."""
+    env = {**os.environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_NO_QUERY_LOG": "1"}
+    kind, cli = "", ""
+    res = subprocess.run([sys.executable, str(ROOT / "extras/host-daily-evolution/resolve.py"), "--status"], env=env,
+                         capture_output=True, text=True, timeout=180)
+    try:
+        st = json.loads(res.stdout.strip().splitlines()[-1])
+        if st.get("lane") == "cli-login":
+            kind, cli = st.get("kind") or "other", Path(st.get("writer_path") or "").name
+        elif st.get("lane") == "api-key":
+            kind = "key"
+    except (ValueError, IndexError):
+        pass
+    pages = tokens = 0
+    dry = subprocess.run([sys.executable, str(ROOT / "skill/krouter-obsidian/scripts/nightly.py"), "--vault", str(vault),
+                          "--dry-run"], env=env, capture_output=True, text=True, timeout=600)
+    try:
+        tokens = int(json.loads(dry.stdout).get("est_tokens_total") or 0)
+    except ValueError:
+        pass
+    cards = subprocess.run([sys.executable, str(ROOT / "skill/krouter-obsidian/scripts/answer_cards.py"), "--vault", str(vault),
+                            "--dry-run"], env=env, capture_output=True, text=True, timeout=600)
+    try:
+        pages = len(json.loads(cards.stdout.strip().splitlines()[-1]).get("would_send_pages") or [])
+    except (ValueError, IndexError):
+        pass
+    return kind, cli, pages, tokens
+
+
+def decide_timer(args: argparse.Namespace, vault: Path, t: dict) -> tuple[bool, bool]:
+    """(install it, the host was asked). The nightly job runs a model with wide permissions and sends vault text:
+    it is installed only on an explicit yes — `--timer`, or `y` at the prompt. No terminal to ask on: not installed."""
+    if args.timer:
+        return True, True
+    if args.no_timer:
+        return False, True
+    kind, cli, pages, tokens = nightly_preview(vault)
+    lane = t["lane_cli"].format(cli=cli) if kind not in ("", "key") else (t["lane_key"] if kind == "key" else t["lane_none"])
+    perm = t.get(f"perm_{kind}", t["perm_other"]) if kind else ""
+    answer = ask_tty(t["ask"].format(lane=lane, perm=perm, pages=pages, tokens=tokens))
+    if answer is None:
+        return False, False
+    return answer.strip().lower() in {"y", "yes", "是", "好", "开"}, True
+
+
 def open_in_obsidian(vault: Path) -> bool:
     url = "obsidian://open?path=" + urllib.parse.quote(str(vault))
     try:
@@ -198,7 +278,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="One-step install: vault + router + daily timer")
     ap.add_argument("--vault", default="")
     ap.add_argument("--lang", choices=["zh", "en", "auto"], default="auto")
-    ap.add_argument("--no-timer", action="store_true", help="skip the daily timer (Windows: no scheduled task)")
+    ap.add_argument("--timer", action="store_true", help="install the nightly job without asking (you have read what it does)")
+    ap.add_argument("--no-timer", action="store_true", help="do not install the nightly job, and do not ask")
     ap.add_argument("--no-open", action="store_true", help="do not open the vault in Obsidian")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
@@ -214,13 +295,22 @@ def main() -> int:
     added = lay_down(template, vault, args.dry_run)
     if added and state != "new":
         print(f"  {t['added']}: {len(added)}" + "".join(f"\n    {a}" for a in added[:12]) + ("\n    …" if len(added) > 12 else ""))
-    if args.no_timer:
-        os.environ["KROUTER_SKIP_LAUNCHD"] = os.environ["KROUTER_SKIP_TIMER"] = "1"
-    rc = install_windows(vault, args.dry_run, not args.no_timer) if WINDOWS else install_posix(vault, args.dry_run)
+    os.environ["KROUTER_NO_TIMER"] = "1"  # 先只装只读部分：库、路由、规则；夜间任务等宿主点头再装
+    rc = install_windows(vault, args.dry_run, False) if WINDOWS else install_posix(vault, args.dry_run)
     if rc != 0:
         return rc
     if args.dry_run:
+        print("  nightly job: " + ("yes (--timer)" if args.timer else "no (--no-timer)" if args.no_timer else "asks first"))
         return 0
+    os.environ.pop("KROUTER_NO_TIMER", None)
+    timer, asked = decide_timer(args, vault, t)
+    if timer:
+        rc = install_windows(vault, False, True) if WINDOWS else install_posix(vault, False)
+        if rc != 0:
+            return rc
+    else:
+        cmd = f"{'python' if WINDOWS else 'python3'} \"{ROOT / 'scripts' / 'bootstrap.py'}\" --timer --vault \"{vault}\""
+        print((t["timer_off"] if asked else t["timer_skip_noninteractive"]).format(cmd=cmd))
     lane = model_lane(vault)
     keys = os.environ.get("KROUTER_KEYS_ENV") or str(Path.home() / ".dsh-krouter-keys.env")
     print(f"{t['model_ok']}: {lane}" if lane else t["model_none"].format(keys=keys))
@@ -229,7 +319,8 @@ def main() -> int:
     print(t["done"].format(vault=vault, router=router))
     if state == "new" and not args.no_open:
         print(t["obsidian"] if open_in_obsidian(vault) else t["obsidian_none"].format(vault=vault))
-    print(json.dumps({"vault": str(vault), "lang": lang, "state": state, "added": len(added), "model": lane or None},
+    print(json.dumps({"vault": str(vault), "lang": lang, "state": state, "added": len(added), "model": lane or None,
+                      "timer": timer},
                      ensure_ascii=False))
     return 0
 

@@ -79,3 +79,69 @@ def test_chinese_template_alias_table_is_consistent():
                           str(REPO / "template-zh/90 系统文件/canonical_sources.psv"), "--vault", str(REPO / "template-zh")],
                          capture_output=True, text=True, timeout=120)
     assert res.returncode == 0 and "failures=0" in res.stdout, res.stdout + res.stderr
+
+
+def test_nightly_job_needs_an_explicit_yes(tmp_path):
+    """No terminal to ask on → no nightly job; `--timer` → installed. Never installed silently."""
+    env = {**_env(tmp_path), "KROUTER_NO_PROMPT": "1"}
+    plist = tmp_path / "home/Library/LaunchAgents/local.dsh-krouter.daily-evolution.plist"
+    res, out = _boot(env, "--lang", "en", "--vault", str(tmp_path / "v1"))
+    assert res.returncode == 0 and out["timer"] is False and "needs your yes" in res.stdout
+    assert not plist.exists() and not (tmp_path / "home/.config/systemd").exists()
+    res, out = _boot(env, "--lang", "en", "--vault", str(tmp_path / "v2"), "--timer")
+    assert res.returncode == 0 and out["timer"] is True
+    if sys.platform == "darwin":
+        assert plist.is_file()
+
+
+def test_consent_prompt_says_what_runs_and_what_is_sent(tmp_path, monkeypatch):
+    sys.path.insert(0, str(REPO / "scripts"))
+    import bootstrap as bs
+
+    asked = []
+    monkeypatch.setattr(bs, "nightly_preview", lambda vault: ("claude", "claude", 12, 4000))
+    monkeypatch.setattr(bs, "ask_tty", lambda prompt: asked.append(prompt) or "y")
+    args = bs.argparse.Namespace(timer=False, no_timer=False)
+    assert bs.decide_timer(args, tmp_path, bs.MSG["zh"]) == (True, True)
+    assert "claude" in asked[0] and "跳过权限" in asked[0] and "12 页" in asked[0] and "4000" in asked[0]
+    monkeypatch.setattr(bs, "ask_tty", lambda prompt: "")
+    assert bs.decide_timer(args, tmp_path, bs.MSG["en"]) == (False, True)  # Enter alone means no
+
+
+@pytest.mark.skipif(__import__("shutil").which("npm") is None, reason="needs npm to build the release package")
+def test_bootstrap_sh_verifies_the_release_checksum(tmp_path):
+    """The one-line install unpacks the release package only when its SHA-256 matches SHA256SUMS."""
+    import hashlib
+    import shutil as sh
+    import threading
+    from functools import partial
+    from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+    pkg_dir = tmp_path / "srv"
+    pkg_dir.mkdir()
+    subprocess.run(["npm", "pack", "--pack-destination", str(pkg_dir)], cwd=REPO, capture_output=True, check=True)
+    tgz = next(pkg_dir.glob("dsh-krouter-*.tgz"))
+    ver = tgz.name[len("dsh-krouter-"):-len(".tgz")]
+    digest = hashlib.sha256(tgz.read_bytes()).hexdigest()
+    handler = partial(SimpleHTTPRequestHandler, directory=str(pkg_dir))
+    handler.log_message = lambda *a: None
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+    script = tmp_path / "bootstrap.sh"
+    sh.copy(REPO / "scripts/bootstrap.sh", script)  # run outside the clone, as `curl | sh` would
+    env = {**_env(tmp_path), "KROUTER_TAG": f"v{ver}", "KROUTER_RELEASE_BASE": base, "KROUTER_HOME": str(tmp_path / "kh"),
+           "NO_PROXY": "127.0.0.1", "no_proxy": "127.0.0.1"}
+    try:
+        (pkg_dir / "SHA256SUMS").write_text("0" * 64 + f"  {tgz.name}\n", encoding="utf-8")
+        bad = subprocess.run(["/bin/sh", str(script), "--dry-run"], env=env, capture_output=True, text=True, timeout=300)
+        assert bad.returncode == 1 and "checksum mismatch" in bad.stdout
+        assert not (tmp_path / "kh" / f"v{ver}").exists()
+        (pkg_dir / "SHA256SUMS").write_text(f"{digest}  {tgz.name}\n", encoding="utf-8")
+        good = subprocess.run(["/bin/sh", str(script), "--dry-run", "--lang", "en", "--vault", str(tmp_path / "v")],
+                              env=env, capture_output=True, text=True, timeout=300)
+        assert good.returncode == 0, good.stdout[-800:] + good.stderr[-800:]
+        assert "sha256 verified" in good.stdout
+        assert (tmp_path / "kh" / f"v{ver}" / "scripts/bootstrap.py").is_file()
+    finally:
+        server.shutdown()

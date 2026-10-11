@@ -13,7 +13,7 @@ verified_at: 2026-01-01
 
 This template is an **empty skeleton**. The product is the loop, not a filled library:
 
-1. **Self-evolution** — seal the day, distill. Timer on. The key is your `*_API_KEY` on [[90 系统文件/自动化/自进化钥匙]] or an already-logged-in CLI. `status` prints `host_action` until one of those is set — the agent must tell the host.
+1. **Self-evolution** — seal the day, distill, every night once the nightly job is on (the installer asks). It needs a model: an `*_API_KEY` pasted on [[90 系统文件/自动化/自进化钥匙]] (it moves to `~/.dsh-krouter-keys.env`) or an already-logged-in CLI. `status` prints `host_action` until one of those is set — the agent must tell the host.
 2. **Two-step promotion** — five gates → auto `provisional` the same day; next similar task asks; adopt + accepted task → `active`.
 3. **Correction-first** — correction page beats the old note.
 4. **Retrieval lock** — one short noun, SHA receipt, no neighbor, no vector.

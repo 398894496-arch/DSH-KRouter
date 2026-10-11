@@ -1,0 +1,22 @@
+name: Install problem
+description: The one-line install, install.sh, or the DSH plugin did not install
+labels: [install]
+body:
+  - type: dropdown
+    id: how
+    attributes:
+      label: How you installed
+      options: [One-line install (bootstrap.sh / bootstrap.ps1), "git clone + install.sh", DSH plugin, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: The last lines of the output
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: OS, Python version, (DSH and pnpm version for the plugin)

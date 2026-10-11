@@ -60,7 +60,7 @@ def lane(vault: Path) -> str:
 def set_frontmatter(path: Path, fields: dict[str, str]) -> None:
     if not path.is_file():
         return
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8").replace("\r\n", "\n")
     if not text.startswith("---\n") or "\n---" not in text[4:]:
         return
     end = text.index("\n---", 4)

@@ -1,4 +1,7 @@
+import os
 from datetime import date
+
+import pytest
 from pathlib import Path
 import sys
 
@@ -74,6 +77,7 @@ def test_longest_streak_stays_inside_window(tmp_path: Path):
     assert result["longest_streak_from"] == "2026-06-10"
 
 
+@pytest.mark.skipif(os.name == "nt", reason="'|' is not allowed in Windows file names")
 def test_ascii_pipe_filename_counts(tmp_path: Path):
     vault = tmp_path / "vault"
     month = vault / "05 时间日志" / "2026-08"

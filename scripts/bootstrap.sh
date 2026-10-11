@@ -2,8 +2,9 @@
 # One line for anyone on macOS / Linux:
 #   curl -fsSL https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bootstrap.sh | sh
 # Options pass through to bootstrap.py, e.g. `| sh -s -- --vault ~/MyVault --lang en`.
-# Fetches the latest release (a pinned tag, not main) into ~/.dsh-krouter/<tag>, points ~/.dsh-krouter/current at
-# it, and runs scripts/bootstrap.py from there. Run again to upgrade. From a clone, it uses the clone.
+# Fetches the latest release (a tag, never main) into ~/.dsh-krouter/<tag>, checks its SHA-256 against the release's
+# SHA256SUMS, points ~/.dsh-krouter/current at it, and runs scripts/bootstrap.py from there. Run again to upgrade;
+# `| KROUTER_TAG=v0.11.2 sh` stays on one release. From a clone, it uses the clone.
 set -eu
 
 REPO="398894496-arch/DSH-KRouter"
@@ -29,10 +30,28 @@ DEST="$HOME_DIR/$TAG"
 if [ ! -f "$DEST/scripts/bootstrap.py" ]; then
   mkdir -p "$HOME_DIR"
   TMP=$(mktemp -d "${TMPDIR:-/tmp}/krouter-dl.XXXXXX")
-  curl -fsSL "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" -o "$TMP/src.tar.gz"
-  tar -xzf "$TMP/src.tar.gz" -C "$TMP"
-  rm -rf "$DEST"
-  mv "$TMP"/DSH-KRouter-* "$DEST"
+  VER=${TAG#v}
+  BASE="${KROUTER_RELEASE_BASE:-https://github.com/$REPO/releases/download/$TAG}"
+  if curl -fsSL "$BASE/dsh-krouter-$VER.tgz" -o "$TMP/pkg.tgz" && curl -fsSL "$BASE/SHA256SUMS" -o "$TMP/SHA256SUMS"; then
+    # 发布包带校验和：对不上就停，不装
+    WANT=$(grep " dsh-krouter-$VER.tgz\$" "$TMP/SHA256SUMS" | cut -d' ' -f1)
+    GOT=$( (sha256sum "$TMP/pkg.tgz" 2>/dev/null || shasum -a 256 "$TMP/pkg.tgz") | cut -d' ' -f1)
+    if [ -z "$WANT" ] || [ "$WANT" != "$GOT" ]; then
+      printf '%s\n' "校验和不符，已停止 / checksum mismatch for dsh-krouter-$VER.tgz; nothing installed."
+      rm -rf "$TMP"
+      exit 1
+    fi
+    tar -xzf "$TMP/pkg.tgz" -C "$TMP"
+    rm -rf "$DEST"
+    mv "$TMP/package" "$DEST"
+    printf '%s\n' "sha256 verified: dsh-krouter-$VER.tgz"
+  else
+    printf '%s\n' "注意：$TAG 没有带校验和的发布包，改用源码归档（未校验） / note: $TAG has no checksummed package; using the source archive (unverified)."
+    curl -fsSL "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" -o "$TMP/src.tar.gz"
+    tar -xzf "$TMP/src.tar.gz" -C "$TMP"
+    rm -rf "$DEST"
+    mv "$TMP"/DSH-KRouter-* "$DEST"
+  fi
   rm -rf "$TMP"
 fi
 ln -sfn "$DEST" "$HOME_DIR/current"
