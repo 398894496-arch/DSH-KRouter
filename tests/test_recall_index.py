@@ -438,3 +438,32 @@ def test_llm_no_key_uses_the_writers_cli_detection(monkeypatch, tmp_path):
     assert llm.plan(None) == [("cli", str(grok))]
     assert llm.complete("你好") == "echo:你好"
     llm._CLI.clear()
+
+
+def test_frontmatter_edit_keeps_a_card_but_a_body_edit_stales_it(vault):
+    """A card is about the page's content: `status` / `verified_at` / `nightly_at` edits must not stale it."""
+    rel = "02 经验与方法/搜索与知识库/封账先看时间日志文件.md"
+    path = vault / rel
+    _card(vault, rel, "封账以后燃料配比怎么算", "时间日志存在就算封账。", sha=r.body_hash(path.read_bytes()))
+    assert rel in [h["rel"] for h in r.recall(vault, "燃料配比", limit=5, gate=False)["hits"]]
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text.replace("status: active", "status: active\nverified_at: 2026-10-11\nnightly_at: x", 1),
+                    encoding="utf-8")
+    assert rel in [h["rel"] for h in r.recall(vault, "燃料配比", limit=5, gate=False)["hits"]]  # still live
+    path.write_text(path.read_text(encoding="utf-8") + "\n正文改了一句。\n", encoding="utf-8")
+    assert rel not in [h["rel"] for h in r.recall(vault, "燃料配比", limit=5, gate=False)["hits"]]  # body changed
+
+
+def test_cards_written_against_the_whole_page_stay_valid(vault):
+    """Cards from before 0.11.1 carry the whole-page hash; they stay valid until the page changes."""
+    rel = "02 经验与方法/搜索与知识库/封账先看时间日志文件.md"
+    _card(vault, rel, "封账以后燃料配比怎么算", "时间日志存在就算封账。")  # whole-page hash
+    assert rel in [h["rel"] for h in r.recall(vault, "燃料配比", limit=5, gate=False)["hits"]]
+
+
+def test_health_page_gets_no_cards(vault):
+    import answer_cards as ac
+
+    health = "90 系统文件/自动化/日更健康.md"
+    write(vault, health, "---\ntitle: 日更健康\nstatus: active\n---\n\n# 日更健康\n\n每天 09:10 跑。\n")
+    assert health not in ac.targets(vault)

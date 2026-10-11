@@ -129,8 +129,6 @@ def main() -> int:
 
     # 3. answer cards: stale (page changed), not verbatim (specifics missing from the page), question off the page,
     #    nothing checkable (pure prose: only a human can tell if it says what the page says), too broad
-    import hashlib
-
     stale_cards, unfaithful_cards, offpage_cards, unchecked_cards, broad_cards = 0, [], [], [], []
     unverified_cards = 0
     page_hash: dict[str, str] = {}
@@ -141,10 +139,10 @@ def main() -> int:
             stale_cards += len(cards)
             continue
         data = path.read_bytes()
-        page_hash[rel] = hashlib.sha1(data).hexdigest()[:16]
+        page_hash[rel] = ri.card_hashes(data)
         page_text[rel] = data.decode("utf-8", errors="replace")
         for card in cards:
-            if card.get("sha") != page_hash[rel]:
+            if card.get("sha") not in page_hash[rel]:
                 stale_cards += 1
                 continue
             if not ri.faithful(card["a"], page_text[rel]):

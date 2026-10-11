@@ -158,6 +158,18 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
 TOPIC_PREFIX = "02 经验与方法/主题档案/"
 
 
+def body_hash(raw_bytes: bytes) -> str:
+    """问答卡绑定的哈希：只算正文。frontmatter 由机器和 agent 频繁改写（`nightly_at`、`status`、`verified_at`），
+    改了它卡片说的事并没有变，不该让卡作废。"""
+    _meta, body = split_frontmatter(raw_bytes.decode("utf-8", errors="replace"))
+    return hashlib.sha1(body.encode("utf-8")).hexdigest()[:16]
+
+
+def card_hashes(raw_bytes: bytes) -> frozenset[str]:
+    """一张卡还算数的哈希：正文哈希（0.11.1 起写入的卡），或整页哈希（更早写入的卡，不必全部重写）。"""
+    return frozenset({body_hash(raw_bytes), hashlib.sha1(raw_bytes).hexdigest()[:16]})
+
+
 def card_triggers(vault: Path | None) -> dict[str, list[dict]]:
     """{rel: [card]} from 下意识问答*.jsonl; refresh() keeps only cards that match and are grounded in the page."""
     if vault is None or not zones.path(vault, "90 系统文件").is_dir():
@@ -255,12 +267,12 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
         # 索引、how、问答卡核对用的都是脱敏后的文字：密钥值不进缓存，也不会从这里被打印或外发
         text = redact(raw_bytes.decode("utf-8", errors="replace"))
         meta, body = split_frontmatter(text)
-        page_hash = hashlib.sha1(raw_bytes).hexdigest()[:16]
+        page_hash = card_hashes(raw_bytes)
         title = meta.get("title") or path.stem
         status = (meta.get("status") or "").lower()
         # 卡片问题只在卡片还对得上这一页当前内容、且核对得过时才算触发词：页面一改旧卡不再影响排序，
         # 答案对不上原文或问题跟这页无关的卡也不能把这页顶上来
-        mine = [c for c in cards.get(rel, []) if c.get("sha") == page_hash]
+        mine = [c for c in cards.get(rel, []) if c.get("sha") in page_hash]
         terms = set(tokens(text)) if mine else set()
         live_cards = [c["q"] for c in mine if grounded(c, text, terms)]
         trig = " ".join([meta.get("triggers") or meta.get("aliases") or ""] + aliases.get(rel, []) + live_cards)
@@ -628,15 +640,15 @@ def attach_answers(vault: Path, hits: list[dict], raw: list[str], df: dict[str, 
         if not options or not page.is_file():
             continue
         page_bytes = page.read_bytes()
-        current = hashlib.sha1(page_bytes).hexdigest()[:16]
+        current = card_hashes(page_bytes)
         page_text = page_bytes.decode("utf-8", errors="replace")
         if is_secret_page(zones.canon(vault, h["rel"]), split_frontmatter(page_text)[0]):
             continue  # 机密页不附答案（旧卡要到下次夜间才会被清掉）
         best, best_cov = None, 0.0
         page_terms: set[str] | None = None
         for card in options:
-            if card.get("sha") != current:
-                continue  # 页面改过，旧卡作废，等夜间重写
+            if card.get("sha") not in current:
+                continue  # 页面正文改过，旧卡作废，等夜间重写
             if page_terms is None:
                 page_terms = set(tokens(page_text))
             if not grounded(card, page_text, page_terms):

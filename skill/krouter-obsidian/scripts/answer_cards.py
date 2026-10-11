@@ -13,7 +13,6 @@ content word with the page (recall_index.grounded); meaning is not checked.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -63,8 +62,13 @@ VERIFY_PROMPT = """下面每一页后面跟着几张问答卡。逐张判断，�
 """
 
 
+# 系统每天自动改写的状态页：卡片当天就会过期，每晚重写只是白花钱；它要回答的问题由规则页回答
+VOLATILE_PAGES = ("90 系统文件/自动化/日更健康.md",)
+
+
 def page_sha(path: Path) -> str:
-    return hashlib.sha1(path.read_bytes()).hexdigest()[:16]
+    """The hash a new card is written against: the page body (frontmatter edits do not stale a card)."""
+    return ri.body_hash(path.read_bytes())
 
 
 def load_cards(vault: Path) -> list[dict]:
@@ -89,7 +93,8 @@ def targets(vault: Path) -> list[str]:
         meta, _ = ri.split_frontmatter((vault / rel).read_text(encoding="utf-8", errors="replace"))
         return ri.is_secret_page(ri.zones.canon(vault, rel), meta)
 
-    return [r for r in rels if not secret(r)]  # 机密页（钥匙页、凭据页、secret: true）永不外发
+    # 机密页（钥匙页、凭据页、secret: true）永不外发；每天被系统改写的状态页不配卡
+    return [r for r in rels if not secret(r) and ri.zones.canon(vault, r) not in VOLATILE_PAGES]
 
 
 def block(vault: Path, rel: str) -> str:
@@ -193,7 +198,8 @@ def main() -> int:
     cards = load_cards(vault)
     pages = targets(vault)
     sha = {rel: page_sha(vault / rel) for rel in pages}
-    fresh = {c["rel"] for c in cards if sha.get(c["rel"]) == c.get("sha")}
+    valid = {rel: ri.card_hashes((vault / rel).read_bytes()) for rel in pages}
+    fresh = {c["rel"] for c in cards if c.get("sha") in valid.get(c["rel"], ())}
     keep = [c for c in cards if c["rel"] in fresh]
     stale = [rel for rel in pages if rel not in fresh]
     if args.limit:
