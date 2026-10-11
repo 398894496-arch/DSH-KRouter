@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.2 — 2026-10-11
+
+Fixes from an outside review of 0.9.0. Each finding was reproduced before it was fixed.
+
+- **A stale card kept ranking its page.** 0.9.0 said "a card whose page changed is ignored"; that was true for `answer:` only. Card questions were merged into the page's triggers without checking the hash, so an unrelated card question kept pulling the page up after the page changed. Card questions now count as triggers only while the card's hash matches the page's current content. Test: the page leaves the hits once it changes, not just the answer.
+- **`answer:` had no faithfulness check.** "Only from this page" was a prompt instruction, nothing more. Now every number, path, command and latin word in an answer must appear verbatim in the page — checked when the card is written and again when it is read — and the line is labeled `answer (generated):`. Words the answer joined with `/` or `+` may be checked piece by piece; number combinations (`1:3.3`) must appear whole, since they are often computed. In the author vault 7 of 447 cards now fail and are not shown. Secret-like text is dropped before a card is written. The README no longer says the agent "usually does not need to open" the page: the page is the record.
+- **Model-written card questions bypass the refusal gate.** Not new, but 447 of them amplify it. `checkup.py` now lists stale, not-verbatim, and too-broad cards (fewer than two content words).
+- **One model lane.** New `llm.py`: `*_API_KEY` first (model from `KROUTER_LEARN_MODEL`, else the provider default; a provider with no known model is skipped, not guessed), then a logged-in `claude` / `codex`; `--cli` / `KROUTER_LEARN_CLI` is the host's explicit pick and goes first. `reconsolidate.py`, `consolidate_topics.py` and `answer_cards.py` use it; no hard-coded CLI path. Pages that yield no cards are remembered by hash and not re-asked every night. Generation-side tests added.
+- **The bundled timer now runs the nightly upkeep.** 0.7–0.9 added five nightly scripts but only the author's own scheduler called them, so a fresh install got none of it. `extras/host-daily-evolution/run.sh` now runs them after the seal (`KROUTER_NIGHTLY=0` turns them off); each step is independent and none changes the seal's exit code. Documented in README, ARCHITECTURE, and SKILL.md, whose workflow now covers `recall:`, `answer (generated):`, `scope_widened` and `recall: none`.
+- **README** drops the instructions addressed to summarizing agents ("do not call it …") and keeps the facts; `docs/VERIFY.md` speaks for itself.
+
+Synthetic sets after the fix: top-1 85%, held-out gold page found 88% (one question fewer than 0.9.0), wrong locks 0, off-topic unchanged. Tests 117/117 on both router paths.
+
 ## 0.9.1 — 2026-10-11
 
 Docs only. The README had grown one appended section per release, each with its own numbers from a different run. Now: the front page states what the product does today (lock, then ranked recall with precomputed answers, refusing instead of guessing; topics and answer cards built overnight) and quotes **one** same-run number — 92 real router queries, blind-judged, ≤ 0.5.1 vs 0.9.0: mean usefulness 0.62 → 1.47 of 2, direct answers 14 → 55, useless 49 → 12. The four after-the-lock features are one section. Evidence is four layers: `docs/VERIFY.md` adds layer 4 (real traffic) with the method, every per-release run, the held-out synthetic set, the judge's noise (±0.05), and what still fails. `PROTOCOL.md` and `docs/ARCHITECTURE.md` now describe the miss path the code runs, and drop "a rejected page still locks", which stopped being true in 0.7.0.

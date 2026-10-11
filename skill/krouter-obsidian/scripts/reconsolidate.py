@@ -13,13 +13,12 @@ import argparse
 import json
 import os
 import re
-import shutil
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import llm  # noqa: E402
 import recall_index as ri  # noqa: E402
 
 MISS = {"bounded-literal-search-complete"}
@@ -64,22 +63,11 @@ def learned(out: Path) -> set[tuple[str, str]]:
     return pairs
 
 
-def find_cli(explicit: str) -> str:
-    for cand in (explicit, os.environ.get("KROUTER_LEARN_CLI", ""), shutil.which("claude") or "",
-                 "/opt/homebrew/bin/claude", str(Path.home() / ".local/bin/claude")):
-        if cand and Path(cand).is_file() and os.access(cand, os.X_OK):
-            return cand
-    return ""
-
-
-def ask(cli: str, model: str, prompt: str) -> dict[str, str]:
-    argv = [cli, "--print", "--tools", "", "--output-format", "text", "--no-session-persistence"]
-    if model:
-        argv += ["--model", model]
-    proc = subprocess.run(argv + [prompt], capture_output=True, text=True, timeout=900)
-    m = re.search(r"\{.*\}", proc.stdout, re.S)
-    if proc.returncode != 0 or not m:
-        raise SystemExit(f"learner model call failed: {(proc.stderr or proc.stdout)[-300:]}")
+def ask(vault: Path, prompt: str) -> dict[str, str]:
+    text = llm.complete(prompt, vault)
+    m = re.search(r"\{.*\}", text, re.S)
+    if not m:
+        raise RuntimeError("learner model output was not JSON")
     return json.loads(m.group(0))
 
 
@@ -93,6 +81,10 @@ def main() -> int:
     ap.add_argument("--max", type=int, default=40)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
+    if args.cli:
+        os.environ["KROUTER_LEARN_CLI"] = args.cli
+    if args.model:
+        os.environ["KROUTER_LEARN_MODEL"] = args.model
     if not args.vault:
         print("set OBSIDIAN_VAULT", file=sys.stderr)
         return 2
@@ -110,15 +102,15 @@ def main() -> int:
             items.append({"id": str(len(items)), "q": row["q"], "cands": cands})
     report = {"misses": len(misses), "asked": len(items), "learned": 0, "none": 0}
     if items and not args.dry_run:
-        cli = find_cli(args.cli)
-        if not cli:
-            print("no logged-in CLI for learning; skipped", file=sys.stderr)
-            return 0
         blocks = []
         for it in items:
             lines = "\n".join(f"  - {h['rel']} ｜ {h['how'][:70]}" for h in it["cands"])
             blocks.append(f"### id={it['id']} 查询：{it['q']}\n候选：\n{lines}\n")
-        verdict = ask(cli, args.model, PROMPT + "\n".join(blocks))
+        try:
+            verdict = ask(vault, PROMPT + "\n".join(blocks))
+        except llm.NoModel as exc:
+            print(f"learning skipped: {exc}", file=sys.stderr)
+            return 0
         new_lines = []
         for it in items:
             pick = (verdict.get(it["id"]) or "none").strip()

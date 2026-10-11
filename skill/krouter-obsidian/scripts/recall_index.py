@@ -19,7 +19,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-SCHEMA_VERSION = "recall-v9"
+SCHEMA_VERSION = "recall-v10"
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
 SCORE_MIN = 8.5  # bm25×分层权重的绝对下限
@@ -133,12 +133,7 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
         for line in data.decode("utf-8", errors="replace").splitlines():
             if not line or line.startswith("#"):
                 continue
-            if line.startswith("{"):  # answer card: its question is a trigger for its page
-                try:
-                    card = json.loads(line)
-                    out.setdefault(card["rel"], []).append(card["q"])
-                except (json.JSONDecodeError, KeyError):
-                    pass
+            if line.startswith("{"):  # answer cards are read by card_triggers(), filtered by page hash
                 continue
             parts = line.split("|")
             if len(parts) == 4:  # canonical map: id|aliases|source|anchor
@@ -152,6 +147,22 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
 
 
 TOPIC_PREFIX = "02 经验与方法/主题档案/"
+
+
+def card_triggers(vault: Path | None) -> dict[str, list[tuple[str, str]]]:
+    """{rel: [(card question, page hash the card was written against)]} from 下意识问答*.jsonl."""
+    out: dict[str, list[tuple[str, str]]] = {}
+    if vault is None or not (vault / "90 系统文件").is_dir():
+        return out
+    for path in sorted((vault / "90 系统文件").rglob(CARD_GLOB)):
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            try:
+                card = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if card.get("rel") and card.get("q"):
+                out.setdefault(card["rel"], []).append((card["q"], card.get("sha", "")))
+    return out
 
 
 def tier_of(rel: str, status: str) -> str:
@@ -219,6 +230,7 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
         seen[rel] = (st.st_mtime_ns, st.st_size, full)
     known = {rel: (m, s, rid) for rel, m, s, rid in con.execute("SELECT rel, mtime_ns, size, rid FROM files")}
     aliases, map_sha = alias_map(vault)
+    cards = card_triggers(vault)
     old_sha = (con.execute("SELECT v FROM meta WHERE k='map_sha'").fetchone() or [""])[0]
     if map_sha != old_sha:
         # 别名或触发词变了：全部重建（一次约 1–2 秒），避免被删掉的触发词残留
@@ -236,13 +248,17 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
             continue
         path = Path(path)
         try:
-            text = path.read_text(encoding="utf-8", errors="replace")
+            raw_bytes = path.read_bytes()
         except OSError:
             continue
+        text = raw_bytes.decode("utf-8", errors="replace")
         meta, body = split_frontmatter(text)
+        page_hash = hashlib.sha1(raw_bytes).hexdigest()[:16]
         title = meta.get("title") or path.stem
         status = (meta.get("status") or "").lower()
-        trig = " ".join([meta.get("triggers") or meta.get("aliases") or ""] + aliases.get(rel, []))
+        # 卡片问题只在卡片还对得上这一页当前内容时才算触发词；页面一改，旧卡不再影响排序
+        live_cards = [q for q, card_hash in cards.get(rel, []) if card_hash == page_hash]
+        trig = " ".join([meta.get("triggers") or meta.get("aliases") or ""] + aliases.get(rel, []) + live_cards)
         how = meta.get("how") or first_rule_line(body)
         dirs = " ".join(rel.split("/")[:-1])
         if old:
@@ -448,6 +464,38 @@ def load_cards(vault: Path) -> dict[str, list[dict]]:
     return by
 
 
+SPECIFIC_BACKTICK = re.compile(r"`([^`]+)`")
+SPECIFIC_TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_./:~+#-]*[A-Za-z0-9]|\d")
+
+
+def card_specifics(answer: str) -> list[str]:
+    """What a card claims verbatim: backticked spans, numbers, paths / versions / commands, latin words ≥ 3."""
+    # 全角冒号是中文标点，不是标识符的一部分（`Opus 5.5：/opt/…` 是两个片段）
+    text = unicodedata.normalize("NFKC", (answer or "").replace("：", " "))
+    found = [m.strip() for m in SPECIFIC_BACKTICK.findall(text) if m.strip()]
+    for tok in SPECIFIC_TOKEN.findall(SPECIFIC_BACKTICK.sub(" ", text)):
+        if any(c.isdigit() for c in tok) or any(c in tok for c in "./_:~#") or len(tok) >= 3:
+            found.append(tok)
+    return found
+
+
+def faithful(answer: str, page_text: str) -> bool:
+    """Every specific in the answer appears verbatim in the page. A prompt saying "only from this page" proves nothing."""
+    page = unicodedata.normalize("NFKC", page_text or "").lower()
+
+    def present(spec: str) -> bool:
+        spec = spec.lower()
+        if spec in page:
+            return True
+        # `utun1/utun7`、`push/release`、`llm+DeepSeek`：答案把原文里分开写的词连在一起了，逐段核对。
+        # 只拆带字母的词；纯数字组合（`1:3.3`、`8/16`）常是模型自己算出来的，必须整串在原文出现
+        parts = [x for x in re.split(r"[/+]", spec) if x]
+        words = len(parts) > 1 and all(len(x) >= 2 and re.search(r"[a-z]", x) for x in parts)
+        return bool(words) and all(x in page for x in parts)
+
+    return all(present(spec) for spec in card_specifics(answer))
+
+
 def attach_answers(vault: Path, hits: list[dict], raw: list[str], df: dict[str, int]) -> None:
     """Pick the card on each hit page whose question/answer share most of the query's content words."""
     cards = load_cards(vault)
@@ -460,11 +508,15 @@ def attach_answers(vault: Path, hits: list[dict], raw: list[str], df: dict[str, 
         options = cards.get(h["rel"])
         if not options or not page.is_file():
             continue
-        current = hashlib.sha1(page.read_bytes()).hexdigest()[:16]
+        page_bytes = page.read_bytes()
+        current = hashlib.sha1(page_bytes).hexdigest()[:16]
+        page_text = page_bytes.decode("utf-8", errors="replace")
         best, best_cov = None, 0.0
         for card in options:
             if card.get("sha") != current:
                 continue  # 页面改过，旧卡作废，等夜间重写
+            if not faithful(card["a"], page_text):
+                continue  # 答案里的数字/路径/命令在原文里找不到，不给
             have = set(tokens(card["q"] + " " + card["a"]))
             cov = sum(w for t, w in weights.items() if t in have) / total
             strong = any(t in have and w >= STRONG_W for t, w in weights.items())
@@ -548,7 +600,7 @@ def main() -> int:
         flag = f" status={h['status']}" if h["status"] else ""
         print(f"- {h['rel']} tier={h['tier']}{flag} score={h['score']}")
         if h.get("answer"):
-            print(f"  answer: {h['answer']}")
+            print(f"  answer (generated): {h['answer']}")
         if h["how"]:
             print(f"  how: {h['how']}")
         for ln, text in best_lines(vault / h["rel"], res["query_tokens"], args.lines):

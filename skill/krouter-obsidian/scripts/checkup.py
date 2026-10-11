@@ -125,7 +125,33 @@ def main() -> int:
         else:
             tenure_bad.append((title, new, old))
 
-    # 3. rule pages with no use in the window
+    # 3. answer cards: stale (page changed), not verbatim (specifics missing from the page), too broad
+    import hashlib
+
+    stale_cards, unfaithful_cards, broad_cards = 0, [], []
+    page_hash: dict[str, str] = {}
+    page_text: dict[str, str] = {}
+    for rel, cards in ri.load_cards(vault).items():
+        path = vault / rel
+        if not path.is_file():
+            stale_cards += len(cards)
+            continue
+        data = path.read_bytes()
+        page_hash[rel] = hashlib.sha1(data).hexdigest()[:16]
+        page_text[rel] = data.decode("utf-8", errors="replace")
+        for card in cards:
+            if card.get("sha") != page_hash[rel]:
+                stale_cards += 1
+                continue
+            if not ri.faithful(card["a"], page_text[rel]):
+                unfaithful_cards.append((rel, card["q"]))
+            raw = [t for t in ri.tokens(card["q"]) if not (len(t) == 1 and ri.CJK_RE.fullmatch(t))]
+            df = ri.term_df(con, raw + [c for t in raw if ri.is_cjk_bigram(t) for c in t])
+            titled = ri.phrase_terms(con, [t for t in raw if ri.is_cjk_bigram(t)], ("title",))
+            if ri.query_content_terms(raw, df, titled) < 2:
+                broad_cards.append((rel, card["q"]))
+
+    # 4. rule pages with no use in the window
     used = usage_counts(vault, args.days)
     rules = sorted(r for r, t in tier.items() if t == "rule")
     unused = [r for r in rules if used.get(r, 0) == 0]
@@ -139,6 +165,9 @@ def main() -> int:
         "tenure_bad": tenure_bad,
         "rule_pages": len(rules),
         "unused_rule_pages": unused,
+        "stale_cards": stale_cards,
+        "unfaithful_cards": unfaithful_cards,
+        "broad_cards": broad_cards,
         "window_days": args.days,
     }
     if args.json:
@@ -146,7 +175,8 @@ def main() -> int:
     lines = [
         "---", "title: 下意识体检", "status: generated", f"generated_at: {report['generated_at']}",
         f"tenure: \"{tenure_ok}/{report['tenure_pairs']}\"", f"stale_locks: {len(stale_locks)}",
-        f"unused_rule_pages: {len(unused)}", "---", "",
+        f"unused_rule_pages: {len(unused)}", f"stale_cards: {stale_cards}",
+        f"unfaithful_cards: {len(unfaithful_cards)}", f"broad_cards: {len(broad_cards)}", "---", "",
         "# 下意识体检", "",
         "机器生成，不改任何来源页。只列需要人看的项。", "",
         "## 锁指向失效页", "",
@@ -156,6 +186,12 @@ def main() -> int:
         f"## 取代后召回（{tenure_ok}/{report['tenure_pairs']} 通过）", "",
         "问旧页标题时，接替它的页必须排在旧页前面。", "",
         *([f"- 「{t}」：`{n}` 没排在 `{o}` 前面" for t, n, o in tenure_bad] or ["- 全部通过"]), "",
+        "## 问答卡", "",
+        f"- 过期（页面改过、卡未重写，已不参与排序和答案）：{stale_cards} 张",
+        f"- 答案里的数字/路径/命令在原文找不到（读取时已拦下）：{len(unfaithful_cards)} 张",
+        *[f"  - `{r}`：{q}" for r, q in unfaithful_cards[:20]],
+        f"- 问题过宽（实词不到 2 个，可能把无关提问召回到这一页）：{len(broad_cards)} 张",
+        *[f"  - `{r}`：{q}" for r, q in broad_cards[:30]], "",
         f"## 近 {args.days} 天没人读、也没被召回的规则页（{len(unused)}/{len(rules)}）", "",
         "只是提醒，不降权、不删除。确认没用了再标 superseded / retired。", "",
         *[f"- `{r}`" for r in unused], "",
