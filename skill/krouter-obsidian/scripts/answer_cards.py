@@ -29,7 +29,20 @@ CARDS = "90 系统文件/自动化/下意识问答.jsonl"
 PAGE_MAX = 3500
 BATCH = 6
 # 卡片写进库前过滤：像密钥、token、口令的串一律丢弃（prompt 里的"不写密钥"不算保证）
-SECRET_RE = re.compile(r"(sk-[A-Za-z0-9_-]{12,}|\b[A-Za-z0-9_-]{32,}\b|bearer\s+\S+|api[_-]?key\s*[=:]|password\s*[=:]|token\s*[=:])", re.I)
+SECRET_RE = re.compile(r"(sk-[A-Za-z0-9_-]{12,}|bearer\s+\S+|api[_-]?key\s*[=:]|password\s*[=:]|token\s*[=:])", re.I)
+LONG_RUN = re.compile(r"[A-Za-z0-9_-]{24,}")
+
+
+def secret_like(text: str) -> bool:
+    """Key-shaped text. A long run counts when one unbroken piece of it is ≥ 24 characters mixing letters and
+    digits (a key, a 40-hex token); a long id made of short `-`/`_` pieces (`20260811-090406-v4-flash`) does not."""
+    if SECRET_RE.search(text):
+        return True
+    for run in LONG_RUN.findall(text):
+        for piece in re.split(r"[-_]", run):
+            if len(piece) >= 24 and re.search(r"[A-Za-z]", piece) and re.search(r"\d", piece):
+                return True
+    return False
 PROMPT = """下面是个人知识库里的若干页面。为每一页写 3–5 张「问答卡」：用户以后最可能怎么问这一页能回答的问题，以及一句话答案。
 规则：
 - 问题：口语化中文，像用户随口问 Agent，6–20 字；覆盖这一页不同的要点，不要五张卡问同一件事。
@@ -147,7 +160,7 @@ def accept(item: object, page_text: str) -> str:
     """'' if the card is kept, else the reason it is dropped."""
     if not isinstance(item, dict) or not item.get("q") or not item.get("a"):
         return "malformed"
-    if SECRET_RE.search(item["q"] + " " + item["a"]):
+    if secret_like(item["q"] + " " + item["a"]):
         return "secret-like"
     if not ri.faithful(item["a"], page_text):
         return "not-verbatim"

@@ -1,0 +1,24 @@
+{"q": "did the scheduled job actually run", "expect": "02 经验与方法/准经验/A timer that fired is not a product.md", "kind": "pos"}
+{"q": "how do I know a day is sealed", "expect": "02 经验与方法/Automation/Seal the day from the log file.md", "kind": "pos"}
+{"q": "is the to-summarize stub a sealed day", "expect": "02 经验与方法/Automation/Seal the day from the log file.md", "kind": "pos"}
+{"q": "can I move clippings originals", "expect": "02 经验与方法/Agent/用户偏好与工作约束.md", "kind": "pos"}
+{"q": "file names must show what they are for", "expect": "02 经验与方法/Agent/用户偏好与工作约束.md", "kind": "pos"}
+{"q": "which correction wins when two disagree", "expect": "90 系统文件/Agent记忆/纠错与取代记录.md", "kind": "pos"}
+{"q": "can low-trust memory be used as an instruction", "expect": "90 系统文件/Agent记忆/可靠记忆索引.md", "kind": "pos"}
+{"q": "where do originals and result evidence go", "expect": "03 资料与证据/资料与证据.md", "kind": "pos"}
+{"q": "what is the sample project", "expect": "01 项目/示例项目/示例项目.md", "kind": "pos"}
+{"q": "five gates before writing a provisional method", "expect": "02 经验与方法/经验与方法.md", "kind": "pos"}
+{"q": "where do I paste the API key for the timer", "expect": "90 系统文件/自动化/自进化钥匙.md", "kind": "pos"}
+{"q": "daily evolution health lamp", "expect": "90 系统文件/自动化/日更健康.md", "kind": "pos"}
+{"q": "how do I bake sourdough bread", "expect": null, "kind": "off"}
+{"q": "Kubernetes pod autoscaling", "expect": null, "kind": "off"}
+{"q": "今天天气怎么样", "expect": null, "kind": "off"}
+{"q": "推荐一部科幻电影", "expect": null, "kind": "off"}
+{"q": "比特币明天会涨吗", "expect": null, "kind": "off"}
+{"q": "how to fix a flat bicycle tire", "expect": null, "kind": "off"}
+{"q": "咖啡机的定时器多久除垢一次", "expect": null, "kind": "semi"}
+{"q": "咖啡机 timer 多久除垢一次", "expect": null, "kind": "semi"}
+{"q": "timer for soft boiled eggs", "expect": null, "kind": "semi"}
+{"q": "evidence for climate change", "expect": null, "kind": "semi"}
+{"q": "sample size for a medical trial", "expect": null, "kind": "semi"}
+{"q": "猫咪每天的日志睡几个小时", "expect": null, "kind": "semi"}

@@ -293,6 +293,7 @@ TOPIC_NAMED = 1.25
 TITLE_HIT = 2.0
 CARD_MIN = 0.5  # 问答卡至少覆盖问题一半的实词分量才输出
 ANSWER_SUPPORT_MIN = 0.3  # 答案用词至少这么多在原页出现
+ALIEN_MIN = 2  # 库里从没出现过的汉字达到这么多、且只对上一个实词：判为库外
 
 
 def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_first: bool = True,
@@ -352,12 +353,15 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     need = min(MIN_STRONG_MATCH, query_content_terms(raw, df, titled))
     # 问题的核心词库里一次都没出现（`Kubernetes`），只靠一两个边角词凑上的，判为库外
     unknown = unknown_content_terms(raw, df)
+    # 问题里有库里一次都没出现过的汉字（`咖啡`、`除垢`），而首条只对上一个实词：问的是库外的事，
+    # 只是借了库里的一个词（`定时`）。字比词稳：换个说法会产生库里没有的双字，但不会凭空多出库里没有的字
+    alien = alien_chars(raw, df)
     if single:
         # 一个概念的短查询：只有一个词可比，不按"至少两个实词"拦；但仍要过（减半的）分数下限
         refuse = top < SCORE_MIN * scale * 0.5 or (unknown and strong == 0)
     else:
         refuse = (top < SCORE_MIN * scale or (strong < need and top < SINGLE_TERM_SCORE * scale) or strong == 0
-                  or (unknown and strong <= 2))
+                  or (unknown and strong <= 2) or (strong < need and alien >= ALIEN_MIN))
     if gate and refuse:
         conf = "none"
     elif margin >= 1.5 and hits[0]["tier"] in ("rule", "topic"):
@@ -387,6 +391,12 @@ def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict
     # 纯数字（年份、日期、序号）到处都有，只参与排序，不算实词
     return sum(1 for t in hit if (soft_weight(t, df) >= STRONG_W or t in named) and not t.isdigit()
                and not set(t) & FUNCTION_CHARS)
+
+
+def alien_chars(raw: list[str], df: dict[str, int]) -> int:
+    """问题里有几个汉字在整个库里一次都没出现过（虚字不算）。"""
+    chars = {c for t in raw if is_cjk_bigram(t) for c in t if c not in FUNCTION_CHARS}
+    return sum(1 for c in chars if not df.get(c, 0))
 
 
 def unknown_content_terms(raw: list[str], df: dict[str, int]) -> int:
