@@ -2,7 +2,7 @@
 
 This is the protocol detail. README is the entry; [`PROTOCOL.md`](../PROTOCOL.md) is the invariant list. The author’s private notes are not in this repository.
 
-**Product (do not skip):** self-evolution (seal → distill) → two-step promotion (auto `provisional` the same day when five gates pass; `active` only after ask + adopt + accepted task) → correction-first → retrieval as the lock. Timer is on by default. The key is your vault-page `*_API_KEY` or an already-logged-in local CLI. `lamp: unused` = you turned the timer off. Author-vault scores below are not clone scores and cannot be reproduced from this clone.
+**Product (do not skip):** self-evolution (seal → distill) → two-step promotion (auto `provisional` the same day when five gates pass; `active` only after ask + adopt + accepted task) → correction-first → retrieval as the lock. The nightly job is installed by `install.sh`, or by the one-line install after the host says yes. The key is an `*_API_KEY` in `~/.dsh-krouter-keys.env` (one pasted on the vault key page moves there) or an already-logged-in local CLI. `lamp: unused` = you turned the timer off. Author-vault scores below are not clone scores and cannot be reproduced from this clone.
 
 KRouter splits knowledge into **four write-up maturity layers** and **five spatial zones**. Layers answer how far this claim can be trusted. Zones answer where the file lives. Agents must read the vault through layer 4. Chat memory and vector indexes are not a second source of truth.
 

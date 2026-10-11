@@ -135,6 +135,9 @@ else
       python3 "$ROOT/extras/host-daily-evolution/patch_health.py" "$HEALTH" krouter_writer missing || true
     fi
   fi
+  if [ "${KROUTER_NO_TIMER:-}" = "1" ]; then
+    printf '%s\n' "self-evolution timer: not installed (KROUTER_NO_TIMER=1)"
+  else
   case "$(uname -s)" in
     Darwin)
       DST="$HOME/Library/LaunchAgents/local.dsh-krouter.daily-evolution.plist"
@@ -186,6 +189,7 @@ else
       printf '%s\n' "HOST ACTION: no timer on this OS; schedule extras/host-daily-evolution/run.sh daily (Windows: scripts/install_windows_task.ps1)."
       ;;
   esac
+  fi
   python3 "$ROOT/extras/host-daily-evolution/resolve.py" --sync-health --offline >/dev/null || true
 fi
 [ "${KROUTER_BOOTSTRAP:-}" = "1" ] || printf '%s\n' "next: run ./scripts/first_run.sh against the template, then point OBSIDIAN_VAULT at your vault."

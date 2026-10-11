@@ -1,0 +1,30 @@
+name: Bug or wrong answer
+description: Something did not work, or the router answered wrongly
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command you ran and its output. Remove anything private (keys print as <redacted> anyway).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`cat ~/.agents/skills/krouter-obsidian/SKILL.md | head -3`, the release tag, or `git rev-parse --short HEAD`"
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options: [macOS, Linux, Windows]
+  - type: dropdown
+    id: lang
+    attributes:
+      label: Vault language
+      options: [Chinese, English, Mixed]

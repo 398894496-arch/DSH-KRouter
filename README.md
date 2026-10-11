@@ -16,7 +16,7 @@ Windows (PowerShell, no admin):
 irm https://raw.githubusercontent.com/398894496-arch/DSH-KRouter/main/scripts/bootstrap.ps1 | iex
 ```
 
-It fetches the latest release (a pinned tag, not `main`), makes a vault in `Documents/Second Brain` (`Documents/第二大脑` with the Chinese template when the system language is Chinese), installs the router and the agent rules, starts the daily timer, and opens the vault in Obsidian. An existing vault (`… | sh -s -- --vault ~/MyVault`) keeps every file; only missing skeleton files are added. Run the same line again to upgrade. Python 3 is the only requirement (the Windows script installs it with winget when missing). The last thing it prints is the one step left, if any: log in to an AI coding CLI, or paste an API key. After that nothing needs maintaining — a lock noun is an optional shortcut, not a prerequisite; recall answers from page titles and text on its own, and refuses rather than guesses. If a night's work did not happen, a desktop notification says why.
+It fetches the latest release (a tag, never `main`) and checks its SHA-256 against the release's `SHA256SUMS`, makes a vault in `Documents/Second Brain` (`Documents/第二大脑` with the Chinese template when the system language is Chinese), installs the router and the agent rules, and opens the vault in Obsidian. Then it **asks** before installing the nightly job, saying in one sentence which CLI will run, with what permissions, and how many pages (and tokens) it will send — the numbers come from a dry run on your new vault. No terminal to ask on means no nightly job; `--timer` says yes up front, `--no-timer` says no. `KROUTER_TAG=v0.11.2` (before `sh`, or `$env:KROUTER_TAG` on Windows) stays on one release. An existing vault (`… | sh -s -- --vault ~/MyVault`) keeps every file; only missing skeleton files are added. Run the same line again to upgrade. Python 3 is the only requirement (the Windows script installs it with winget when missing). The last thing it prints is the one step left, if any: log in to an AI coding CLI, or paste an API key. After that nothing needs maintaining — a lock noun is an optional shortcut, not a prerequisite; recall answers from page titles and text on its own, and refuses rather than guesses. If a night's work did not happen, a desktop notification says why. Where data goes and what a CLI writer can see: [`SECURITY.md`](SECURITY.md).
 
 ## What leaves your machine, and what it costs
 
@@ -151,7 +151,7 @@ Q11|deploy;deployment;how we ship|02 经验与方法/Deploy/发布流程.md|Ship
 
 ## Start the daily writer
 
-This is the product. Timer is **on by default**.
+This is the product. `install.sh` installs the nightly job (`KROUTER_NO_TIMER=1` skips it); the one-line install asks first.
 
 Copy `template/` to your vault, then:
 
@@ -253,7 +253,7 @@ The real-traffic numbers are the author's vault and a development set (see **Evi
 | Claim | Meaning |
 |---|---|
 | Product | An **Agent knowledge OS**. Methods and corrections live in Obsidian. Chat is not the memory. |
-| Self-evolution | **The product.** Seal, distill, two-step promotion. Timer **on by default**. **API key first:** lock that provider’s flagship. **No key:** your already-logged-in CLI. `lamp: unused` = you turned the timer off. `dsh plugin add` is a mount, not the writer. |
+| Self-evolution | **The product.** Seal, distill, two-step promotion. Nightly job **on your yes** (the one-line install asks; `install.sh` installs it). **API key first:** lock that provider’s flagship. **No key:** your already-logged-in CLI. `lamp: unused` = you turned the timer off. `dsh plugin add` is a mount, not the writer. |
 | Promotion | **Two steps.** Five gates pass → **automatically write `provisional` the same day**. Next similar task → **ask** (`ask_product.py`); host adopts AND that task is accepted → `promote` writes `active`. `record` does not write `active`. |
 | Correction | Correction page beats the old note. Next route must open it. |
 | Retrieval | Serves the product. **Lock** first (alias table, dual SHA-256); on a miss, ranked L1 recall with precomputed `answer (generated):` cards, checked against their page lexically and by a second model pass; `recall: none` instead of a guess. No vector. |

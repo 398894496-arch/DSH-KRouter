@@ -500,7 +500,8 @@ def exec_distill(probe: bool) -> int:
     patch_health(vault, payload["key"], payload["writer"])
     ok, code, msg = distill_gate(payload)
     if not ok and "network" not in msg:
-        notify.send(notify.NO_WRITER, kind="no-writer")  # 没有模型：宿主不看终端也要知道
+        # 没有模型：宿主不看终端也要知道；贴了 key 却认不出服务商时，说的是这个，不是"没有模型"
+        notify.send(notify.PENDING_KEY if _lane.pending_keys() else notify.NO_WRITER, kind="no-writer")
     if not ok:
         print(msg, file=sys.stderr)
         return code

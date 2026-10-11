@@ -53,7 +53,17 @@ def _value_is_secret(v: str) -> bool:
     return (len(v) >= 12 and not v.isdigit()) or (len(v) >= 6 and bool(has_alpha and has_digit))
 
 
+HEX = re.compile(r"[0-9a-fA-F]+")
+SRI = re.compile(r"^(?:sha(?:1|256|384|512))[-:]", re.I)
+
+
 def _high_entropy(run: str) -> bool:
+    """A long unbroken piece mixing letters and digits — except pure hex (git commits, SHA digests) and SRI
+    integrity strings (`sha512-…`): coding notes are full of those, and masking them loses the note's point.
+    Hex keys written with a label (`KEY=…`, `密钥：…`) are still caught by the label rule; unlabeled ones are
+    left to the secret-page layer."""
+    if SRI.match(run) or HEX.fullmatch(run.replace("-", "")):
+        return False
     for piece in re.split(r"[-_./]", run):
         if len(piece) >= 16 and len(re.findall(r"[A-Za-z]", piece)) >= 2 and len(re.findall(r"\d", piece)) >= 2:
             return True

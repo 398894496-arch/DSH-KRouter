@@ -1,0 +1,30 @@
+name: release-assets
+
+# Every published release gets the installable package and its checksum, so the one-line install
+# (scripts/bootstrap.sh / bootstrap.ps1) downloads a fixed, verifiable file instead of a git checkout.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Pack and checksum
+        run: |
+          npm pack
+          sha256sum dsh-krouter-*.tgz > SHA256SUMS
+          cat SHA256SUMS
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dsh-krouter-*.tgz SHA256SUMS --clobber

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.11.2 — 2026-10-11
+
+What a stranger's agent checks before recommending it, plus the sixth outside review.
+
+**Consent and integrity of the one-line install (sixth review)**
+- The one-line install no longer installs the nightly job silently. It installs the read-only parts (vault, router, rules), then asks in one sentence: which CLI will run, with what permissions (`claude` / `grok` with permission prompts skipped inside the vault; Codex in a workspace-write sandbox; or a direct API call), and how many pages and tokens it will send — from a dry run on the new vault. Only `y` installs it; no terminal to ask on means not installed; `--timer` / `--no-timer` decide up front. `install.sh` (for terminal users) still installs it; `KROUTER_NO_TIMER=1` skips.
+- Releases carry the installable package and its `SHA256SUMS` (new `release-assets` workflow); `bootstrap.sh` / `bootstrap.ps1` verify the checksum before unpacking and stop on a mismatch. `KROUTER_TAG` pins a release (now in the README).
+- A key pasted on the key page moves out of the vault in every common shape — `NAME: value`, `- NAME=…`, `DeepSeek 密钥：sk-…`, a bare key — not only `NAME=value`. The provider comes from the name, the key's prefix or a provider word; when none tells, the key waits as `KROUTER_PENDING_KEY_n`, the page says how to name it, and the notification says that instead of "no model".
+- The redaction backstop no longer masks git commits, SHA digests or SRI integrity strings (pure hex, `sha512-…`) unless a key label precedes them. Trade-off, stated in `SECURITY.md`: an unlabeled bare-hex key is left to the secret-page layer.
+- The keys file is written atomically (temp file + rename, mode 600).
+
+**Windows, now in CI**
+- CI runs on Linux, macOS and Windows. Running the suite on a real Windows host found two real bugs: vault-relative paths came back with `\`, which broke tiering (rule pages ranked like any page: English bench 1/12 on Windows), and CRLF line endings hid the frontmatter, so `status: superseded` was ignored. Both fixed; Windows passes the suite (POSIX-only tests skip).
+
+**For a stranger's agent**
+- README first screen: what it is, the one-line install, what leaves the machine and what it costs (first night ~4k tokens on the template, ~160k on a ~100-page vault), evidence at a glance with the development-set caveat next to the real-traffic number, and a versions policy. Same in Chinese. "Timer on by default" is gone wherever it was no longer true.
+- `SECURITY.md` (data flows, what a CLI writer can see, known filter limits, private reporting), `CODE_OF_CONDUCT.md`, issue and PR templates.
+- The DSH plugin installs from the release package as well as from git (`dsh plugin --profile web add https://github.com/…/releases/download/vX/dsh-krouter-X.tgz`); the package now includes everything `install.sh` and the one-line install use.
+
 ## 0.11.1 — 2026-10-11
 
 - **Answer cards no longer go stale on frontmatter edits.** Cards were keyed to the whole page, so any frontmatter edit — `verified_at`, `status`, or the `nightly` / `nightly_at` fields `nightly.py` writes onto the health page — staled every card on that page, and the nightly run paid to rewrite them only to stale them again minutes later. Found on the author's machine after 0.11.0: all five health-page cards stale, `日更每天几点跑` ranked by a different page. New cards are keyed to the page body; cards written earlier (whole-page hash) stay valid until the page changes, so nothing is regenerated in bulk.

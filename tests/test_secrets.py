@@ -114,7 +114,9 @@ def test_upgrade_rebuilds_a_cache_built_before_redaction(keyed_vault, tmp_path, 
 
 REDACT_CASES = [  # the shapes an outside review found leaking, plus the ones 0.10.2 already caught
     "密钥：{v}", "凭据 {v}", "Key: {v}", "| DeepSeek | {v} |", "https://api.example.com/v1?key={v}&a=1",
-    "postgres://admin:{v}@db.local:5432/app", "Together a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4", "智谱 0f3e2d1c0f3e2d1c.{v}",
+    "postgres://admin:{v}@db.local:5432/app",
+    # an unlabeled bare-hex key is left to the secret-page layer: pure hex is how notes record commits and digests
+    "Together key: a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4", "智谱 0f3e2d1c0f3e2d1c.{v}",
     "fw_{v}", "pplx-{v}{v}", "nvapi-{v}{v}", "csk-{v}", "Mistral 密钥：{v}", "DEEPSEEK_API_KEY=sk-{v}",
     "Authorization: Bearer {v}", 'secret = "{v}"',
 ]
@@ -141,3 +143,42 @@ def test_redact_leaves_ordinary_text_alone(case):
     from krouter_redact import redact
 
     assert redact(case) == case
+
+
+PASTES = [  # how people paste a key on the key page (outside review, round six)
+    ("DEEPSEEK_API_KEY=sk-{v}", "DEEPSEEK_API_KEY"),
+    ('export DEEPSEEK_API_KEY="sk-{v}"', "DEEPSEEK_API_KEY"),
+    ("DEEPSEEK_API_KEY: sk-{v}", "DEEPSEEK_API_KEY"),
+    ("DeepSeek 密钥：sk-{v}", "DEEPSEEK_API_KEY"),
+    ("- DEEPSEEK_API_KEY=sk-{v}", "DEEPSEEK_API_KEY"),
+    ("Gemini 的 key 是 AIza{v}{v}", "GEMINI_API_KEY"),
+    ("sk-{v}", "KROUTER_PENDING_KEY_1"),  # no provider word, ambiguous prefix: held, not guessed
+]
+
+
+@pytest.mark.parametrize("paste,name", PASTES)
+def test_any_pasted_key_leaves_the_vault(keyed_vault, tmp_path, monkeypatch, paste, name):
+    sys.path.insert(0, str(SCRIPTS))
+    import llm
+
+    keys = tmp_path / "keys.env"
+    monkeypatch.setenv("KROUTER_KEYS_ENV", str(keys))
+    page = keyed_vault / KEY_PAGE
+    page.write_text("# 自进化钥匙\n\n" + paste.format(v=BARE) + "\n", encoding="utf-8")
+    assert llm.move_page_keys(keyed_vault) == [name]
+    assert BARE not in page.read_text(encoding="utf-8")  # gone from the vault
+    assert f"{name}=" in keys.read_text(encoding="utf-8") and BARE in keys.read_text(encoding="utf-8")
+    if name.startswith("KROUTER_PENDING"):
+        assert "DEEPSEEK_API_KEY" in page.read_text(encoding="utf-8")  # the note says how to name it
+        assert llm.pending_keys() == [name]
+
+
+def test_hashes_in_notes_survive_redaction():
+    sys.path.insert(0, str(SCRIPTS))
+    from krouter_redact import redact
+
+    for text in ("根因在 commit 3f6c4a7da8b6ff65c51203b9d4813653bb84ef90，回滚时 revert 它",
+                 "sha256 d8c1d5af1234567890abcdef1234567890abcdef1234567890abcdef12345678",
+                 "integrity sha512-y77VWOwb/Th4MabcdEFGH1234567yxZfYWe5+K+Pg=="):
+        assert redact(text) == text
+    assert "a1b2c3d4a1b2" not in redact("Together 密钥：" + "a1b2c3d4" * 8)  # labelled hex is still a key
