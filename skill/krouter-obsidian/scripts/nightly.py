@@ -26,6 +26,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import llm  # noqa: E402
+import zones  # noqa: E402
 
 STEPS = ("compile_subconscious", "reconsolidate", "consolidate_topics", "answer_cards", "checkup")
 MODEL_STEPS = {"reconsolidate", "consolidate_topics", "answer_cards"}
@@ -146,7 +147,7 @@ def write_report(vault: Path, results: list[dict], state: str, lane_name: str, a
         "发出的内容：规则页 / 主题页全文（问答卡）、主题证据（主题档案）、路由器没答好的查询原文（夜间学习）。"
         "`KROUTER_NIGHTLY=0` 关掉；`run.sh --dry-run` 先看会发什么。", "",
     ])
-    out = vault / REPORT
+    out = zones.path(vault, REPORT)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")
 
@@ -179,7 +180,7 @@ def main() -> int:
     state = overall(results)
     at = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     write_report(vault, results, state, lane_name, at)
-    set_frontmatter(vault / HEALTH, {"nightly": state, "nightly_at": at})
+    set_frontmatter(zones.path(vault, HEALTH), {"nightly": state, "nightly_at": at})
     print(json.dumps({"nightly": state, "lane": lane_name, "steps": results}, ensure_ascii=False))
     return 0
 

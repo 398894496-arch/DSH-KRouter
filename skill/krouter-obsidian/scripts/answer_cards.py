@@ -56,7 +56,8 @@ def page_sha(path: Path) -> str:
 
 def load_cards(vault: Path) -> list[dict]:
     out = []
-    for path in sorted((vault / "90 系统文件").rglob("下意识问答*.jsonl")) if (vault / "90 系统文件").is_dir() else []:
+    system = ri.zones.path(vault, "90 系统文件")
+    for path in sorted(system.rglob("下意识问答*.jsonl")) if system.is_dir() else []:
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             try:
                 row = json.loads(line)
@@ -170,7 +171,7 @@ def main() -> int:
     if args.model:
         os.environ["KROUTER_LEARN_MODEL"] = args.model
     vault = Path(args.vault)
-    out = vault / CARDS
+    out = ri.zones.path(vault, CARDS)
     cards = load_cards(vault)
     pages = targets(vault)
     sha = {rel: page_sha(vault / rel) for rel in pages}

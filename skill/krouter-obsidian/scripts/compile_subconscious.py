@@ -12,6 +12,7 @@ import re
 from datetime import date, datetime
 from pathlib import Path
 
+import zones
 from canonical_lookup import in_force, load_rows, map_for, parse_frontmatter
 
 REL = "90 系统文件/自动化/下意识.md"
@@ -90,7 +91,7 @@ def compile_rows(
             continue
         if not path.is_file():
             continue
-        kind = kind_for(source, fm)
+        kind = kind_for(zones.canon(vault, source), fm)
         how = how_for(anchor, fm)
         flag = correction_flag(source, fm, aliases)
         alias_s = pipe_safe(";".join(aliases))
@@ -149,7 +150,7 @@ def compile_vault(
 ) -> Path:
     vault = vault.resolve()
     map_path = (map_path or map_for(vault)).resolve()
-    dest = out or (vault / REL)
+    dest = out or zones.path(vault, REL)
     dest.parent.mkdir(parents=True, exist_ok=True)
     lines = compile_rows(vault, map_path, today=today)
     map_sha = file_sha256(map_path) if map_path.is_file() else ""

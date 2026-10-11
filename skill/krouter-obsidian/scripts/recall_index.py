@@ -19,6 +19,9 @@ import time
 import unicodedata
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import zones  # noqa: E402
+
 SCHEMA_VERSION = "recall-v11"
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
@@ -121,9 +124,10 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
     from canonical_lookup import map_for
 
     sources = [map_for(vault)]
-    if vault is not None and (vault / "90 系统文件").is_dir():
-        sources += sorted((vault / "90 系统文件").rglob(TRIGGER_GLOB))
-        sources += sorted((vault / "90 系统文件").rglob(CARD_GLOB))
+    system = zones.path(vault, "90 系统文件") if vault is not None else None
+    if system is not None and system.is_dir():
+        sources += sorted(system.rglob(TRIGGER_GLOB))
+        sources += sorted(system.rglob(CARD_GLOB))
     out: dict[str, list[str]] = {}
     digest = hashlib.sha1()
     for path in sources:
@@ -152,7 +156,7 @@ TOPIC_PREFIX = "02 经验与方法/主题档案/"
 
 def card_triggers(vault: Path | None) -> dict[str, list[dict]]:
     """{rel: [card]} from 下意识问答*.jsonl; refresh() keeps only cards that match and are grounded in the page."""
-    if vault is None or not (vault / "90 系统文件").is_dir():
+    if vault is None or not zones.path(vault, "90 系统文件").is_dir():
         return {}
     return load_cards(vault)
 
@@ -269,7 +273,7 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
                 " ".join(tokens(trig)),
                 " ".join(tokens(dirs + "\n" + body)),
                 " ".join(unigrams(title + " " + trig + " " + body)),
-                tier_of(rel, status),
+                tier_of(zones.canon(vault, rel), status),
                 status,
                 how,
                 compact(title + "|" + path.stem + "|" + meta.get("topic_terms", "")),
@@ -448,7 +452,7 @@ def is_single_concept(query: str) -> bool:
 
 def load_cards(vault: Path) -> dict[str, list[dict]]:
     by: dict[str, list[dict]] = {}
-    base = vault / "90 系统文件"
+    base = zones.path(vault, "90 系统文件")
     for path in sorted(base.rglob(CARD_GLOB)) if base.is_dir() else []:
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             try:

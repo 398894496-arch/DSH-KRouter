@@ -140,3 +140,21 @@ def test_nightly_dry_run_calls_nothing_and_writes_nothing(tmp_path):
     assert plan["est_tokens_total"] > 0
     after = {p.relative_to(vault).as_posix(): p.stat().st_mtime_ns for p in vault.rglob("*") if p.is_file()}
     assert after == before and not usage.exists()
+
+
+def test_run_py_matches_run_sh_contract(tmp_path):
+    """Windows twin: unset vault is a no-op; --dry-run writes nothing."""
+    run_py = REPO / "extras/host-daily-evolution/run.py"
+    env = _nightly_env(tmp_path, tmp_path / "unused")
+    env.pop("OBSIDIAN_VAULT")
+    res = subprocess.run([sys.executable, str(run_py)], env=env, capture_output=True, text=True, timeout=60)
+    assert res.returncode == 0 and "OBSIDIAN_VAULT is not set" in res.stderr
+    vault = tmp_path / "vault"
+    shutil.copytree(REPO / "template", vault)
+    before = {p.relative_to(vault).as_posix(): p.stat().st_mtime_ns for p in vault.rglob("*") if p.is_file()}
+    res = subprocess.run([sys.executable, str(run_py), "--dry-run"], env=_nightly_env(tmp_path, vault),
+                         capture_output=True, text=True, timeout=600)
+    assert res.returncode == 0, res.stderr
+    assert '"est_tokens_total"' in res.stdout
+    after = {p.relative_to(vault).as_posix(): p.stat().st_mtime_ns for p in vault.rglob("*") if p.is_file()}
+    assert after == before

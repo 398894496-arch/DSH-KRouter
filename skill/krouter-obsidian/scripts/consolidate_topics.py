@@ -49,7 +49,7 @@ PROMPT = """你在为个人知识库写一页「主题档案」。下面是关�
 
 
 def load_list(vault: Path) -> list[dict]:
-    path = vault / LIST
+    path = ri.zones.path(vault, LIST)
     rows = []
     if not path.is_file():
         return rows
@@ -68,13 +68,14 @@ def gather(vault: Path, topic: dict) -> tuple[str, list[str], str]:
     out_prefix = f"{OUT_DIR}/"
     auth_blocks, page_blocks, log_blocks = [], [], []
     latest = ""
-    for path, rel in ri.iter_markdown(vault):
+    for path, real_rel in ri.iter_markdown(vault):
+        rel = ri.zones.canon(vault, real_rel)  # 分类用默认区名；出处写库里的真实路径
         if rel.startswith(out_prefix) or rel.startswith(SKIP):
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        is_auth = rel in topic["auth"] or rel[:-3] in topic["auth"]
+        is_auth = real_rel in topic["auth"] or real_rel[:-3] in topic["auth"]
         if is_auth:
-            auth_blocks.append((rel, text[:3500]))
+            auth_blocks.append((real_rel, text[:3500]))
             continue
         lines = text.splitlines()
         hits = [i for i, line in enumerate(lines) if pat.search(line)]
@@ -93,9 +94,9 @@ def gather(vault: Path, topic: dict) -> tuple[str, list[str], str]:
         if m:
             day = f"{m.group(1)}-{m.group(2)}"
             latest = max(latest, day)
-            log_blocks.append((day, rel, snippet))
+            log_blocks.append((day, real_rel, snippet))
         else:
-            page_blocks.append((len(hits), rel, snippet))
+            page_blocks.append((len(hits), real_rel, snippet))
     log_blocks.sort(reverse=True)
     page_blocks.sort(reverse=True)
     parts, sources, size = [], [], 0
@@ -154,7 +155,7 @@ def llm_label(vault: Path) -> str:
 
 def build(vault: Path, topic: dict, force: bool) -> dict:
     name = f"主题｜{topic['title']}"
-    dest = vault / OUT_DIR / f"{name}.md"
+    dest = ri.zones.path(vault, f"{OUT_DIR}/{name}.md")
     evidence, sources, latest = gather(vault, topic)
     if not sources:
         return {"slug": topic["slug"], "status": "no-evidence"}
@@ -212,7 +213,7 @@ def main() -> int:
     if args.dry_run:
         for t in topics:
             evidence, sources, _latest = gather(vault, t)
-            dest = vault / OUT_DIR / f"主题｜{t['title']}.md"
+            dest = ri.zones.path(vault, f"{OUT_DIR}/主题｜{t['title']}.md")
             sha = hashlib.sha1(evidence.encode("utf-8")).hexdigest()[:16]
             same = dest.is_file() and not args.force and f"evidence_sha: {sha}" in dest.read_text(encoding="utf-8")
             print(json.dumps({"slug": t["slug"], "would": "skip-unchanged" if same or not sources else "send",

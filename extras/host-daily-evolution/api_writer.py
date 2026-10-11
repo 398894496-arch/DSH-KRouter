@@ -38,11 +38,14 @@ def _load_lane():
             spec = importlib.util.spec_from_file_location("krouter_llm", path)
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
+            if str(scripts) not in sys.path:
+                sys.path.append(str(scripts))
             return mod
     raise SystemExit("DSH-KRouter: skill/krouter-obsidian/scripts/llm.py not found")
 
 
 _lane = _load_lane()
+import zones  # noqa: E402  (skill scripts dir, appended by _load_lane)
 CHAT_SPECS = _lane.CHAT_SPECS
 lock_flagship = _lane.lock_flagship
 openai_headers = _lane.openai_headers
@@ -204,7 +207,8 @@ def parse_files_payload(text: str) -> list[dict[str, str]]:
 def apply_files(vault: Path, files: list[dict[str, str]]) -> int:
     written = 0
     for item in files[:8]:
-        path = safe_vault_path(vault, item["path"])
+        # 模型按默认区名给路径；库里改过区名就换成真实路径
+        path = safe_vault_path(vault, zones.real(vault, str(item.get("path") or "")))
         if path is None:
             continue
         body = item["content"]
@@ -226,7 +230,7 @@ def target_day() -> date:
 
 
 def collect_snapshot(vault: Path, day: date) -> str:
-    logs = vault / "05 时间日志"
+    logs = zones.path(vault, "05 时间日志")
     names: list[str] = []
     if logs.is_dir():
         for p in sorted(logs.rglob("*.md")):
@@ -237,7 +241,7 @@ def collect_snapshot(vault: Path, day: date) -> str:
             names.append(rel)
             if len(names) >= 40:
                 break
-    health = vault / "90 系统文件" / "自动化" / "日更健康.md"
+    health = zones.path(vault, "90 系统文件/自动化/日更健康.md")
     health_text = ""
     if health.is_file():
         health_text = health.read_text(encoding="utf-8", errors="replace")[:2000]
@@ -276,7 +280,7 @@ def run_route(route: str, query: str = "") -> str:
 
 def tool_impl(vault: Path, name: str, args: dict) -> str:
     if name == "read_file":
-        path = safe_vault_path(vault, str(args.get("path") or ""))
+        path = safe_vault_path(vault, zones.real(vault, str(args.get("path") or "")))
         if path is None or not path.is_file():
             return "denied or missing"
         return path.read_text(encoding="utf-8", errors="replace")[:MAX_FILE_BYTES]
@@ -285,7 +289,7 @@ def tool_impl(vault: Path, name: str, args: dict) -> str:
         n = apply_files(vault, files)
         return "wrote" if n else "denied"
     if name == "list_md":
-        rel = str(args.get("path") or ".").strip() or "."
+        rel = zones.real(vault, str(args.get("path") or ".").strip() or ".")
         root = (vault / rel).resolve()
         try:
             root.relative_to(vault)
@@ -324,7 +328,7 @@ def _http_json(url: str, payload: dict, headers: dict[str, str]) -> dict:
 
 
 def write_pending(vault: Path, day: date, reason: str) -> None:
-    month = vault / "05 时间日志" / day.strftime("%Y-%m")
+    month = zones.path(vault, "05 时间日志") / day.strftime("%Y-%m")
     path = month / f"{day.strftime('%d')}｜待总结.md"
     if path.exists():
         return

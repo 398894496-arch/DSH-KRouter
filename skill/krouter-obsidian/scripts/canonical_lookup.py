@@ -18,8 +18,12 @@ def map_for(vault: Path | None) -> Path:
     raw = os.environ.get("KROUTER_MAP", "").strip()
     if raw:
         return Path(raw)
-    if vault is not None and (vault / MAP_REL).is_file():
-        return vault / MAP_REL
+    if vault is not None:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import zones
+
+        if zones.path(vault, MAP_REL).is_file():
+            return zones.path(vault, MAP_REL)
     return Path(__file__).resolve().parent / "canonical_sources.psv"
 
 

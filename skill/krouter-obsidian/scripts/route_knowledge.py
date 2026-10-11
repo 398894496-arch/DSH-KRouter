@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import zones
 from canonical_lookup import (
     map_for,
     load_rows,
@@ -88,7 +89,7 @@ def emit_receipt(source: Path, retrieval_status: str, route: str, query: str, va
     if map_path.is_file():
         print(f"canonical_map: {map_path}")
         print(f"canonical_map_sha256: {sha256_file(map_path)}")
-    l0 = vault / "90 系统文件/自动化/下意识.md"
+    l0 = zones.path(vault, "90 系统文件/自动化/下意识.md")
     if l0.is_file():
         print(f"subconscious: {l0}")
         print(f"subconscious_sha256: {sha256_file(l0)}")
@@ -185,7 +186,7 @@ def emit_suggestions(query: str, vault: Path, map_path: Path) -> None:
 
 
 def how_for(vault: Path, case_id: str, anchor: str) -> tuple[str, bool]:
-    l0 = vault / "90 系统文件/自动化/下意识.md"
+    l0 = zones.path(vault, "90 系统文件/自动化/下意识.md")
     if not l0.is_file():
         return anchor, False
     for line in l0.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -376,13 +377,13 @@ def main() -> int:
         )
         return 2
     map_path = map_for(vault)
-    canonical = vault / "Agent第二大脑.md"
-    health = vault / "90 系统文件/自动化/日更健康.md"
+    canonical = zones.path(vault, "Agent第二大脑.md")
+    health = zones.path(vault, "90 系统文件/自动化/日更健康.md")
     scopes = {
-        "preference": vault / "02 经验与方法/Agent/用户偏好与工作约束.md",
-        "correction": vault / "90 系统文件/Agent记忆/纠错与取代记录.md",
-        "memory": vault / "90 系统文件/Agent记忆/可靠记忆索引.md",
-        "project": vault / "01 项目",
+        "preference": zones.path(vault, "02 经验与方法/Agent/用户偏好与工作约束.md"),
+        "correction": zones.path(vault, "90 系统文件/Agent记忆/纠错与取代记录.md"),
+        "memory": zones.path(vault, "90 系统文件/Agent记忆/可靠记忆索引.md"),
+        "project": zones.path(vault, "01 项目"),
         "search": vault,
     }
     if route in scopes and query and canonical_lookup(query, vault, map_path, route):

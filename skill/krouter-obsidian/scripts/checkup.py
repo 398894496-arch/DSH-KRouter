@@ -215,7 +215,7 @@ def main() -> int:
         "只是提醒，不降权、不删除。确认没用了再标 superseded / retired。", "",
         *[f"- `{r}`" for r in unused], "",
     ]
-    out = vault / args.out
+    out = ri.zones.path(vault, args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8")
     if not args.json:

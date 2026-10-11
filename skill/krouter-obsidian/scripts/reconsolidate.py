@@ -89,7 +89,7 @@ def main() -> int:
         print("set OBSIDIAN_VAULT", file=sys.stderr)
         return 2
     vault = Path(args.vault)
-    out = vault / args.out
+    out = ri.zones.path(vault, args.out)
     cursor = state_dir() / "reconsolidate.cursor"
     since = args.since or (cursor.read_text().strip() if cursor.is_file() else "")
     misses = load_misses(state_dir() / "queries.jsonl", since)[: args.max]

@@ -274,7 +274,12 @@ def collect_keys(vault: Path | None) -> dict[str, str]:
     if env_file.is_file():
         keys.update(_parse(env_file.read_text(encoding="utf-8", errors="replace")))
     if vault is not None:
-        page = vault / "90 系统文件" / "自动化" / "自进化钥匙.md"
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import zones
+
+        page = zones.path(vault, "90 系统文件/自动化/自进化钥匙.md")
         if page.is_file():
             keys.update(_parse(page.read_text(encoding="utf-8", errors="replace")))
     return keys

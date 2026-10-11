@@ -29,6 +29,9 @@ SKIP_STEMS = {"准经验入口", "Provisional index"}
 PROV_REL = Path("02 经验与方法") / "准经验"
 LEDGER_REL = Path("90 系统文件") / "自动化" / "ask-ledger.jsonl"
 SIDECAR_REL = Path("90 系统文件") / "自动化" / "ask-triggers.json"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import zones as _zones  # noqa: E402
+
 PENDING = Path.home() / ".dsh-krouter-ask-pending.json"
 
 
@@ -60,7 +63,7 @@ def _split_triggers(raw: str) -> list[str]:
 
 
 def load_sidecar(vault: Path) -> dict[str, list[str]]:
-    path = vault / SIDECAR_REL
+    path = _zones.path(vault, SIDECAR_REL.as_posix())
     if not path.is_file():
         return {}
     try:
@@ -79,7 +82,7 @@ def load_sidecar(vault: Path) -> dict[str, list[str]]:
 def load_catalog(vault: Path | None = None) -> list[dict]:
     vault = vault or vault_root()
     sidecar = load_sidecar(vault)
-    folder = vault / PROV_REL
+    folder = _zones.path(vault, PROV_REL.as_posix())
     out: list[dict] = []
     if not folder.is_dir():
         return out
@@ -172,7 +175,7 @@ def match_trigger(query: str, catalog: list[dict]) -> dict:
 
 
 def _ledger_path(vault: Path) -> Path:
-    return vault / LEDGER_REL
+    return _zones.path(vault, LEDGER_REL.as_posix())
 
 
 def append_ledger(vault: Path, row: dict) -> None:
@@ -259,7 +262,7 @@ def promote(vault: Path, filename: str) -> dict:
     decision = last_decision(vault, name)
     if decision != "adopt":
         return {"file": name, "active": False, "reason": "need-adopt-first", "last_decision": decision}
-    path = vault / PROV_REL / name
+    path = _zones.path(vault, PROV_REL.as_posix()) / name
     if not path.is_file():
         return {"file": name, "active": False, "reason": "missing-page"}
     meta = _frontmatter(path.read_text(encoding="utf-8", errors="replace")[:4000])

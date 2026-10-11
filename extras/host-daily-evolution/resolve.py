@@ -65,11 +65,14 @@ def _load_lane():
             spec = importlib.util.spec_from_file_location("krouter_llm", path)
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
+            if str(scripts) not in sys.path:
+                sys.path.append(str(scripts))
             return mod
     raise SystemExit("DSH-KRouter: skill/krouter-obsidian/scripts/llm.py not found")
 
 
 _lane = _load_lane()
+import zones  # noqa: E402  (skill scripts dir, appended by _load_lane)
 CLI_KIND_RE = _lane.CLI_KIND_RE
 GENERIC_PROBE_TAILS = _lane.GENERIC_PROBE_TAILS
 CLI_FLAGSHIP = _lane.CLI_FLAGSHIP
@@ -89,7 +92,7 @@ def vault_root() -> Path:
 
 
 def key_page(vault: Path) -> Path:
-    return vault / "90 系统文件" / "自动化" / "自进化钥匙.md"
+    return zones.path(vault, "90 系统文件/自动化/自进化钥匙.md")
 
 
 def keys_env_path() -> Path:
@@ -287,7 +290,7 @@ def enrich_path(raw: str) -> str:
 
 
 def distill_wrote(vault: Path, day) -> bool:
-    month = vault / "05 时间日志" / day.strftime("%Y-%m")
+    month = zones.path(vault, "05 时间日志") / day.strftime("%Y-%m")
     if not month.is_dir():
         return False
     prefix = day.strftime("%d")
@@ -295,6 +298,16 @@ def distill_wrote(vault: Path, day) -> bool:
         if path.is_file() and path.name.startswith(prefix + "｜"):
             return True
     return False
+
+
+def zone_note(vault: Path) -> str:
+    """This vault renamed the default folders: say so, so the writer writes where the vault keeps them."""
+    pairs = zones.pairs(vault)
+    if not pairs:
+        return ""
+    lines = "\n".join(f"- `{a}` → `{b}`" for a, b in pairs)
+    return ("This vault renames the default layout. Wherever the instructions below say the left name, "
+            f"use the right one:\n{lines}\n\n")
 
 
 def write_runtime_prompt(base: Path, vault: Path, router: Path) -> Path:
@@ -306,7 +319,8 @@ def write_runtime_prompt(base: Path, vault: Path, router: Path) -> Path:
         "Write only inside that vault. "
         "Do not read or run ~/.agents/skills/obsidian-knowledge-router "
         "or any other knowledge router.\n\n"
-        "---\n\n"
+        + zone_note(vault)
+        + "---\n\n"
     )
     dest = Path(__file__).resolve().parent / ".runtime-prompt.md"
     dest.write_text(header + base.read_text(encoding="utf-8"), encoding="utf-8")
@@ -399,7 +413,7 @@ def status_payload(detect: bool, probe: bool) -> dict[str, str]:
 
 
 def patch_health(vault: Path, key_field: str, writer_field: str) -> None:
-    health = vault / "90 系统文件" / "自动化" / "日更健康.md"
+    health = zones.path(vault, "90 系统文件/自动化/日更健康.md")
     patch = Path(__file__).resolve().parent / "patch_health.py"
     if not health.is_file() or not patch.is_file():
         return
