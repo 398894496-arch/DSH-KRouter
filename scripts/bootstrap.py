@@ -36,7 +36,7 @@ MSG = {
         "plan": "计划", "vault_new": "新建知识库", "vault_merge": "使用已有知识库（只补缺失的骨架文件，不覆盖任何文件）",
         "vault_ours": "已是第二大脑知识库（升级）", "added": "补上的文件", "skill": "路由器", "timer": "每日定时任务",
         "model_ok": "模型通道", "model_none": "还没有可用的模型：登录一个 AI 编程工具（Claude Code 运行 `claude`、Codex、grok 等任选其一），"
-        "或把 API key 写进 {keys}（一行，如 DEEPSEEK_API_KEY=sk-…）。之后每晚自动整理，不用再做任何事。",
+        "或把 API key 写进 {keys}（一行，如 DEEPSEEK_API_KEY=sk-…）。夜间任务开着的话，之后每晚自动整理，不用再做任何事。",
         "done": "装好了。知识库在：{vault}\nagent 查询走：{router}",
         "obsidian": "已在 Obsidian 里打开这个知识库。", "obsidian_none": "装上 Obsidian（https://obsidian.md）后，选「打开本地仓库」→ {vault}",
         "py_old": "需要 Python 3.9 或更新版本，当前是 {v}。",
@@ -52,7 +52,7 @@ MSG = {
         "plan": "Plan", "vault_new": "New vault", "vault_merge": "Existing vault (adds only missing skeleton files; overwrites nothing)",
         "vault_ours": "Already a Second Brain vault (upgrade)", "added": "files added", "skill": "Router", "timer": "Daily timer",
         "model_ok": "Model lane", "model_none": "No model yet: log in to one AI coding CLI (`claude`, Codex, grok, …), "
-        "or put an API key in {keys} (one line, e.g. DEEPSEEK_API_KEY=sk-…). After that it runs every night on its own.",
+        "or put an API key in {keys} (one line, e.g. DEEPSEEK_API_KEY=sk-…). With the nightly job on, it then runs every night on its own.",
         "done": "Done. Your vault: {vault}\nAgents query: {router}",
         "obsidian": "Opened the vault in Obsidian.", "obsidian_none": "Install Obsidian (https://obsidian.md), then “Open folder as vault” → {vault}",
         "py_old": "Python 3.9 or newer is required; this is {v}.",

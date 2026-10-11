@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.3 — 2026-10-11
+
+- **The Windows one-line install no longer closes the PowerShell window.** `bootstrap.ps1` ended with `exit $LASTEXITCODE`; under `irm … | iex` that exits the user's own session, so the window closed before the last line — the one saying what is left to do — could be read. Found by running the published one-liner on a real Windows host after 0.11.2. It now returns instead; a test keeps both PowerShell scripts ASCII-only and free of `exit`.
+- The "no model yet" message no longer promises nightly runs when the nightly job was not turned on.
+
 ## 0.11.2 — 2026-10-11
 
 What a stranger's agent checks before recommending it, plus the sixth outside review.
