@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.11.0 — 2026-10-11
+
+For anyone, with nothing to know and nothing to maintain. Plus the fifth outside review's two secret findings.
+
+**One line to install**
+- `curl -fsSL …/scripts/bootstrap.sh | sh` (macOS / Linux) and `irm …/scripts/bootstrap.ps1 | iex` (Windows) fetch the latest release, make a vault in `Documents/第二大脑` (Chinese template when the system language is Chinese) or `Documents/Second Brain`, install the router, the agent rules and the daily timer, and open the vault in Obsidian. An existing vault only gains missing skeleton files; nothing is overwritten; re-running upgrades. Only Python 3 is required (the Windows script installs it with winget when missing). The last line says the one step left, if any, in plain words. Run end to end on a real Windows 11 host.
+- **`template-zh/`**: the template in Chinese, with its own sample alias table.
+
+**Chinese recall on a fresh (small) vault**
+- A general two-character word list (jieba dictionary, freq ≥ 100, MIT; `lexicon_zh2.txt`) decides what is a word. Two or more real words the vault never contains, outnumbering those on the top page, mean the question is about something else (`纠错之后的房贷利率是多少`); below 300 pages only real or titled words count as matches (`天会` no longer does). Chinese template bench: half-off-topic refused 1/6 → 5/6, off-topic 5/6 → 6/6, gold page 9/12 unchanged — and unchanged with the alias table emptied. English template and author vault unchanged (+4 ms per query).
+
+**Secrets (fifth review)**
+- `redact()` missed 13 of 16 common shapes. It now covers labels in either language and any separator (`密钥：…`, `凭据 …`, `Key: …`), table cells, `?key=` / `&access_token=`, connection-string passwords, more provider prefixes, and a backstop for any unbroken piece of ≥ 16 characters mixing letters and digits (Mistral, Together, 智谱, Fireworks, Perplexity, NVIDIA, Cerebras …). All 16 shapes are regression tests, with 11 ordinary texts that must stay untouched.
+- **Secret pages**: a page named 凭据 / 密钥 / 秘钥 / 钥匙 / 口令 / credential / secret / password, or with `secret: true`, is never sent to a model, never quoted (the router shows only its path), never read by the API writer — no declaration needed.
+- **Keys never come from the vault.** A CLI writer runs inside the vault with full permissions, so a key there is visible to its model whatever KRouter filters. A key pasted on the key page now moves into `~/.dsh-krouter-keys.env` (chmod 600) on the next run, the page line becomes a note, and nothing reads keys from the vault. Pasting on the page still works for hosts who never open a terminal.
+- Recall cache schema `recall-v13` (full rebuild + vacuum on upgrade).
+
+**When the night's work did not happen**
+- A desktop notification (macOS, Linux `notify-send`, Windows balloon) when the seal or the nightly upkeep was skipped for lack of a model, or failed; at most once a day; `KROUTER_NOTIFY=0` off.
+
+**Docs**: README leads with the one-line install; an alias table is no longer a prerequisite for recommending it; what leaves the machine now names secret pages and says why keys never live in the vault.
+
+The DSH bridge tests (`extras/dsh/test-*.mjs`) no longer write the host's query log either — the last test entry point that did.
+
+Not changed: answer cards stay on by default until the scheduled real-traffic test on 2026-10-16 (the author's decision). Tests 172/172 on both router paths.
+
 ## 0.10.2 — 2026-10-11
 
 Fourth outside review. Both new findings reproduced, both fixed with regression tests that fail on 0.10.1.

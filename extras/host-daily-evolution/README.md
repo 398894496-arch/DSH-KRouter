@@ -34,7 +34,7 @@ export OBSIDIAN_VAULT=/path/to/DSH-KRouter/template
 ## Contract
 
 1. Set `OBSIDIAN_VAULT` to your vault root (copy `template/` there first).
-2. **API key first.** Paste `*_API_KEY` on `90 系统文件/自动化/自进化钥匙.md`. The writer locks the flagship model. **No key:** already-logged-in Claudian-class CLI (`grok` / official Codex / `claude` / …). Distill and two-step promotion both run. Do not use a PATH-level `agent`.
+2. **API key first.** Keys live in `~/.dsh-krouter-keys.env`; a key pasted on `90 系统文件/自动化/自进化钥匙.md` moves there on the next run. The writer locks the flagship model. **No key:** already-logged-in Claudian-class CLI (`grok` / official Codex / `claude` / …). Distill and two-step promotion both run. Do not use a PATH-level `agent`.
 3. Timer is on. Cloud chat automations are not this writer.
 4. Write L1 logs and L2 distillation. When the five gates pass, write `provisional` the same day (no ask). Do not auto-promote to `active`.
 5. Do not edit the alias table (`90 系统文件/canonical_sources.psv`). The API writer refuses that path; the host ticks rows in `别名候选.md`.

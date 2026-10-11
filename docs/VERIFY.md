@@ -61,6 +61,10 @@ The checks above cover the lock. [`tests/fixtures/recall_bench.jsonl`](../tests/
 python3 -m pytest -q tests/test_recall_bench.py
 ```
 
+The Chinese template (`template-zh/`, what a Chinese-speaking host starts with) has its own bench, [`tests/fixtures/recall_bench_zh.jsonl`](../tests/fixtures/recall_bench_zh.jsonl): 12 gold-page questions, 6 off-topic, 6 half-off-topic. A fresh vault is a small vault, and small vaults are where corpus statistics stop telling a word from a fragment (`天会`) or saying that `房贷` / `报销` are absent for a reason; 0.11.0 decides that from a general two-character word list instead. 0.10.2: gold page 9/12, off-topic refused 5/6, half-off-topic refused 1/6. 0.11.0: 9/12, 6/6, 5/6 (CI: ≥ 9, all, ≥ 5). **With the alias table emptied the numbers are the same** — on this template recall needs no lock noun at all. The English template and the author vault are unchanged by the change.
+
+**Windows, on a real host** (Windows 11, PowerShell 5.1, Python 3.12, 2026-10-11): `bootstrap.py` made the Chinese vault, installed the skill, put the alias table in the vault and registered the scheduled task; `route_knowledge.py` locked a Chinese question and refused an off-topic one; a fake key pasted on the key page moved into the keys file and never printed; `nightly.py --dry-run` and a real run (no model → `skipped`, report written); `run.py --dry-run`; `install_windows_task.ps1 -Uninstall`. The one-line `bootstrap.ps1` itself fetches a release, so it is checked on the host after a release is published.
+
 ---
 
 ## Layer 2 — comparison (lock vs neighbor)

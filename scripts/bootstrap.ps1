@@ -47,5 +47,7 @@ if (-not (Test-Path (Join-Path $Dest "scripts\bootstrap.py"))) {
 Set-Content -Path (Join-Path $Home_ "current.txt") -Value $Dest -Encoding ASCII
 Write-Output "DSH-KRouter $Tag -> $Dest"
 $env:PYTHONUTF8 = "1"
+# Python prints UTF-8; without this the 5.1 console decodes it in the ANSI code page and Chinese turns to garbage
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 & $Python (Join-Path $Dest "scripts\bootstrap.py") @BootArgs
 exit $LASTEXITCODE
