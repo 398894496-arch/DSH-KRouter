@@ -23,7 +23,6 @@ from pathlib import Path
 
 PLACEHOLDERS = ("YOUR_", "CHANGE_ME", "REPLACE", "TODO", "sk-your", "PASTE_")
 TIMEOUT = 12
-CLI_KIND_RE = re.compile(r"^[a-z][a-z0-9_-]{0,40}$")
 KEY_LINE = re.compile(r"^(?:export\s+)?([A-Z][A-Z0-9_]+)=(.*)$")
 GEMINI_NAMES = frozenset(
     {"GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"}
@@ -51,13 +50,35 @@ BEARER_URLS = {
     "COHERE_API_KEY": "https://api.cohere.com/v1/models",
     "NVIDIA_API_KEY": "https://integrate.api.nvidia.com/v1/models",
 }
-GENERIC_PROBE_TAILS = (
-    ("auth", "status"),
-    ("auth", "list"),
-    ("login", "status"),
-    ("models",),
-    ("status",),
-)
+
+
+def _load_lane():
+    """CLI candidates, login probes and harness flagships live in the skill's llm.py, shared with the
+    nightly steps. Loaded by file path so an unrelated `llm` package on sys.path cannot stand in for it."""
+    import importlib.util
+
+    here = Path(__file__).resolve().parent
+    for scripts in (here.parents[1] / "skill/krouter-obsidian/scripts",
+                    Path.home() / ".agents/skills/krouter-obsidian/scripts"):
+        path = scripts / "llm.py"
+        if path.is_file():
+            spec = importlib.util.spec_from_file_location("krouter_llm", path)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod
+    raise SystemExit("DSH-KRouter: skill/krouter-obsidian/scripts/llm.py not found")
+
+
+_lane = _load_lane()
+CLI_KIND_RE = _lane.CLI_KIND_RE
+GENERIC_PROBE_TAILS = _lane.GENERIC_PROBE_TAILS
+CLI_FLAGSHIP = _lane.CLI_FLAGSHIP
+detect_candidates = _lane.detect_candidates
+writer_probe_argv = _lane.writer_probe_argv
+probe_writer = _lane.probe_writer
+writer_ok = _lane.writer_ok
+writer_kind = _lane.writer_kind
+detect_writer = _lane.detect_writer
 
 
 def vault_root() -> Path:
@@ -189,129 +210,6 @@ def probe_key(name: str, key: str, extra: dict[str, str] | None = None) -> str:
     return str(code)
 
 
-def detect_candidates() -> list[Path]:
-    home = Path.home()
-    return [
-        home / ".grok/bin/grok",
-        home / ".local/bin/grok",
-        Path("/Applications/ChatGPT.app/Contents/Resources/codex"),
-        Path("/Applications/Codex.app/Contents/Resources/codex"),
-        Path("/opt/homebrew/bin/claude"),
-        home / ".local/bin/claude",
-        Path("/usr/local/bin/claude"),
-        home / ".cursor/bin/cursor-agent",
-        home / ".cursor/bin/agent",
-        Path("/opt/homebrew/bin/opencode"),
-        home / ".opencode/bin/opencode",
-        Path("/opt/homebrew/bin/kimi"),
-        home / ".local/bin/kimi",
-        Path("/opt/homebrew/bin/pi"),
-        Path("/opt/homebrew/bin/vibe"),
-        Path("/opt/homebrew/bin/antigravity"),
-    ]
-
-
-def writer_probe_argv(writer: str) -> tuple[str, list[str] | None]:
-    name = os.path.basename(writer).lower().replace(".exe", "")
-    posix = writer.replace("\\", "/")
-    if name == "grok":
-        return "grok", [writer, "models"]
-    if name == "agent":
-        if "/.grok/" in posix:
-            return "grok", [writer, "models"]
-        if "/.cursor/" in posix:
-            return "cursor", [writer, "status"]
-        return "path-agent", None
-    if name == "cursor-agent":
-        return "cursor", [writer, "status"]
-    if name == "codex":
-        return "codex", [writer, "login", "status"]
-    if name in {"claude", "claude-max"}:
-        return "claude", [writer, "auth", "status"]
-    if name == "opencode":
-        return "opencode", [writer, "auth", "list"]
-    if name == "kimi":
-        return "kimi", [writer, "auth", "status"]
-    if name == "pi":
-        return "pi", [writer, "login", "status"]
-    if name == "vibe":
-        return "vibe", [writer, "auth", "status"]
-    if name == "antigravity":
-        return "antigravity", [writer, "auth", "status"]
-    if CLI_KIND_RE.match(name):
-        return name, None
-    return "other", None
-
-
-def _run_cmd(argv: list[str]) -> tuple[int, str]:
-    env = os.environ.copy()
-    env.setdefault("HOME", str(Path.home()))
-    try:
-        proc = subprocess.run(argv, capture_output=True, text=True, timeout=25, env=env)
-    except (OSError, subprocess.TimeoutExpired):
-        return -1, "network"
-    return proc.returncode, f"{proc.stdout}\n{proc.stderr}".lower()
-
-
-def probe_writer(writer: str) -> str:
-    writer = (writer or "").strip()
-    if not writer:
-        return "unset"
-    if not os.path.isabs(writer):
-        return "relative"
-    if not os.path.isfile(writer) or not os.access(writer, os.X_OK):
-        return "not-exec"
-    kind, argv = writer_probe_argv(writer)
-    if kind == "path-agent":
-        return kind
-    tails = [tuple(argv[1:])] if argv is not None else list(GENERIC_PROBE_TAILS)
-    last = f"{kind}:exit1"
-    for tail in tails:
-        code, text = _run_cmd([writer, *tail])
-        if text == "network" and code == -1:
-            return "network"
-        if (
-            "not authenticated" in text
-            or "authentication required" in text
-            or "not logged in" in text
-            or "loggedin false" in text
-            or "logged_in: false" in text
-        ):
-            return f"{kind}:unauth"
-        if code == 0:
-            return f"{kind}:ok"
-        last = f"{kind}:exit{code}"
-    return last
-
-
-def writer_ok(result: str) -> bool:
-    return result.endswith(":ok")
-
-
-def writer_kind(result: str) -> str:
-    return result.split(":", 1)[0] if ":" in result else result
-
-
-def detect_writer(pinned: str = "") -> tuple[str, str]:
-    """Return (path, probe_result). Prefer a pinned absolute binary, else first logged-in CLI."""
-    if pinned.strip():
-        return pinned.strip(), probe_writer(pinned.strip())
-    first_existing = ""
-    first_existing_result = "unset"
-    for path in detect_candidates():
-        result = probe_writer(str(path))
-        if result == "path-agent":
-            continue
-        if writer_ok(result):
-            return str(path), result
-        if path.is_file() and os.access(path, os.X_OK) and not first_existing:
-            first_existing = str(path)
-            first_existing_result = result
-    if first_existing:
-        return first_existing, first_existing_result
-    return "", "unset"
-
-
 def live_keys(keys: dict[str, str], extra: dict[str, str], probe: bool) -> tuple[dict[str, str], str]:
     """Return (live_key_map, field) where field is present|missing|dead|unknown."""
     secret_names = [n for n in keys if not is_config_name(n)]
@@ -347,10 +245,6 @@ def writer_field_of(writer: str, wr: str) -> str:
     return "missing"
 
 
-CLI_FLAGSHIP = {
-    "grok": "grok-4.6",
-    "claude": "opus",
-}
 LIVE_FOREIGN_ROUTER = "obsidian-knowledge-router"
 
 

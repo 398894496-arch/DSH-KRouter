@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """One model channel for the nightly scripts and the daily writer: API key first, then a logged-in CLI.
 
-This file owns the provider table and the flagship lock; `extras/host-daily-evolution/api_writer.py`
-imports them from here, so the nightly steps and the writer see the same providers in the same order
-(PROTOCOL rule 7). Keys come from the process environment, then `KROUTER_KEYS_ENV` (default
+This file owns the provider table, the flagship lock, and the list of CLI harnesses with their login
+probes; `extras/host-daily-evolution/api_writer.py` and `resolve.py` import them from here, so the
+nightly steps and the writer see the same providers and the same CLIs in the same order (PROTOCOL
+rule 7). Keys come from the process environment, then `KROUTER_KEYS_ENV` (default
 `~/.dsh-krouter-keys.env`), then the vault page `90 系统文件/自动化/自进化钥匙.md`. Values are never
 printed and never put in a URL. The model is `KROUTER_LEARN_MODEL`, else `KROUTER_DISTILL_MODEL`, else
-the provider's flagship from its live catalog, else the table's default. With no usable key,
-`claude` / `codex` on PATH. A host that sets `KROUTER_LEARN_CLI` (or passes `--cli`) has picked a CLI
-on purpose; it goes first.
+the provider's flagship from its live catalog, else the table's default. With no usable key, the first
+logged-in CLI the writer would pick (grok, official Codex, claude, cursor-agent, opencode, kimi, pi,
+vibe, antigravity; `KROUTER_WRITER` pins one). A host that sets `KROUTER_LEARN_CLI` (or passes
+`--cli`) has picked a CLI on purpose; it goes first.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -75,6 +78,176 @@ FLAGSHIP_NEEDLES = (
     ("sonar-pro", 58),
 )
 FLAGSHIP_PENALTY = ("mini", "nano", "haiku", "lite", "small", "instant", "flash-lite", "tiny")
+
+
+# ---- CLI harnesses (no key). The writer's detection, shared. -------------------------------------
+
+CLI_KIND_RE = re.compile(r"^[a-z][a-z0-9_-]{0,40}$")
+GENERIC_PROBE_TAILS = (("auth", "status"), ("auth", "list"), ("login", "status"), ("models",), ("status",))
+CLI_FLAGSHIP = {"grok": "grok-4.6", "claude": "opus"}
+PATH_NAMES = ("grok", "codex", "claude", "cursor-agent", "opencode", "kimi", "pi", "vibe", "antigravity")
+
+
+def detect_candidates() -> list[Path]:
+    """Known install paths first, then the same names on PATH (never a PATH-level `agent`)."""
+    home = Path.home()
+    fixed = [
+        home / ".grok/bin/grok",
+        home / ".local/bin/grok",
+        Path("/Applications/ChatGPT.app/Contents/Resources/codex"),
+        Path("/Applications/Codex.app/Contents/Resources/codex"),
+        Path("/opt/homebrew/bin/claude"),
+        home / ".local/bin/claude",
+        Path("/usr/local/bin/claude"),
+        home / ".cursor/bin/cursor-agent",
+        home / ".cursor/bin/agent",
+        Path("/opt/homebrew/bin/opencode"),
+        home / ".opencode/bin/opencode",
+        Path("/opt/homebrew/bin/kimi"),
+        home / ".local/bin/kimi",
+        Path("/opt/homebrew/bin/pi"),
+        Path("/opt/homebrew/bin/vibe"),
+        Path("/opt/homebrew/bin/antigravity"),
+    ]
+    seen = {str(p) for p in fixed}
+    for name in PATH_NAMES:
+        found = shutil.which(name)
+        if found and found not in seen:
+            fixed.append(Path(found))
+            seen.add(found)
+    return fixed
+
+
+def writer_probe_argv(writer: str) -> tuple[str, list[str] | None]:
+    name = os.path.basename(writer).lower().replace(".exe", "")
+    posix = writer.replace("\\", "/")
+    if name == "grok":
+        return "grok", [writer, "models"]
+    if name == "agent":
+        if "/.grok/" in posix:
+            return "grok", [writer, "models"]
+        if "/.cursor/" in posix:
+            return "cursor", [writer, "status"]
+        return "path-agent", None
+    if name == "cursor-agent":
+        return "cursor", [writer, "status"]
+    if name == "codex":
+        return "codex", [writer, "login", "status"]
+    if name in {"claude", "claude-max"}:
+        return "claude", [writer, "auth", "status"]
+    if name == "opencode":
+        return "opencode", [writer, "auth", "list"]
+    if name == "kimi":
+        return "kimi", [writer, "auth", "status"]
+    if name == "pi":
+        return "pi", [writer, "login", "status"]
+    if name == "vibe":
+        return "vibe", [writer, "auth", "status"]
+    if name == "antigravity":
+        return "antigravity", [writer, "auth", "status"]
+    if CLI_KIND_RE.match(name):
+        return name, None
+    return "other", None
+
+
+def _run_cmd(argv: list[str]) -> tuple[int, str]:
+    env = os.environ.copy()
+    env.setdefault("HOME", str(Path.home()))
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, timeout=25, env=env, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired):
+        return -1, "network"
+    return proc.returncode, f"{proc.stdout}\n{proc.stderr}".lower()
+
+
+def probe_writer(writer: str) -> str:
+    writer = (writer or "").strip()
+    if not writer:
+        return "unset"
+    if not os.path.isabs(writer):
+        return "relative"
+    if not os.path.isfile(writer) or not os.access(writer, os.X_OK):
+        return "not-exec"
+    kind, argv = writer_probe_argv(writer)
+    if kind == "path-agent":
+        return kind
+    tails = [tuple(argv[1:])] if argv is not None else list(GENERIC_PROBE_TAILS)
+    last = f"{kind}:exit1"
+    for tail in tails:
+        code, text = _run_cmd([writer, *tail])
+        if text == "network" and code == -1:
+            return "network"
+        if (
+            "not authenticated" in text
+            or "authentication required" in text
+            or "not logged in" in text
+            or "loggedin false" in text
+            or '"loggedin": false' in text
+            or "logged_in: false" in text
+        ):
+            return f"{kind}:unauth"
+        if code == 0:
+            return f"{kind}:ok"
+        last = f"{kind}:exit{code}"
+    return last
+
+
+def writer_ok(result: str) -> bool:
+    return result.endswith(":ok")
+
+
+def writer_kind(result: str) -> str:
+    return result.split(":", 1)[0] if ":" in result else result
+
+
+def detect_writer(pinned: str = "") -> tuple[str, str]:
+    """Return (path, probe_result). Prefer a pinned absolute binary, else first logged-in CLI."""
+    if pinned.strip():
+        return pinned.strip(), probe_writer(pinned.strip())
+    first_existing = ""
+    first_existing_result = "unset"
+    for path in detect_candidates():
+        result = probe_writer(str(path))
+        if result == "path-agent":
+            continue
+        if writer_ok(result):
+            return str(path), result
+        if path.is_file() and os.access(path, os.X_OK) and not first_existing:
+            first_existing = str(path)
+            first_existing_result = result
+    if first_existing:
+        return first_existing, first_existing_result
+    return "", "unset"
+
+
+_CLI: list[str] = []  # the logged-in CLI, detected once per process
+
+
+def logged_in_cli() -> str:
+    """The CLI the writer would pick with no key: `KROUTER_WRITER` if set, else the first logged-in one."""
+    if not _CLI:
+        path, result = detect_writer(os.environ.get("KROUTER_WRITER", ""))
+        _CLI.append(path if writer_ok(result) else "")
+    return _CLI[0]
+
+
+def text_argv(cli: str, prompt_file: str) -> tuple[list[str], bool]:
+    """(argv, prompt on stdin) for a plain text completion: no tools, no file writes."""
+    kind, _ = writer_probe_argv(cli)
+    model = os.environ.get("KROUTER_LEARN_MODEL", "") or os.environ.get("KROUTER_DISTILL_MODEL", "") \
+        or CLI_FLAGSHIP.get(kind, "")
+    prompt = Path(prompt_file).read_text(encoding="utf-8")
+    if kind == "codex":
+        return [cli, "exec", "--skip-git-repo-check", "--sandbox", "read-only", "-"], True
+    if kind == "claude":
+        argv = [cli, "--print", "--tools", "", "--output-format", "text", "--no-session-persistence"]
+        return argv + (["--model", model] if model else []) + [prompt], False
+    if kind == "grok":
+        argv = [cli] + (["--model", model] if model else [])
+        return argv + ["--prompt-file", prompt_file, "--max-turns", "1", "--cwd", str(Path(prompt_file).parent)], False
+    if kind == "opencode":
+        return [cli, "run", prompt], False
+    return [cli, "--print", prompt], False
 
 
 class NoModel(RuntimeError):
@@ -203,9 +376,10 @@ def plan(vault: Path | None = None) -> list[tuple[str, str]]:
     for spec in api_specs(keys):
         # without an override the model is the catalog's flagship, decided at call time
         steps.append((f"api:{spec['name']}", override or f"flagship (default {spec['model']})"))
-    cli = shutil.which("claude") or shutil.which("codex") or ""
-    if not explicit and cli and Path(cli).is_file() and os.access(cli, os.X_OK):
-        steps.append(("cli", cli))
+    if not explicit:
+        cli = logged_in_cli()
+        if cli:
+            steps.append(("cli", cli))
     return steps
 
 
@@ -246,16 +420,12 @@ def complete(prompt: str, vault: Path | None = None) -> str:
                     model = _LOCKED[spec["name"]]
                 return _call_api(spec, key, model, prompt)
             if kind == "cli":
-                name = Path(detail).name.lower()
-                if name.startswith("codex"):
-                    argv = [detail, "exec", "--skip-git-repo-check", "-"]
-                    proc = subprocess.run(argv, input=prompt, capture_output=True, text=True, timeout=TIMEOUT)
-                else:
-                    argv = [detail, "--print", "--tools", "", "--output-format", "text", "--no-session-persistence"]
-                    model = os.environ.get("KROUTER_LEARN_MODEL", "")
-                    if model:
-                        argv += ["--model", model]
-                    proc = subprocess.run(argv + [prompt], capture_output=True, text=True, timeout=TIMEOUT)
+                with tempfile.TemporaryDirectory(prefix="krouter-llm-") as tmp:
+                    prompt_file = str(Path(tmp) / "prompt.md")
+                    Path(prompt_file).write_text(prompt, encoding="utf-8")
+                    argv, on_stdin = text_argv(detail, prompt_file)
+                    proc = subprocess.run(argv, input=prompt if on_stdin else None, capture_output=True, text=True,
+                                          timeout=TIMEOUT, cwd=tmp, stdin=None if on_stdin else subprocess.DEVNULL)
                 if proc.returncode != 0:
                     raise RuntimeError((proc.stderr or proc.stdout)[-200:])
                 return proc.stdout
@@ -264,4 +434,4 @@ def complete(prompt: str, vault: Path | None = None) -> str:
             errors.append(f"{kind}: {str(exc)[:160]}")
     if errors:
         raise RuntimeError("all model channels failed: " + " | ".join(errors))
-    raise NoModel("no API key and no logged-in CLI; set a *_API_KEY or log in claude / codex")
+    raise NoModel("no API key and no logged-in CLI; set a *_API_KEY or log in one of: " + ", ".join(PATH_NAMES))

@@ -358,6 +358,8 @@ def test_llm_plan_order(monkeypatch, tmp_path):
             monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("KROUTER_KEYS_ENV", str(tmp_path / "none.env"))
     monkeypatch.setenv("PATH", str(tmp_path))
+    monkeypatch.setattr(llm, "detect_candidates", lambda: [])
+    llm._CLI.clear()
     assert llm.plan(None) == []
     monkeypatch.setenv("GEMINI_API_KEY", "g")
     monkeypatch.setenv("OPENAI_API_KEY", "x")
@@ -381,3 +383,24 @@ def test_llm_plan_order(monkeypatch, tmp_path):
     with pytest.raises(llm.NoModel):
         monkeypatch.setenv("PATH", str(tmp_path / "empty"))
         llm.complete("hi")
+
+
+def test_llm_no_key_uses_the_writers_cli_detection(monkeypatch, tmp_path):
+    """Only grok installed, no key: the nightly lane finds what the writer finds and gets text back."""
+    import llm
+
+    for k in list(__import__("os").environ):
+        if k.endswith(("_API_KEY", "_BASE_URL", "_MODEL")) or k in ("KROUTER_LEARN_CLI", "KROUTER_WRITER"):
+            monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("KROUTER_KEYS_ENV", str(tmp_path / "none.env"))
+    grok = tmp_path / "bin" / "grok"
+    grok.parent.mkdir()
+    grok.write_text('#!/bin/sh\n[ "$1" = models ] && exit 0\n'
+                    'while [ $# -gt 0 ]; do [ "$1" = --prompt-file ] && { printf "echo:"; cat "$2"; exit 0; }; shift; done\n'
+                    'exit 2\n')
+    grok.chmod(0o755)
+    monkeypatch.setattr(llm, "detect_candidates", lambda: [tmp_path / "missing" / "claude", grok])
+    llm._CLI.clear()
+    assert llm.plan(None) == [("cli", str(grok))]
+    assert llm.complete("你好") == "echo:你好"
+    llm._CLI.clear()
