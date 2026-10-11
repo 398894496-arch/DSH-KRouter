@@ -141,7 +141,7 @@ The agent does not dump the vault into context. It sends a short noun, or a shor
 
 ### Alias scoring
 
-`canonical_lookup.py` against `canonical_sources.psv`:
+`canonical_lookup.py` against the alias table in force — `KROUTER_MAP`, else the vault's own `90 系统文件/canonical_sources.psv`, else the sample shipped with the skill (receipts print which, as `canonical_map:`). The table lives in the vault so it syncs and survives upgrades; `propose_aliases.py` drafts rows for the host to tick, and only ticked, re-checked rows are appended:
 
 1. Normalized alias equals query: highest.
 2. Alias is a substring of the query and carries it (alias ≥ 4 characters, or at least half the query): next. A shorter alias inside a longer question only ranks suggestions.
@@ -157,7 +157,11 @@ Miss: **L1 recall** (`recall_index.py`). Ranked over the route’s scope; rule p
 
 ### Nightly upkeep (bundled timer)
 
-After the daily seal, `extras/host-daily-evolution/run.sh` runs `compile_subconscious.py` → `reconsolidate.py` → `consolidate_topics.py` → `answer_cards.py` → `checkup.py`; `KROUTER_NIGHTLY=0` turns them off. Each is independent and none changes the seal's exit code. Model steps go through `llm.py`, which owns the one provider table and flagship lock that `api_writer.py` also imports — `*_API_KEY` first in the writer's order (model from `KROUTER_LEARN_MODEL` or the catalog flagship), then a logged-in `claude` / `codex`; `KROUTER_LEARN_CLI` is the host's explicit pick and goes first; with neither the step prints `skipped`. Machine output is recall-only and `provisional`: learned triggers, topic dossiers, and answer cards (specifics checked as whole tokens, question grounded in the page, keyed to the page hash, printed as `answer (generated):`; meaning is not checked). None of it can claim a page.
+After the daily seal, the timer (`run.sh`; `run.py` on Windows) runs `nightly.py`: `compile_subconscious.py` → `reconsolidate.py` → `consolidate_topics.py` → `answer_cards.py` → `checkup.py`; `KROUTER_NIGHTLY=0` turns them off. Each is independent and none changes the seal's exit code. Each outcome (state, reason, model lane, calls, characters sent — metadata only) is written to `90 系统文件/自动化/夜间维护.md` and the health page (`nightly`, `nightly_at`); `status` prints it and raises `host_action` when steps are skipped, failing, or three days old. `--dry-run` lists what would be sent and written with no model call. Model steps go through `llm.py`, which owns the provider table, the flagship lock and the CLI candidates with their login probes; `api_writer.py` and `resolve.py` import them, so both lanes see the same providers and CLIs in the same order — `*_API_KEY` first (model from `KROUTER_LEARN_MODEL` or the catalog flagship), then the CLI the writer would pick; `KROUTER_LEARN_CLI` is the host's explicit pick and goes first. Machine output is recall-only and `provisional`: learned triggers, topic dossiers, and answer cards (specifics checked as whole tokens, answer words drawn from the page, question grounded in the page, then a second model pass on question / answer / meaning; keyed to the page hash; printed as `answer (generated):`). None of it can claim a page.
+
+### Zone names
+
+The code speaks the default layout. A vault with its own folder names puts `krouter-zones.psv` at its root, one `default prefix|vault prefix` per line (directories or single files, longest prefix wins). `zones.real()` maps default paths onto the vault; `zones.canon()` maps vault paths back, so tiering and log detection keep using the default names. Writers get the mapping: API paths are translated on write, CLI writers see it in their runtime prompt.
 
 ### Receipt
 

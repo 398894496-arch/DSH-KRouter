@@ -89,7 +89,7 @@ def main() -> int:
         print("set OBSIDIAN_VAULT", file=sys.stderr)
         return 2
     vault = Path(args.vault)
-    out = vault / args.out
+    out = ri.zones.path(vault, args.out)
     cursor = state_dir() / "reconsolidate.cursor"
     since = args.since or (cursor.read_text().strip() if cursor.is_file() else "")
     misses = load_misses(state_dir() / "queries.jsonl", since)[: args.max]
@@ -101,6 +101,10 @@ def main() -> int:
         if cands and not any((h["rel"], row["q"]) in have for h in cands):
             items.append({"id": str(len(items)), "q": row["q"], "cands": cands})
     report = {"misses": len(misses), "asked": len(items), "learned": 0, "none": 0}
+    if args.dry_run:
+        report["chars"] = len(PROMPT) + sum(len(it["q"]) + sum(len(h["rel"]) + 75 for h in it["cands"]) for it in items) if items else 0
+        report["sends"] = "router queries the router did not answer well, and candidate page paths" if items else "nothing"
+        report["writes"] = [args.out] if items else []
     if items and not args.dry_run:
         blocks = []
         for it in items:

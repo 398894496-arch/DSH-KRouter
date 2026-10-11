@@ -9,14 +9,16 @@ The job auto-detects the CLI each run. Keys come from the vault page, `~/.dsh-kr
 | File | Role |
 |---|---|
 | `check.sh` | Proves writer files exist and reads `lamp:`. Default `running`. Does not fire the job. |
-| `run.sh` | OS job entry. Calls `resolve.py --exec`. Skips distill if the key and CLI login are both missing. |
+| `run.sh` | OS job entry. Calls `resolve.py --exec`, then `nightly.py` (the five nightly steps, outcomes on `夜间维护.md` and the health page). Skips distill if the key and CLI login are both missing. `--dry-run` lists what would be sent and written. |
+| `run.py` | Same as `run.sh` for Windows (no `/bin/sh`). `scripts/install_windows_task.ps1` registers it as a daily task. |
 | `resolve.py` | The one probe engine: collects keys (process env, `~/.dsh-krouter-keys.env`, vault page — page wins), detects a logged-in CLI, otherwise runs the bundled API writer. Never prints secrets. |
 | `api_writer.py` | Distill with only an `*_API_KEY`. No grok / Codex / claude required. |
 | `wire_keys.py` | Installer front end over `resolve.py`: detect a logged-in CLI (`--detect`), probe keys, keep the live ones in `~/.dsh-krouter-keys.env`. Never copies `auth.json`, never writes the vault. |
 | `patch_health.py` | Updates health fields (`present` / `missing` / `dead` / `unknown`). Never the secret. |
 | `PROMPT.md` | Writer contract. Passed to the detected CLI. |
 | `launchd.example.plist` | macOS example. `OBSIDIAN_VAULT`, `KROUTER_ROUTER`, `HOME`, `PATH` (includes `~/.grok/bin`). No key slot. |
-| `cron.example` | cron example. Same. |
+| `cron.example` | cron example. Same. `install.sh` writes one marked crontab line on Linux without systemd. |
+| `systemd/` | systemd user service + timer that `install.sh` installs on Linux. |
 
 `dsh plugin add` is a mount, not this writer. It does not replace the timer.
 
@@ -35,8 +37,8 @@ export OBSIDIAN_VAULT=/path/to/DSH-KRouter/template
 2. **API key first.** Paste `*_API_KEY` on `90 系统文件/自动化/自进化钥匙.md`. The writer locks the flagship model. **No key:** already-logged-in Claudian-class CLI (`grok` / official Codex / `claude` / …). Distill and two-step promotion both run. Do not use a PATH-level `agent`.
 3. Timer is on. Cloud chat automations are not this writer.
 4. Write L1 logs and L2 distillation. When the five gates pass, write `provisional` the same day (no ask). Do not auto-promote to `active`.
-5. Do not edit `canonical_sources.psv`.
+5. Do not edit the alias table (`90 系统文件/canonical_sources.psv`). The API writer refuses that path; the host ticks rows in `别名候选.md`.
 6. On failure, leave a to-summarize note.
-7. Uninstalling a Cursor / Codex / Claude Code / DSH mount does not stop this job. Disable the OS schedule yourself, then set `lamp: unused`.
+7. Uninstalling a Cursor / Codex / Claude Code / DSH mount does not stop this job. `scripts/uninstall.sh` removes the schedule (launchd / systemd / crontab line); on Windows `install_windows_task.ps1 -Uninstall`.
 
 Paste a live `*_API_KEY` on the vault page, **or** log in a coding CLI. Either lane distills **and** promotes. API lane auto-locks the flagship. Subscription lane is the Claudian channel (spawn the logged-in harness).

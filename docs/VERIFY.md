@@ -53,6 +53,14 @@ python3 scripts/verify_canonical_map.py \
 
 It does **not** verify the historical claim “the author’s live map was 26/26 · 156/156.” That map is not in this repository. Running the script on `template/` is not a replay of that number.
 
+### Recall bench (refuse instead of guess, below the lock)
+
+The checks above cover the lock. [`tests/fixtures/recall_bench.jsonl`](../tests/fixtures/recall_bench.jsonl) covers what answers a miss: 24 questions against `template/` — 12 with a gold page, 6 the vault cannot answer, and 6 half-off-topic ones that borrow one vault word (`咖啡机的定时器多久除垢一次` shares only `定时` with the timer page). Recall must refuse all 12 non-answerable ones and put the gold page first for at least 9 of 12. 0.9.3: 18/24, three half-off-topic Chinese questions answered `high`. 0.10.0: 21/24, every refusal holds; the three misses are gold pages ranked below a neighbor.
+
+```bash
+python3 -m pytest -q tests/test_recall_bench.py
+```
+
 ---
 
 ## Layer 2 — comparison (lock vs neighbor)
@@ -119,7 +127,7 @@ Layers 1–3 use questions someone wrote for a test. This layer uses the questio
 | ≤ 0.5.1 vs 0.8.0 | 0.66 / 14 / 45 | 1.41 / 52 / 14 |
 | 0.8.0 vs 0.9.0 | 1.34 / 46 / 15 | 1.43 / 52 / 12 |
 
-What moved it, in order of effect: answering misses with ranked recall instead of a whole-sentence grep; widening single-page routes; topic dossiers for things that lived only in daily logs (one topic appeared in 44 logs and on zero pages); answer cards. Learned triggers alone stayed inside the noise in their first run — they pay off as questions repeat.
+What moved it, in order of effect: answering misses with ranked recall instead of a whole-sentence grep; widening single-page routes; topic dossiers for things that lived only in daily logs (one topic appeared in 44 logs and on zero pages); name and single-concept ranking. Answer cards do not show in the ablations below. Learned triggers alone stayed inside the noise in their first run — they pay off as questions repeat.
 
 **Held-out synthetic set** (30 questions written before tuning; 24 with a gold page, 6 with none):
 
@@ -129,6 +137,21 @@ What moved it, in order of effect: answering misses with ranked recall instead o
 | Gold page first | 0% | 75% | 75% |
 | Wrong lock | 0 / 30 | 0 / 30 | 0 / 30 |
 | Off-topic question answered | 0 / 6 | 0 / 6 | 0 / 6 |
+
+**Is this a held-out set? No.** The 92 queries are a development set: the remaining failures below were read one by one, and the nightly learning step reads the same query log. The held-out synthetic set above is held out, and on it 0.6.0 and 0.10.0 are flat (gold page found 88% → 88%, first 75% → 71% on the same day's vault; the 0.9.0 column was measured on an earlier state of the vault). So the gains from 0.7 on show on real traffic the author tuned against, not on questions nobody tuned against.
+
+**Ablations (0.10.0, same 92 queries, same judge).** Does the answer card earn its keep?
+
+| Removed | Without | With | Difference |
+|---|---|---|---|
+| the `answer (generated):` line only | 1.47 / 52 / 9 | 1.46 / 51 / 9 | −0.01 |
+| answer cards entirely (no card triggers, no answer line) | 1.47 / 52 / 9 | 1.49 / 54 / 9 | +0.02 |
+
+Both are inside the ±0.05 noise. On this traffic and this judge, answer cards do not measurably help: the page plus its `how` line already scores 2 where a card would. Two caveats: the judge (Claude Opus) is the model family that writes the cards, so a self-preference bias would have favoured them, not hidden them; and 92 queries cannot resolve an effect under ~0.1. Cards stay because they cost little at query time and are checked twice (below), but the 0.8 → 0.9 gain should be credited to the same release's title and single-concept ranking, not to cards.
+
+**Card checks against adversarial cards.** 160 cards built against the author vault — 40 each of: a question that borrows one page word to ask about something else, an answer swapped in from another question on the page, an answer with its meaning flipped (specifics kept), an answer copied from another page — plus all 447 real cards. Lexical checks alone keep 436/447 real cards and let 121/160 bad ones through (they catch only copied answers, 37/40). The second model pass in `answer_cards.py` passes 446/447 real cards (the one it fails is a truncated identifier the lexical check also fails) and catches 160/160 bad ones.
+
+**Fresh held-out traffic.** Not yet. No new router query from the author's agents has been logged since the 92 were frozen (2026-10-10) beyond four. The query log is now kept free of test and evaluation calls (0.10.0 found 514 of its 518 lines were the author's own evaluation runs and pytest fixtures; they were removed before the nightly learning could read them). The next layer-4 number will be a blind judge on at least 50 queries logged after the freeze, against the same two routers.
 
 **What is left.** Of the 12 queries still judged useless in the same-run comparison: four ask about something no page in the vault mentions and a fifth about something one page mentions in passing (refusing is the right answer, but the judge scores it 0); two are too vague without the conversation they came from (`下一步优化`); the other five are plain retrieval misses on things that are written down (`Codex AGENTS`, `runtime36 上传 实测 发版`). On the synthetic set the gold page is in the top 10 for 95% of questions, so most remaining gains come from what gets written down — but real traffic still shows a handful of ranking misses.
 

@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.10.0 — 2026-10-11
+
+Third outside review (two parts: a re-review of 0.9.3, and "would a stranger's agent recommend this"). Every finding was reproduced first; one proposed fix was measured and replaced (below).
+
+**Behaviour that did not match the docs**
+
+- **One CLI lane.** With no key, the nightly steps only knew `claude` / `codex`, while the writer detects grok, Codex, claude, cursor-agent, opencode, kimi, pi, vibe, antigravity. A grok-only host got five `skipped` steps and no sign of it. `llm.py` now owns the CLI candidates and their login probes; `resolve.py` imports them, so both lanes pick the same CLI. Each harness has a text-only invocation (grok: single-turn `--prompt-file`, verified).
+- **Pure-shell `status` stopped before `host_action`** whenever no day was pending (a trailing `[ … ] &&` returned 1 under `set -e`). Fixed; found while testing the nightly line.
+
+**Answer cards**
+
+- The review proposed requiring half of a card question's words to be on the page. Measured on the 447 real cards it would drop 152 (34%, including `日更每天几点跑`), and the reviewer's adversarial card (0.125) sits inside the real cards' range (0.09–0.17): no word-overlap threshold separates them. Instead: lexical checks gain "most of the answer's words come from the page" (real cards ≥ 0.38; threshold 0.3), and a **second model pass** checks each card once — is the question about this page, does the answer answer it, is anything flipped or added. On 160 adversarial cards (half-off-topic question, swapped answer, flipped meaning, copied answer; 40 each) lexical checks catch 39, the second pass 160, with no real card lost beyond the 11 the lexical check already drops. This also closes 0.9.3's admitted gap: a reworded sentence that flips the page is now caught. Verified cards carry `v: 1`; unverified ones are re-checked the next night; `checkup.py` counts them.
+- **Ablations on the 92 real queries** (same judge): removing the answer line 1.46 → 1.47; removing cards entirely 1.49 → 1.47. Both inside the ±0.05 noise. Cards do not measurably help on this traffic; the 0.8 → 0.9 gain belongs to that release's ranking changes. Docs no longer credit cards. Cards stay (cheap at query time, now checked twice).
+- Secret filter: a long id made of short `-`/`_` pieces (`20260811-090406-v4-flash-…`) is no longer taken for a key; a 24+ unbroken mixed run (keys, 40-hex tokens) still is.
+
+**Recall**
+
+- A question with ≥ 2 Chinese characters the vault never contains, matching one content word, is out of the vault (`咖啡机的定时器多久除垢一次` matched `定时` and came back `high`). Template bench 18/24 → 21/24; author vault synthetic, held-out and all 92 real queries unchanged.
+- **Public recall bench in CI** (`tests/fixtures/recall_bench.jsonl`, template): 12 gold-page, 6 off-topic, 6 half-off-topic questions. Every off-topic and half-off-topic one must be refused; gold page first ≥ 9/12.
+
+**The host's data**
+
+- **The alias table lives in the vault** (`90 系统文件/canonical_sources.psv`): it syncs with the vault and is in its snapshots. `map_for()` resolves `KROUTER_MAP` > the vault's table > the shipped sample everywhere (router py and sh, recall, L0, checkup); receipts print `canonical_map:`.
+- **`install.sh --upgrade`** (`--force` is the same) replaces code only and keeps the alias table, ledgers and symlinks; a table edited in the old location moves into the vault once (a symlinked one gets a `HOST ACTION` instead of being rewritten behind another tool). Fresh installs seed the vault with the sample once.
+- **`scripts/uninstall.sh`**: removes the timer (launchd / systemd / crontab line), Cursor rules, hook and skill; saves an alias table that is not in the vault yet; leaves the vault alone; `--dry-run`, `--purge` (cache and query log). Keys file is never deleted.
+- **Timers beyond macOS.** Linux: a systemd user timer, or one marked crontab line. Windows: `extras/host-daily-evolution/run.py` (a Python twin of `run.sh`) and `scripts/install_windows_task.ps1` (`-Uninstall`). The PowerShell script has not been run on a Windows host yet.
+- **Configurable zone names.** `krouter-zones.psv` at the vault root maps the default layout (`90 系统文件|System`, `Agent第二大脑.md|Home.md`, …); longest prefix wins, files too. Wired through the router, recall, cards, topics, checkup, nightly, ask, the key page and both writers. The DSH bridge still assumes the default names.
+- **Alias cold start.** `propose_aliases.py` drafts lock rows from the vault — unlocked rule / topic pages, ranked by how often real traffic reached them without a lock; `--model` adds model-proposed nouns — into `90 系统文件/自动化/别名候选.md`. The host ticks rows; `--apply` re-checks and appends only those. Nothing is written unticked.
+
+**Visibility and disclosure**
+
+- **`nightly.py`** runs the five steps and writes each outcome — state, reason, model lane, calls, characters sent (metadata only) — to `90 系统文件/自动化/夜间维护.md` and the health page (`nightly`, `nightly_at`). `status` prints it and raises `host_action` when steps are skipped, failing, or three days old. The launchd job now logs to `~/Library/Logs/dsh-krouter-daily.log`.
+- **`run.sh --dry-run`** (and `nightly.py --dry-run`): what would be sent, estimated tokens, which files would be written; no model call, no write.
+- README's "tell your host" facts now say what leaves the machine: queries never; the writer sends logs and sessions; the nightly steps send rule and topic pages in full, topic excerpts, and unanswered router queries.
+
+**Evidence and process**
+
+- `docs/VERIFY.md` says plainly that the 92 real queries are a development set, that the held-out synthetic set is flat from 0.6.0 (88% / 75% → 88% / 71% on today's vault), the ablations, the adversarial card results, and that no fresh held-out traffic exists yet.
+- The host's query log held 518 lines, 514 of them the author's own evaluation runs and pytest fixtures — they would have become learned triggers tonight, and the held-out questions among them would have stopped being held out. Removed (backup kept). `tests/conftest.py` now isolates state and cache for the whole test session; evaluation scripts set `KROUTER_NO_QUERY_LOG=1`.
+- `CONTRIBUTING.md`: scoring-constant and refusal changes ship with before / after numbers on the recall bench and a held-out set; hosts should pin a tag.
+
+Tests 133/133 on both router paths.
+
 ## 0.9.3 — 2026-10-11
 
 Fixes from a second outside review, of 0.9.2. Each finding was reproduced before it was fixed.

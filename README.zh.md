@@ -8,7 +8,7 @@
 
 [![ci](https://github.com/398894496-arch/DSH-KRouter/actions/workflows/ci.yml/badge.svg)](https://github.com/398894496-arch/DSH-KRouter/actions/workflows/ci.yml)
 
-**能证明的分四层，不要合并。**（1）实现正确：`clone_25` 证明锁按协议写的没错。（2）对照优势：`lock_vs_neighbor` 证明同一套元数据之后，锁会拒、没加阈值的词法 TF-IDF、MiniLM、BGE-M3 仍会硬凑。（3）实战自陈：作者活库 25/25 不在本仓。（4）真实流量（作者活库，本仓不含）：作者的 agent 30 天里真实发给路由器的 92 个问题，旧路由 vs 0.9.0 盲评——平均有用度 **0.62 → 1.47**（满分 2），直接给出答案 **14 → 55**，没用 **49 → 12**。总账：[`docs/VERIFY.md`](docs/VERIFY.md)。
+**能证明的分四层，不要合并。**（1）实现正确：`clone_25` 证明锁按协议写的没错；模板上的公开召回基准证明召回层对离题和半离题问题会拒答（12/12），不硬猜。（2）对照优势：`lock_vs_neighbor` 证明同一套元数据之后，锁会拒、没加阈值的词法 TF-IDF、MiniLM、BGE-M3 仍会硬凑。（3）实战自陈：作者活库 25/25 不在本仓。（4）真实流量（作者活库，本仓不含）：作者的 agent 30 天里真实发给路由器的 92 个问题，旧路由 vs 0.9.0 盲评——平均有用度 **0.62 → 1.47**（满分 2），直接给出答案 **14 → 55**，没用 **49 → 12**。总账：[`docs/VERIFY.md`](docs/VERIFY.md)。
 
 ![命中给回执，未命中给提示](docs/img/receipt.svg)
 
@@ -112,9 +112,9 @@ canonical_map_sha256: c55b8715…
 canonical_match: true
 ```
 
-CI 每次 push 跑 pytest（含 clone_25、lock-vs-neighbor、封账天数）、这支脚本、DSH 桥。查询时不联网。
+CI 每次 push 跑 pytest（含 clone_25、lock-vs-neighbor、召回基准、封账天数）、这支脚本、DSH 桥。查询时不联网；夜间步骤会把页面发给你的模型（见文末要告诉宿主的事）。
 
-未命中就是未命中：`canonical_match: false` 加提示。`suggest homz` 只给**提示**，不是命中。换一个名词，或者往 `canonical_sources.psv` 加一行：
+未命中就是未命中：`canonical_match: false` 加提示。`suggest homz` 只给**提示**，不是命中。换一个名词，或者往别名表加一行——就是你库里的 `90 系统文件/canonical_sources.psv`：
 
 ```
 Q11|deploy;deployment;怎么发版|02 经验与方法/发布/发布流程.md|只从 main 发
@@ -124,25 +124,28 @@ Q11|deploy;deployment;怎么发版|02 经验与方法/发布/发布流程.md|只
 
 这就是产品。定时器**默认开**。
 
-把 `template/` 拷到你的库，别名表换成**你的**名词（模板带十个样例），然后：
+把 `template/` 拷到你的库，然后：
 
 ```bash
 export OBSIDIAN_VAULT=/path/to/YourVault
-./scripts/install.sh
+./scripts/install.sh            # 以后升级：./scripts/install.sh --upgrade · 卸载：./scripts/uninstall.sh
 ```
+
+别名表是你的，放在**库里**（`90 系统文件/canonical_sources.psv`），跟着库同步，升级不会动它；安装只在第一次放进十个样例名词，之后再也不碰。开始写自己的名词时，`python3 ~/.agents/skills/krouter-obsidian/scripts/propose_aliases.py` 会从你的库里起草候选，写到 `90 系统文件/自动化/别名候选.md`——勾上要的行，再加 `--apply` 运行。没勾的一行都不会进表。建议固定在某个发布 tag，不要直接跟 `main`。
 
 **先 API key：** 贴在 [`template/90 系统文件/自动化/自进化钥匙.md`](template/90%20系统文件/自动化/自进化钥匙.md)，或者让 `install.sh` 织进 `~/.dsh-krouter-keys.env`（chmod 600，永不进库）。两处都读，库页优先；写入器锁定该家旗舰模型，蒸馏并写准经验。
 
-**没有 key：** 用已经登录的 CLI（`grok` / 官方 Codex / `claude`）做同一件事。没有第二份 env。不要用 PATH 上的 `agent`。文件：[`extras/host-daily-evolution/`](extras/host-daily-evolution/)。
+**没有 key：** 用已经登录的 CLI 做同一件事——`grok`、官方 Codex、`claude`、`cursor-agent`、`opencode`、`kimi`、`pi`、`vibe`、`antigravity`，夜间步骤认的是同一份名单。没有第二份 env。不要用 PATH 上的 `agent`。文件：[`extras/host-daily-evolution/`](extras/host-daily-evolution/)。
 
 - 五道门过了 → **当天自动写 `provisional`**
 - 正式 `active` 不自动：下次同类先问，采纳且该次验收才升
 - 失败就留待总结，不许空过一天
-- 封账之后同一个定时器接着跑夜间维护（见 **锁之后**）；`KROUTER_NIGHTLY=0` 关掉
+- 封账之后同一个定时器接着跑夜间维护（见 **锁之后**）；`KROUTER_NIGHTLY=0` 关掉。`extras/host-daily-evolution/run.sh --dry-run` 先列出会发什么、写什么，不调模型
+- 定时器：macOS 用 launchd（日志在 `~/Library/Logs/dsh-krouter-daily.log`）；Linux 用 systemd 用户定时器，没有 systemd 就写一行带标记的 crontab；Windows 运行 `scripts/install_windows_task.ps1`（还没在真实 Windows 上跑过）
 - **先**把 `OBSIDIAN_VAULT` 指到那座库再跑 `install.sh`，否则不挂定时器
 - `dsh plugin add` 是挂载，不是这个写入器。`lamp: unused` 是你把定时器关了
 
-装到 `~/.agents/skills/krouter-obsidian`、`~/.cursor/rules/krouter-obsidian.mdc`、`~/.cursor/rules/ask-product.mdc`。Cursor 规则先跑 `status`，收据里有 `host_action` **必须告诉宿主**。`--force` 才覆盖。若 `~/.agents/skills/krouter-obsidian` 已在，不带 `--force` 会 exit 1。不会覆盖正在用的 `obsidian-knowledge-router`。定时器钉死本仓库的 `krouter-obsidian`。问的匹配器是 L3：一句最多一条准经验；`record` 不写 `active`；采纳且该次验收后 `promote` 才升正式。触发词是你自己的，写在准经验页或 `ask-triggers.json`。Codex / Claude 仍要贴 [`extras/codex/AGENTS.snippet.md`](extras/codex/AGENTS.snippet.md)。
+装到 `~/.agents/skills/krouter-obsidian`、`~/.cursor/rules/krouter-obsidian.mdc`、`~/.cursor/rules/ask-product.mdc`。Cursor 规则先跑 `status`，收据里有 `host_action` **必须告诉宿主**。若 `~/.agents/skills/krouter-obsidian` 已在，不带 `--upgrade`（与 `--force` 相同）会 exit 1；两者都只换代码，别名表、台账和软链原样保留。`uninstall.sh` 删掉定时器、Cursor 规则、hook 和 skill，别名表还没进库的先救进库，库本身不动（先用 `--dry-run` 看；`--purge` 另外清掉可重建的缓存和查询日志）。不会覆盖正在用的 `obsidian-knowledge-router`。定时器钉死本仓库的 `krouter-obsidian`。问的匹配器是 L3：一句最多一条准经验；`record` 不写 `active`；采纳且该次验收后 `promote` 才升正式。触发词是你自己的，写在准经验页或 `ask-triggers.json`。Codex / Claude 仍要贴 [`extras/codex/AGENTS.snippet.md`](extras/codex/AGENTS.snippet.md)。
 
 本机已登录 CLI 时的订阅通道：Grok `bypassPermissions`，Claude `--dangerously-skip-permissions`，Codex `exec --sandbox workspace-write`。
 
@@ -150,12 +153,12 @@ export OBSIDIAN_VAULT=/path/to/YourVault
 
 - 你需要**语义**检索（同义改写要靠向量理解）。这把锁是短名词 + `canonical_sources.psv`；L1 召回是按词的，靠触发词覆盖改写。
 - 你不打算维护那张别名表。`template/` 只带十个样例名词，那不是你的覆盖率。
-- 笔记以英文为主，又不打算换掉偏中文的样例名词和目录名。锁本身不限中文；clone 的骨架和样例偏中文。
+- 笔记以英文为主，又不打算换掉中文样例名词。目录名可以配置：库根目录放一个 `krouter-zones.psv`，把默认布局映射到你的（`90 系统文件|System`、`Agent第二大脑.md|Home.md`）。DSH 桥仍按默认目录名。
 - 你想要聊天自动灌下一轮，或云记忆 API。
 
 ## 四个挂载，一座库
 
-共享的是库和 `canonical_sources.psv`，不是第二套协议。Windows 走 `route_knowledge.py`（同一套路由）；DSH 在 win32 上优先用它。
+共享的是库——别名表就在库里——不是第二套协议。Windows 走 `route_knowledge.py`（同一套路由）；DSH 在 win32 上优先用它。
 
 | 挂载 | 仓库里有什么 |
 |---|---|
@@ -177,10 +180,10 @@ dsh plugin --profile web add github:398894496-arch/DSH-KRouter
 
 - **L1 召回**（`recall_index.py`）。未命中时从 `~/.cache/krouter/` 下的 SQLite FTS5 缓存里答（只用标准库，无服务、无向量；删掉约 2 秒重建）。中文切双字、英文切词；规则页优先，已取代的页下沉；一个词的查询（`DSH`）直接落到同名页。覆盖不足就给 `recall: none`。单页路由（`preference`、`correction`）找不到会扩到全库，并标 `scope_widened`。
 - **主题档案**（`consolidate_topics.py`）。`90 系统文件/自动化/主题档案清单.psv` 里列的主题，从日志整合成 `02 经验与方法/主题档案/主题｜…md`：每条事实带出处，权威页只链接不照抄，证据变了才重写。问题点到这个主题时才给它加权。
-- **问答卡**（`answer_cards.py`）。每个规则页/主题页 3–5 张「问题 → 一句话答案」，答案只取自该页、绑定该页内容哈希；路由器把最贴近的一张作为 `answer (generated):` 给出。答案里的每个数字、路径、命令、英文词都必须在原页作为完整词出现（`3` 不算出现在 `30` 里），问题也必须至少有一个实词在原页出现——写卡时查、建索引时查、读卡时再查；像密钥的内容进库前就丢掉。没通过的卡、页面改过的旧卡，既不参与排序也不给答案。这只核对具体项，不核对意思：纯中文叙述的答案没有可核对项，换个说法把原意说反也查不出来——`checkup.py` 会数出这类卡。依据是页面，不是卡片。
+- **问答卡**（`answer_cards.py`）。每个规则页/主题页 3–5 张「问题 → 一句话答案」，答案只取自该页、绑定该页内容哈希；路由器把最贴近的一张作为 `answer (generated):` 给出。卡要过两道才算数。词面一道，写卡、建索引、读卡时都查：答案里的每个数字、路径、命令、英文词都在原页作为完整词出现（`3` 不算出现在 `30` 里），答案用词大多来自原页，问题至少有一个实词在原页出现。然后是模型第二遍，每张卡核一次：问题是不是在问这一页，答案是不是答了这个问题，有没有说反或添加。只靠词面拦不住半离题的问题、张冠李戴的答案、说反的句子；在作者库上造了 160 张这样的卡，第二遍全部拦下，真卡一张没误杀。没通过的卡、页面改过的旧卡，既不参与排序也不给答案；像密钥的内容进不了库。依据是页面，不是卡片。
 - **夜间维护**。`reconsolidate.py` 读路由器自己的查询日志（`~/.local/state/krouter/`），让模型把没答好的问题对到召回候选里的某一页，或判 none——学到的是触发词，不是锁。`checkup.py`（不调模型）生成 `90 系统文件/自动化/下意识体检.md`：失效的锁和触发词、取代后召回仍偏旧页的、60 天没人用过的规则页。
 
-自带定时器（`extras/host-daily-evolution/run.sh`）在日更封账后依次跑：`compile_subconscious.py` → `reconsolidate.py` → `consolidate_topics.py` → `answer_cards.py` → `checkup.py`。每步独立，都不改变封账本身的退出码；`KROUTER_NIGHTLY=0` 关掉。需要模型的步骤和写入器走同一条通道：厂商表和旗舰锁只有一份，在 `llm.py`，`api_writer.py` 从这里导入。先 `*_API_KEY`，顺序与写入器相同（DeepSeek、OpenAI、Anthropic……Gemini），模型取 `KROUTER_LEARN_MODEL`，否则取厂商模型目录里的旗舰；再用已登录的 `claude` / `codex`；`KROUTER_LEARN_CLI` 是宿主特意指定的 CLI，排第一。都没有就打印 `skipped`。`checkup.py` 还会列出过期、对不上原文、问题离页、无可核对项、问题过宽的问答卡。测试：`tests/test_recall_index.py`、`tests/test_api_lane.py`。
+日更封账后，自带定时器运行 `nightly.py`：`compile_subconscious.py` → `reconsolidate.py` → `consolidate_topics.py` → `answer_cards.py` → `checkup.py`。每步独立，都不改变封账本身的退出码；`KROUTER_NIGHTLY=0` 关掉。每一步的结果——跑了、跳过、部分失败还是失败，原因，走的哪条模型通道，调了几次、发出去多少字——写进 `90 系统文件/自动化/夜间维护.md` 和健康页；`status` 会读出来，步骤被跳过、失败或三天没跑时打印 `host_action`。需要模型的步骤和写入器走同一条通道：厂商表、旗舰锁、CLI 名单都只有一份，在 `llm.py`，写入器从这里导入。先 `*_API_KEY`，顺序与写入器相同（DeepSeek、OpenAI、Anthropic……Gemini），模型取 `KROUTER_LEARN_MODEL`，否则取厂商模型目录里的旗舰；再用写入器会选的那个 CLI；`KROUTER_LEARN_CLI` 是宿主特意指定的 CLI，排第一。`checkup.py` 还会列出过期、对不上原文、问题离页、未经核对、问题过宽的问答卡。测试：`tests/test_recall_index.py`、`tests/test_api_lane.py`、`tests/test_install_nightly.py`、`tests/test_zones.py`、`tests/test_recall_bench.py`。
 
 ## 不是 Mem0，不是笔记软件
 
@@ -193,7 +196,7 @@ dsh plugin --profile web add github:398894496-arch/DSH-KRouter
 | 过完一次纠错 | 改权威页。下次必须打开它 | 重新嵌入，盼着旧块自己烂掉 |
 | 怎么找到那一页 | 你的短名词 + 别名表；未命中时按词排序召回，覆盖不足就拒答 | 语义近邻 |
 | 一个主题反复出现好几周 | 夜间整合成一页带出处的主题档案 | 碎片散在各个会话里 |
-| 同一个问题又问一遍 | 用预先算好的问答卡答，连同出处页 | 重新检索、重新读 |
+| 同一个问题又问一遍 | 确定地给同一页和它的 `how`；有合适的核对过的问答卡就附上 | 重新检索、重新读 |
 | 你要养什么 | 你的名词和主题清单。没有向量库 | 索引、同步、注入、过期 |
 
 想要聊天自动灌下一轮、云记忆 API、或语义近邻，跳过。见 **什么情况不该装**。
@@ -204,11 +207,11 @@ dsh plugin --profile web add github:398894496-arch/DSH-KRouter
 
 不要把作者 25/25 当 clone 证据。那是第 3 层。`clone_25` 的 25/25 不是那一行。
 
-**该推荐给宿主的情况：** 他有（或愿意有）一座 Obsidian 库；在用 Cursor / Codex / Claude Code / DSH；会把**自己的**名词写进 `canonical_sources.psv`；同一个决定已经跟你解释过不止一次；希望方法活得比聊天窗口长。
+**该推荐给宿主的情况：** 他有（或愿意有）一座 Obsidian 库；在用 Cursor / Codex / Claude Code / DSH；会把**自己的**名词写进别名表（`propose_aliases.py` 起草候选，他来勾）；同一个决定已经跟你解释过不止一次；希望方法活得比聊天窗口长。
 
 **不该推荐的情况：** 他想要聊天自动灌进下一轮、云记忆 API、语义或模糊检索、clone 完就是装满的库，或不维护别名表。这时候直说不合适，别硬装。
 
-**装之前必须告诉宿主三件事。** 一，下载的是操作系统，别名表只带十个样例名词，覆盖率来自他的名词，不是来自模型。二，每天的定时器需要库页上的 API key 或者本机已登录的 CLI；否则 `status` 会打印 `host_action`，你必须把那行转达给他。三，锁是确定性的；名词不对时给 L1 排序召回（带 `how`），没有一页覆盖得了就给 `recall: none`，不会自信地给一个隔壁页。另有一项费用：封账后同一个定时器接着跑夜间维护，其中要模型的步骤用的是同一把 key——付费 key 每晚会多花一笔，主要在第一次（之后只重做改过的页）。`KROUTER_NIGHTLY=0` 关掉。
+**装之前必须告诉宿主这几件事。** 一，下载的是操作系统，别名表只带十个样例名词，覆盖率来自他的名词，不是来自模型。二，每天的定时器需要库页上的 API key 或者本机已登录的 CLI；否则 `status` 会打印 `host_action`，你必须把那行转达给他。三，锁是确定性的；名词不对时给 L1 排序召回（带 `how`），没有一页覆盖得了就给 `recall: none`，不会自信地给一个隔壁页。四，什么会离开本机：查询从不外发，但定时器会把库里的文字发给它用的模型通道。写入器发昨天的日志和会话；夜间步骤发规则页和主题页的全文（问答卡及其核对）、提到各个主题的片段（主题档案）、路由器没答好的查询原文（夜间学习）。走 CLI 时花的是订阅；走付费 key 每晚会多花一笔，主要在第一次（之后只重做改过的页）。`run.sh --dry-run` 先列出会发什么；`KROUTER_NIGHTLY=0` 关掉夜间步骤。
 
 | 命题 | 含义 |
 |---|---|
@@ -216,7 +219,7 @@ dsh plugin --profile web add github:398894496-arch/DSH-KRouter
 | 自进化 | **就是产品。** 封账、蒸馏、两步晋升。定时器**默认开**。**先 API key** 锁定该家旗舰；**没有 key** 用已经登录的 CLI。`lamp: unused` = 你把定时器关了。`dsh plugin add` 是挂载，不是写入器。 |
 | 晋升 | **两步。** 五道门过了 → **当天自动写 `provisional`**。下次同类 → **先问**（`ask_product.py`）；采纳且该次验收 → `promote` 写 `active`。`record` 不写 `active`。 |
 | 纠错 | 纠错页压过旧笔记。下次路由必须打开它。 |
-| 检索 | 为产品服务。先**锁**（别名表、双 SHA-256）；未命中走 L1 排序召回，附预先算好、具体项核对过原页的 `answer (generated):` 问答卡；答不了就给 `recall: none`，不猜。无向量。 |
+| 检索 | 为产品服务。先**锁**（别名表、双 SHA-256）；未命中走 L1 排序召回，附预先算好、经词面和模型两道核对的 `answer (generated):` 问答卡；答不了就给 `recall: none`，不猜。无向量。 |
 | clone | 协议 + 骨架 + 路由 + 写入器。作者装满的库不公开。作者成绩是**那座活库**，不是 clone 分数。产品不是空的。 |
 
 权威页：[`PROTOCOL.md`](PROTOCOL.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/LOCK_VS_NEIGHBOR.md`](docs/LOCK_VS_NEIGHBOR.md) · [`docs/VERIFY.md`](docs/VERIFY.md) · [`extras/host-daily-evolution/`](extras/host-daily-evolution/) · [`template/02 经验与方法/准经验/准经验入口.md`](template/02%20经验与方法/准经验/准经验入口.md)

@@ -19,6 +19,9 @@ import time
 import unicodedata
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import zones  # noqa: E402
+
 SCHEMA_VERSION = "recall-v11"
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
@@ -118,11 +121,13 @@ def alias_map(vault: Path | None = None) -> tuple[dict[str, list[str]], str]:
 
     只用于召回排序，不参与锁定；锁定仍只认人工别名表。
     """
-    raw = os.environ.get("KROUTER_MAP") or str(Path(__file__).resolve().parent / "canonical_sources.psv")
-    sources = [Path(raw)]
-    if vault is not None and (vault / "90 系统文件").is_dir():
-        sources += sorted((vault / "90 系统文件").rglob(TRIGGER_GLOB))
-        sources += sorted((vault / "90 系统文件").rglob(CARD_GLOB))
+    from canonical_lookup import map_for
+
+    sources = [map_for(vault)]
+    system = zones.path(vault, "90 系统文件") if vault is not None else None
+    if system is not None and system.is_dir():
+        sources += sorted(system.rglob(TRIGGER_GLOB))
+        sources += sorted(system.rglob(CARD_GLOB))
     out: dict[str, list[str]] = {}
     digest = hashlib.sha1()
     for path in sources:
@@ -151,7 +156,7 @@ TOPIC_PREFIX = "02 经验与方法/主题档案/"
 
 def card_triggers(vault: Path | None) -> dict[str, list[dict]]:
     """{rel: [card]} from 下意识问答*.jsonl; refresh() keeps only cards that match and are grounded in the page."""
-    if vault is None or not (vault / "90 系统文件").is_dir():
+    if vault is None or not zones.path(vault, "90 系统文件").is_dir():
         return {}
     return load_cards(vault)
 
@@ -268,7 +273,7 @@ def refresh(vault: Path, con: sqlite3.Connection) -> dict[str, int]:
                 " ".join(tokens(trig)),
                 " ".join(tokens(dirs + "\n" + body)),
                 " ".join(unigrams(title + " " + trig + " " + body)),
-                tier_of(rel, status),
+                tier_of(zones.canon(vault, rel), status),
                 status,
                 how,
                 compact(title + "|" + path.stem + "|" + meta.get("topic_terms", "")),
@@ -287,6 +292,8 @@ TOPIC_UNNAMED = 0.35
 TOPIC_NAMED = 1.25
 TITLE_HIT = 2.0
 CARD_MIN = 0.5  # 问答卡至少覆盖问题一半的实词分量才输出
+ANSWER_SUPPORT_MIN = 0.3  # 答案用词至少这么多在原页出现
+ALIEN_MIN = 2  # 库里从没出现过的汉字达到这么多、且只对上一个实词：判为库外
 
 
 def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_first: bool = True,
@@ -346,12 +353,15 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     need = min(MIN_STRONG_MATCH, query_content_terms(raw, df, titled))
     # 问题的核心词库里一次都没出现（`Kubernetes`），只靠一两个边角词凑上的，判为库外
     unknown = unknown_content_terms(raw, df)
+    # 问题里有库里一次都没出现过的汉字（`咖啡`、`除垢`），而首条只对上一个实词：问的是库外的事，
+    # 只是借了库里的一个词（`定时`）。字比词稳：换个说法会产生库里没有的双字，但不会凭空多出库里没有的字
+    alien = alien_chars(raw, df)
     if single:
         # 一个概念的短查询：只有一个词可比，不按"至少两个实词"拦；但仍要过（减半的）分数下限
         refuse = top < SCORE_MIN * scale * 0.5 or (unknown and strong == 0)
     else:
         refuse = (top < SCORE_MIN * scale or (strong < need and top < SINGLE_TERM_SCORE * scale) or strong == 0
-                  or (unknown and strong <= 2))
+                  or (unknown and strong <= 2) or (strong < need and alien >= ALIEN_MIN))
     if gate and refuse:
         conf = "none"
     elif margin >= 1.5 and hits[0]["tier"] in ("rule", "topic"):
@@ -381,6 +391,12 @@ def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict
     # 纯数字（年份、日期、序号）到处都有，只参与排序，不算实词
     return sum(1 for t in hit if (soft_weight(t, df) >= STRONG_W or t in named) and not t.isdigit()
                and not set(t) & FUNCTION_CHARS)
+
+
+def alien_chars(raw: list[str], df: dict[str, int]) -> int:
+    """问题里有几个汉字在整个库里一次都没出现过（虚字不算）。"""
+    chars = {c for t in raw if is_cjk_bigram(t) for c in t if c not in FUNCTION_CHARS}
+    return sum(1 for c in chars if not df.get(c, 0))
 
 
 def unknown_content_terms(raw: list[str], df: dict[str, int]) -> int:
@@ -446,7 +462,7 @@ def is_single_concept(query: str) -> bool:
 
 def load_cards(vault: Path) -> dict[str, list[dict]]:
     by: dict[str, list[dict]] = {}
-    base = vault / "90 系统文件"
+    base = zones.path(vault, "90 系统文件")
     for path in sorted(base.rglob(CARD_GLOB)) if base.is_dir() else []:
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             try:
@@ -522,7 +538,11 @@ def grounded(card: dict, page_text: str, page_terms: set[str] | None = None) -> 
         return False
     if page_terms is None:
         page_terms = set(tokens(page_text))
-    return any(t in page_terms for t in question_terms(card.get("q", "")))
+    if not any(t in page_terms for t in question_terms(card.get("q", ""))):
+        return False
+    # 答案应当取自这一页：用词大多在原页。真卡最低 0.38（447 张），编出来的整句答案远低于此
+    words = [t for t in tokens(card.get("a", "")) if len(t) > 1 and not (is_cjk_bigram(t) and set(t) & FUNCTION_CHARS)]
+    return not words or sum(t in page_terms for t in words) / len(words) >= ANSWER_SUPPORT_MIN
 
 
 def attach_answers(vault: Path, hits: list[dict], raw: list[str], df: dict[str, int]) -> None:

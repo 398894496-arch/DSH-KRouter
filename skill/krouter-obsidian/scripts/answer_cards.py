@@ -29,7 +29,20 @@ CARDS = "90 系统文件/自动化/下意识问答.jsonl"
 PAGE_MAX = 3500
 BATCH = 6
 # 卡片写进库前过滤：像密钥、token、口令的串一律丢弃（prompt 里的"不写密钥"不算保证）
-SECRET_RE = re.compile(r"(sk-[A-Za-z0-9_-]{12,}|\b[A-Za-z0-9_-]{32,}\b|bearer\s+\S+|api[_-]?key\s*[=:]|password\s*[=:]|token\s*[=:])", re.I)
+SECRET_RE = re.compile(r"(sk-[A-Za-z0-9_-]{12,}|bearer\s+\S+|api[_-]?key\s*[=:]|password\s*[=:]|token\s*[=:])", re.I)
+LONG_RUN = re.compile(r"[A-Za-z0-9_-]{24,}")
+
+
+def secret_like(text: str) -> bool:
+    """Key-shaped text. A long run counts when one unbroken piece of it is ≥ 24 characters mixing letters and
+    digits (a key, a 40-hex token); a long id made of short `-`/`_` pieces (`20260811-090406-v4-flash`) does not."""
+    if SECRET_RE.search(text):
+        return True
+    for run in LONG_RUN.findall(text):
+        for piece in re.split(r"[-_]", run):
+            if len(piece) >= 24 and re.search(r"[A-Za-z]", piece) and re.search(r"\d", piece):
+                return True
+    return False
 PROMPT = """下面是个人知识库里的若干页面。为每一页写 3–5 张「问答卡」：用户以后最可能怎么问这一页能回答的问题，以及一句话答案。
 规则：
 - 问题：口语化中文，像用户随口问 Agent，6–20 字；覆盖这一页不同的要点，不要五张卡问同一件事。
@@ -41,13 +54,23 @@ PROMPT = """下面是个人知识库里的若干页面。为每一页写 3–5 �
 """
 
 
+VERIFY_PROMPT = """下面每一页后面跟着几张问答卡。逐张判断，三条都满足才算 ok：
+1. 问题问的是这一页讲到的事，不是借了页面里的一个词去问别的事；
+2. 答案确实回答了这个问题，不是同一页里另一个问题的答案；
+3. 答案的每个说法在这一页都有依据：没有说反、没有把条件或数字改掉、没有添加页面没有的内容。
+拿不准就判 false。只输出 JSON：{"<页面路径>": [{"id": <卡号>, "ok": true 或 false}, ...], ...}
+
+"""
+
+
 def page_sha(path: Path) -> str:
     return hashlib.sha1(path.read_bytes()).hexdigest()[:16]
 
 
 def load_cards(vault: Path) -> list[dict]:
     out = []
-    for path in sorted((vault / "90 系统文件").rglob("下意识问答*.jsonl")) if (vault / "90 系统文件").is_dir() else []:
+    system = ri.zones.path(vault, "90 系统文件")
+    for path in sorted(system.rglob("下意识问答*.jsonl")) if system.is_dir() else []:
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             try:
                 row = json.loads(line)
@@ -91,11 +114,53 @@ def ask(vault: Path, rels: list[str]) -> dict:
     return {}
 
 
+def verify(vault: Path, by_rel: dict[str, list[dict]], jobs: int = 3) -> dict[str, list[bool]] | None:
+    """A second model pass over finished cards: question on the page, answer answers it, answer says what
+    the page says. Lexical checks cannot tell a half-off-topic question or a flipped sentence from a real
+    card; this pass is what can. None when no model is reachable (cards stay unverified)."""
+    rels = [r for r in by_rel if by_rel[r]]
+    chunks = [rels[i : i + BATCH] for i in range(0, len(rels), BATCH)]
+
+    def one(chunk: list[str]) -> dict[str, list[bool]]:
+        parts = []
+        for rel in chunk:
+            cards = "\n".join(f"卡 {n}：问：{c['q']}　答：{c['a']}" for n, c in enumerate(by_rel[rel]))
+            parts.append(block(vault, rel) + "\n" + cards + "\n")
+        try:
+            text = llm.complete(VERIFY_PROMPT + "\n".join(parts), vault)
+        except RuntimeError as exc:
+            if isinstance(exc, llm.NoModel):
+                raise
+            print(f"verify failed at {chunk[0]}: {str(exc)[-160:]}", file=sys.stderr)
+            return {}
+        m = re.search(r"\{.*\}", text, re.S)
+        try:
+            data = json.loads(m.group(0)) if m else {}
+        except json.JSONDecodeError:
+            data = {}
+        got: dict[str, list[bool]] = {}
+        for rel in chunk:
+            rows = data.get(rel, []) if isinstance(data, dict) else []
+            verdict = {int(x["id"]): x.get("ok") is True for x in rows if isinstance(x, dict) and str(x.get("id", "")).isdigit()}
+            if verdict:  # a page the model skipped stays unverified rather than failed
+                got[rel] = [verdict.get(n, False) for n in range(len(by_rel[rel]))]
+        return got
+
+    out: dict[str, list[bool]] = {}
+    try:
+        with ThreadPoolExecutor(max_workers=jobs) as ex:
+            for got in ex.map(one, chunks):
+                out.update(got)
+    except llm.NoModel:
+        return None
+    return out
+
+
 def accept(item: object, page_text: str) -> str:
     """'' if the card is kept, else the reason it is dropped."""
     if not isinstance(item, dict) or not item.get("q") or not item.get("a"):
         return "malformed"
-    if SECRET_RE.search(item["q"] + " " + item["a"]):
+    if secret_like(item["q"] + " " + item["a"]):
         return "secret-like"
     if not ri.faithful(item["a"], page_text):
         return "not-verbatim"
@@ -111,13 +176,15 @@ def main() -> int:
     ap.add_argument("--model", default="")
     ap.add_argument("--jobs", type=int, default=3)
     ap.add_argument("--limit", type=int, default=0, help="only the first N stale pages (0 = all)")
+    ap.add_argument("--no-verify", action="store_true", help="skip the second model pass (cards stay unverified)")
+    ap.add_argument("--dry-run", action="store_true", help="list what would be sent and written; no model call")
     args = ap.parse_args()
     if args.cli:
         os.environ["KROUTER_LEARN_CLI"] = args.cli
     if args.model:
         os.environ["KROUTER_LEARN_MODEL"] = args.model
     vault = Path(args.vault)
-    out = vault / CARDS
+    out = ri.zones.path(vault, CARDS)
     cards = load_cards(vault)
     pages = targets(vault)
     sha = {rel: page_sha(vault / rel) for rel in pages}
@@ -127,6 +194,13 @@ def main() -> int:
     if args.limit:
         stale = stale[: args.limit]
     batches = [stale[i : i + BATCH] for i in range(0, len(stale), BATCH)]
+    if args.dry_run:
+        unverified = [c for c in keep if not c.get("empty") and "v" not in c]
+        chars = sum(len(PROMPT) + sum(len(block(vault, r)) for r in b) for b in batches)
+        chars += sum(len(VERIFY_PROMPT) + len(block(vault, r)) for r in {c["rel"] for c in unverified}) if not args.no_verify else 0
+        print(json.dumps({"would_send_pages": stale, "would_verify_cards": 0 if args.no_verify else len(unverified),
+                          "chars": chars, "writes": [CARDS] if stale or unverified else []}, ensure_ascii=False))
+        return 0
     made = empty = 0
     dropped: dict[str, int] = {}
     try:
@@ -135,6 +209,7 @@ def main() -> int:
     except llm.NoModel as exc:
         print(f"answer cards skipped: {exc}", file=sys.stderr)
         return 0
+    fresh_by_rel: dict[str, list[dict]] = {}
     for part in parts:
         for rel, items in part.items():
             page_text = (vault / rel).read_text(encoding="utf-8", errors="replace")
@@ -144,19 +219,40 @@ def main() -> int:
                 if why:
                     dropped[why] = dropped.get(why, 0) + 1
                 else:
-                    good.append(it)
-            if not good:
-                # 导航页或全被拦下：记下这页的哈希，页面不变就不再每晚重问
-                keep.append({"rel": rel, "sha": sha[rel], "empty": True})
-                empty += 1
-            for it in good[:5]:
-                keep.append({"rel": rel, "sha": sha[rel], "q": it["q"].strip(), "a": it["a"].strip()[:160]})
-                made += 1
+                    good.append({"rel": rel, "sha": sha[rel], "q": it["q"].strip(), "a": it["a"].strip()[:160]})
+            fresh_by_rel[rel] = good[:5]
+    # 第二遍：模型逐张核对（问题在问这一页、答案答的是这个问题、没说反没添加）。
+    # 新写的卡和还没核对过的旧卡一起核对；没有模型可用时卡片保持"未核对"，不当作失败
+    pending = {rel: cards for rel, cards in fresh_by_rel.items() if cards}
+    for c in keep:
+        if not c.get("empty") and "v" not in c:
+            pending.setdefault(c["rel"], []).append(c)
+    verdict = verify(vault, pending, jobs=args.jobs) if pending and not args.no_verify else None
+    failed = set()
+    for rel, cards in pending.items():
+        for card, ok in zip(cards, (verdict or {}).get(rel, [])):
+            if ok:
+                card["v"] = 1
+            else:
+                failed.add(id(card))
+    if failed:
+        dropped["verify-failed"] = len(failed)
+        keep = [c for c in keep if id(c) not in failed]
+    for rel, cards in fresh_by_rel.items():
+        cards = [c for c in cards if id(c) not in failed]
+        if not cards:
+            # 导航页或全被拦下：记下这页的哈希，页面不变就不再每晚重问
+            keep.append({"rel": rel, "sha": sha[rel], "empty": True})
+            empty += 1
+        keep.extend(cards)
+        made += len(cards)
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix(".tmp")
     tmp.write_text("".join(json.dumps(c, ensure_ascii=False) + "\n" for c in keep), encoding="utf-8")
     tmp.replace(out)
     print(json.dumps({"pages": len(pages), "stale": len(stale), "cards_written": made, "dropped": dropped,
+                      "verified": sum(1 for c in keep if c.get("v")),
+                      "unverified": sum(1 for c in keep if not c.get("empty") and not c.get("v")),
                       "pages_without_cards": empty, "cards_total": sum(1 for c in keep if not c.get("empty"))},
                      ensure_ascii=False))
     return 0

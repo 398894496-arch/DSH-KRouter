@@ -87,7 +87,7 @@ def usage_counts(vault: Path, days: int) -> Counter:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--vault", default=os.environ.get("OBSIDIAN_VAULT", ""))
-    ap.add_argument("--map", default=os.environ.get("KROUTER_MAP") or str(Path(__file__).resolve().parent / "canonical_sources.psv"))
+    ap.add_argument("--map", default="", help="alias table (default: KROUTER_MAP, the vault's table, the sample)")
     ap.add_argument("--out", default=DEFAULT_OUT, help="vault-relative")
     ap.add_argument("--days", type=int, default=60)
     ap.add_argument("--json", action="store_true")
@@ -100,7 +100,9 @@ def main() -> int:
 
     # 1. lock rows + triggers pointing at missing / superseded pages
     stale_locks = []
-    for line in Path(args.map).read_text(encoding="utf-8").splitlines():
+    from canonical_lookup import map_for
+
+    for line in (Path(args.map) if args.map else map_for(vault)).read_text(encoding="utf-8").splitlines():
         parts = line.split("|", 3)
         if line.startswith("#") or len(parts) != 4:
             continue
@@ -130,6 +132,7 @@ def main() -> int:
     import hashlib
 
     stale_cards, unfaithful_cards, offpage_cards, unchecked_cards, broad_cards = 0, [], [], [], []
+    unverified_cards = 0
     page_hash: dict[str, str] = {}
     page_text: dict[str, str] = {}
     for rel, cards in ri.load_cards(vault).items():
@@ -148,8 +151,10 @@ def main() -> int:
                 unfaithful_cards.append((rel, card["q"]))
             elif not ri.grounded(card, page_text[rel]):
                 offpage_cards.append((rel, card["q"]))
-            elif not ri.card_specifics(card["a"]):
-                unchecked_cards.append((rel, card["q"]))
+            elif not card.get("v"):
+                unverified_cards += 1
+                if not ri.card_specifics(card["a"]):
+                    unchecked_cards.append((rel, card["q"]))
             raw = [t for t in ri.tokens(card["q"]) if not (len(t) == 1 and ri.CJK_RE.fullmatch(t))]
             df = ri.term_df(con, raw + [c for t in raw if ri.is_cjk_bigram(t) for c in t])
             titled = ri.phrase_terms(con, [t for t in raw if ri.is_cjk_bigram(t)], ("title",))
@@ -174,6 +179,7 @@ def main() -> int:
         "unfaithful_cards": unfaithful_cards,
         "offpage_cards": offpage_cards,
         "unchecked_cards": unchecked_cards,
+        "unverified_cards": unverified_cards,
         "broad_cards": broad_cards,
         "window_days": args.days,
     }
@@ -184,7 +190,8 @@ def main() -> int:
         f"tenure: \"{tenure_ok}/{report['tenure_pairs']}\"", f"stale_locks: {len(stale_locks)}",
         f"unused_rule_pages: {len(unused)}", f"stale_cards: {stale_cards}",
         f"unfaithful_cards: {len(unfaithful_cards)}", f"offpage_cards: {len(offpage_cards)}",
-        f"unchecked_cards: {len(unchecked_cards)}", f"broad_cards: {len(broad_cards)}", "---", "",
+        f"unverified_cards: {unverified_cards}", f"unchecked_cards: {len(unchecked_cards)}",
+        f"broad_cards: {len(broad_cards)}", "---", "",
         "# 下意识体检", "",
         "机器生成，不改任何来源页。只列需要人看的项。", "",
         "## 锁指向失效页", "",
@@ -200,14 +207,15 @@ def main() -> int:
         *[f"  - `{r}`：{q}" for r, q in unfaithful_cards[:20]],
         f"- 问题跟这页无关（问题里没有一个实词在原页出现，读取时已拦下）：{len(offpage_cards)} 张",
         *[f"  - `{r}`：{q}" for r, q in offpage_cards[:20]],
-        f"- 答案没有可核对的数字/路径/英文词（只能人看；意思被说反也查不出来）：{len(unchecked_cards)} 张",
+        f"- 还没经过模型核对（问题是否在问这一页、答案是否答对、有没有说反；夜间会补核）：{unverified_cards} 张",
+        f"- 其中答案也没有可核对的数字/路径/英文词（只能人看）：{len(unchecked_cards)} 张",
         f"- 问题过宽（实词不到 2 个，可能把无关提问召回到这一页）：{len(broad_cards)} 张",
         *[f"  - `{r}`：{q}" for r, q in broad_cards[:30]], "",
         f"## 近 {args.days} 天没人读、也没被召回的规则页（{len(unused)}/{len(rules)}）", "",
         "只是提醒，不降权、不删除。确认没用了再标 superseded / retired。", "",
         *[f"- `{r}`" for r in unused], "",
     ]
-    out = vault / args.out
+    out = ri.zones.path(vault, args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8")
     if not args.json:

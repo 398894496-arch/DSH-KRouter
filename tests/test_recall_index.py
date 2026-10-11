@@ -320,10 +320,15 @@ def test_answer_cards_generation_filters_and_remembers_empty_pages(vault, monkey
     import answer_cards as ac
     import llm
 
-    asked = []
+    asked, verified = [], []
 
     def fake(prompt, v=None):
         rels = re.findall(r"### 页面路径: (.+)", prompt)
+        if prompt.startswith(ac.VERIFY_PROMPT[:20]):
+            verified.extend(rels)
+            # the checker rejects a card whose answer is another question's
+            return json.dumps({rel: [{"id": int(n), "ok": "跑" not in q} for n, q in re.findall(r"卡 (\d+)：问：(\S+)", prompt)]
+                               for rel in rels}, ensure_ascii=False)
         asked.extend(rels)
         out = {}
         for rel in rels:
@@ -343,11 +348,40 @@ def test_answer_cards_generation_filters_and_remembers_empty_pages(vault, monkey
     rows = [json.loads(x) for x in (vault / ac.CARDS).read_text(encoding="utf-8").splitlines()]
     real = [x for x in rows if not x.get("empty")]
     assert [x["q"] for x in real] == ["怎么算封账"]  # 03:00 not in page; api_key line dropped
+    assert real[0].get("v") == 1 and verified  # the second pass checked it
     assert any(x.get("empty") for x in rows)  # nav pages remembered
     first = len(asked)
     asked.clear()
+    verified.clear()
     assert ac.main() == 0
-    assert asked == [] and first > 0  # nothing changed: nothing re-asked
+    assert asked == [] and verified == [] and first > 0  # nothing changed: nothing re-asked or re-checked
+
+
+def test_answer_cards_verify_drops_what_lexical_checks_cannot_see(vault, monkeypatch):
+    """A half-off-topic or flipped card passes every lexical check; the second pass drops it."""
+    import json
+    import re
+
+    import answer_cards as ac
+    import llm
+
+    rel = "02 经验与方法/搜索与知识库/封账先看时间日志文件.md"
+
+    def fake(prompt, v=None):
+        if prompt.startswith(ac.VERIFY_PROMPT[:20]):
+            return json.dumps({rel: [{"id": int(n), "ok": "咖啡" not in q} for n, q in re.findall(r"卡 (\d+)：问：(\S+)", prompt)]},
+                              ensure_ascii=False)
+        return json.dumps({r: ([{"q": "怎么算封账", "a": "时间日志文件存在且不是待总结就算封账。"},
+                                {"q": "咖啡机封账多久除垢", "a": "时间日志文件存在且不是待总结就算封账。"}] if r == rel else [])
+                           for r in re.findall(r"### 页面路径: (.+)", prompt)}, ensure_ascii=False)
+
+    monkeypatch.setattr(llm, "complete", fake)
+    monkeypatch.setattr("sys.argv", ["answer_cards.py", "--vault", str(vault), "--jobs", "1"])
+    page = (vault / rel).read_text(encoding="utf-8")
+    assert r.grounded({"q": "咖啡机封账多久除垢", "a": "时间日志文件存在且不是待总结就算封账。"}, page)  # lexical: passes
+    assert ac.main() == 0
+    rows = [json.loads(x) for x in (vault / ac.CARDS).read_text(encoding="utf-8").splitlines()]
+    assert [x["q"] for x in rows if x.get("rel") == rel and not x.get("empty")] == ["怎么算封账"]
 
 
 def test_llm_plan_order(monkeypatch, tmp_path):
@@ -358,6 +392,8 @@ def test_llm_plan_order(monkeypatch, tmp_path):
             monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("KROUTER_KEYS_ENV", str(tmp_path / "none.env"))
     monkeypatch.setenv("PATH", str(tmp_path))
+    monkeypatch.setattr(llm, "detect_candidates", lambda: [])
+    llm._CLI.clear()
     assert llm.plan(None) == []
     monkeypatch.setenv("GEMINI_API_KEY", "g")
     monkeypatch.setenv("OPENAI_API_KEY", "x")
@@ -381,3 +417,24 @@ def test_llm_plan_order(monkeypatch, tmp_path):
     with pytest.raises(llm.NoModel):
         monkeypatch.setenv("PATH", str(tmp_path / "empty"))
         llm.complete("hi")
+
+
+def test_llm_no_key_uses_the_writers_cli_detection(monkeypatch, tmp_path):
+    """Only grok installed, no key: the nightly lane finds what the writer finds and gets text back."""
+    import llm
+
+    for k in list(__import__("os").environ):
+        if k.endswith(("_API_KEY", "_BASE_URL", "_MODEL")) or k in ("KROUTER_LEARN_CLI", "KROUTER_WRITER"):
+            monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("KROUTER_KEYS_ENV", str(tmp_path / "none.env"))
+    grok = tmp_path / "bin" / "grok"
+    grok.parent.mkdir()
+    grok.write_text('#!/bin/sh\n[ "$1" = models ] && exit 0\n'
+                    'while [ $# -gt 0 ]; do [ "$1" = --prompt-file ] && { printf "echo:"; cat "$2"; exit 0; }; shift; done\n'
+                    'exit 2\n')
+    grok.chmod(0o755)
+    monkeypatch.setattr(llm, "detect_candidates", lambda: [tmp_path / "missing" / "claude", grok])
+    llm._CLI.clear()
+    assert llm.plan(None) == [("cli", str(grok))]
+    assert llm.complete("你好") == "echo:你好"
+    llm._CLI.clear()

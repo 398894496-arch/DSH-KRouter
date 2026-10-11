@@ -16,13 +16,41 @@ if [ "${KROUTER_SH_ONLY:-0}" != 1 ] && command -v python3 >/dev/null 2>&1 \
   exec python3 "$(dirname "$0")/route_knowledge.py" "$@"
 fi
 
-CANONICAL="$VAULT/Agent第二大脑.md"
-PREFERENCES="$VAULT/02 经验与方法/Agent/用户偏好与工作约束.md"
-CORRECTIONS="$VAULT/90 系统文件/Agent记忆/纠错与取代记录.md"
-MEMORY="$VAULT/90 系统文件/Agent记忆/可靠记忆索引.md"
-PROJECTS="$VAULT/01 项目"
-HEALTH="$VAULT/90 系统文件/自动化/日更健康.md"
-CANONICAL_MAP="$(dirname "$0")/canonical_sources.psv"
+# 区名可配置：库根目录 krouter-zones.psv（或 KROUTER_ZONES）每行「默认前缀|你的前缀」，最长前缀优先（同 zones.py）
+zpath() {
+  zf=${KROUTER_ZONES:-$VAULT/krouter-zones.psv}
+  if [ ! -f "$zf" ]; then
+    printf '%s/%s\n' "$VAULT" "$1"
+    return 0
+  fi
+  awk -F'|' -v rel="$1" -v vault="$VAULT" '
+    /^[[:space:]]*#/ || NF < 2 { next }
+    {
+      src = $1; dst = $2
+      gsub(/^[ \t]+|[ \t\/]+$/, "", src); gsub(/^[ \t]+|[ \t\/]+$/, "", dst)
+      if (src == "" || dst == "") next
+      if ((rel == src || index(rel, src "/") == 1) && length(src) > best) {
+        best = length(src); out = dst substr(rel, length(src) + 1)
+      }
+    }
+    END { if (best) print vault "/" out; else print vault "/" rel }
+  ' "$zf"
+}
+
+CANONICAL=$(zpath "Agent第二大脑.md")
+PREFERENCES=$(zpath "02 经验与方法/Agent/用户偏好与工作约束.md")
+CORRECTIONS=$(zpath "90 系统文件/Agent记忆/纠错与取代记录.md")
+MEMORY=$(zpath "90 系统文件/Agent记忆/可靠记忆索引.md")
+PROJECTS=$(zpath "01 项目")
+HEALTH=$(zpath "90 系统文件/自动化/日更健康.md")
+# 别名表：KROUTER_MAP → 库里的 90 系统文件/canonical_sources.psv → 代码目录里的样例
+if [ -n "${KROUTER_MAP:-}" ]; then
+  CANONICAL_MAP=$KROUTER_MAP
+elif [ -f "$(zpath "90 系统文件/canonical_sources.psv")" ]; then
+  CANONICAL_MAP=$(zpath "90 系统文件/canonical_sources.psv")
+else
+  CANONICAL_MAP="$(dirname "$0")/canonical_sources.psv"
+fi
 
 usage() {
   printf '%s\n' "usage: route_knowledge.sh {status|preference|correction|memory|project|search|suggest} [literal query]" >&2
@@ -68,8 +96,11 @@ emit_receipt() {
     [ -n "$source_verified_at" ] && printf 'source_verified_at: %s\n' "$source_verified_at"
     printf 'source_sha256: %s\n' "$(file_sha256 "$source")"
   fi
-  [ -f "$CANONICAL_MAP" ] && printf 'canonical_map_sha256: %s\n' "$(file_sha256 "$CANONICAL_MAP")"
-  subconscious="$VAULT/90 系统文件/自动化/下意识.md"
+  if [ -f "$CANONICAL_MAP" ]; then
+    printf 'canonical_map: %s\n' "$CANONICAL_MAP"
+    printf 'canonical_map_sha256: %s\n' "$(file_sha256 "$CANONICAL_MAP")"
+  fi
+  subconscious=$(zpath "90 系统文件/自动化/下意识.md")
   if [ -f "$subconscious" ]; then
     printf 'subconscious: %s\n' "$subconscious"
     printf 'subconscious_sha256: %s\n' "$(file_sha256 "$subconscious")"
@@ -90,6 +121,21 @@ emit_host_action() {
   printf 'krouter_writer: %s\n' "${writer:-missing}"
   if [ "${key:-missing}" != "present" ] || [ "${writer:-missing}" != "present" ]; then
     printf '%s\n' "host_action: Distill needs a callable model. Paste *_API_KEY on 90 系统文件/自动化/自进化钥匙.md (flagship is auto-locked), or log in grok / official Codex / claude (your subscription). Timer already on. Do not print secrets."
+  fi
+  nightly=$(frontmatter_value "$HEALTH" nightly)
+  if [ -n "$nightly" ]; then
+    nightly_at=$(frontmatter_value "$HEALTH" nightly_at)
+    printf 'nightly: %s\n' "$nightly"
+    printf 'nightly_at: %s\n' "$nightly_at"
+    stale=$(python3 -c 'import sys,datetime as d
+try: print(int((d.datetime.now()-d.datetime.fromisoformat(sys.argv[1])).days>=3))
+except ValueError: print(0)' "$nightly_at" 2>/dev/null || printf 0)
+    [ "${lamp:-}" = running ] || stale=0
+    if [ "$nightly" = skipped ] || [ "$nightly" = failed ] || [ "$stale" = 1 ]; then
+      why=$nightly
+      [ "$nightly" != skipped ] && [ "$nightly" != failed ] && why="has not run for 3+ days"
+      printf '%s\n' "host_action: Nightly upkeep $why; see 90 系统文件/自动化/夜间维护.md for each step's reason. Model steps need the writer's lane (a *_API_KEY, or a logged-in grok / Codex / claude / …)."
+    fi
   fi
 }
 
@@ -128,6 +174,7 @@ emit_daily_seal() {
   printf 'daily_seal: %s\n' "${sealed:-missing}"
   [ -n "$through" ] && printf 'daily_seal_through: %s\n' "$through"
   [ -n "$pending" ] && printf 'daily_seal_pending: %s\n' "$pending"
+  return 0  # 上一行为假时函数返回 1，set -e 会让整个 status 在打印 host_action 之前静默退出
 }
 
 md_search() {
@@ -209,7 +256,7 @@ canonical_lookup() {
     "$canonical_id" "$canonical_source"
   anchor=${rest#*|}
   how=$anchor
-  l0="$VAULT/90 系统文件/自动化/下意识.md"
+  l0=$(zpath "90 系统文件/自动化/下意识.md")
   if [ -f "$l0" ]; then
     row=$(awk -F'|' -v id="$canonical_id" '$1==id { print; exit }' "$l0")
     if [ -n "$row" ]; then
