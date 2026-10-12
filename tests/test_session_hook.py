@@ -143,11 +143,16 @@ def test_end_imports_the_session_that_just_ended(tmp_path):
     env = {**s["env"], "KROUTER_CLAUDE_PROJECTS": str(tmp_path / "projects")}
     res = _hook(env, "end", {"session_id": "dddd4444-s", "transcript_path": str(transcript), "cwd": str(work)})
     assert res.returncode == 0 and res.stdout == ""
-    for _ in range(100):  # 导入在后台跑，不拖住 Claude Code
-        if list(s["folder"].glob("*超时设置*")):
-            break
+    page = ""
+    for _ in range(150):  # 导入在后台跑，不拖住 Claude Code；只认写完的 .md，不碰正在写的 .md.tmp
+        found = list(s["folder"].glob("*超时设置*.md"))
+        if found:
+            try:
+                page = found[0].read_text(encoding="utf-8")
+                break
+            except OSError:  # Windows：文件刚换上、还被占着
+                pass
         time.sleep(0.1)
-    page = next(s["folder"].glob("*超时设置*")).read_text(encoding="utf-8")
     assert "project: api" in page and f"project_root: {_root(work)}" in page and "改成 10 秒。" in page
 
 
