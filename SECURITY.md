@@ -39,6 +39,11 @@ reads on its own — that is what the sandbox and the allow-list are for.
 commits and digests), nor a key split into short hyphenated groups. Put keys in `~/.dsh-krouter-keys.env`, or keep them
 on a page whose name says what it is.
 
+**Long-lived CLI token.** For the claude lane, `claude setup-token` issues a token for unattended use; put it in
+`~/.dsh-krouter-keys.env` as `CLAUDE_CODE_OAUTH_TOKEN=…` (the file is mode 600, never in the vault). KRouter passes it
+only to the `claude` process. It avoids the logout that happens when another program (a proxy, another machine) holds
+the same keychain login and spends its single-use refresh token.
+
 ## Integrity of what you install
 
 The one-line install downloads a tagged release, never `main`, and checks the package's SHA-256 against the release's

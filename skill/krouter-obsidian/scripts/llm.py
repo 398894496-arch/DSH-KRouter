@@ -153,6 +153,7 @@ def writer_probe_argv(writer: str) -> tuple[str, list[str] | None]:
 def _run_cmd(argv: list[str]) -> tuple[int, str]:
     env = os.environ.copy()
     env.setdefault("HOME", str(Path.home()))
+    env.update({k: v for k, v in cli_env().items() if k in CLI_TOKEN_NAMES})
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, timeout=25, env=env, stdin=subprocess.DEVNULL)
     except (OSError, subprocess.TimeoutExpired):
@@ -229,6 +230,49 @@ def logged_in_cli() -> str:
         path, result = detect_writer(os.environ.get("KROUTER_WRITER", ""))
         _CLI.append(path if writer_ok(result) else "")
     return _CLI[0]
+
+
+CLI_TOKEN_NAMES = ("CLAUDE_CODE_OAUTH_TOKEN",)  # `claude setup-token`: a year-long token that never needs a refresh
+
+
+def cli_env() -> dict[str, str]:
+    """Environment for a CLI writer: the process environment plus a long-lived CLI token from the keys file.
+
+    A logged-in `claude` keeps a short-lived OAuth token plus a single-use refresh token in the keychain. When
+    another program holds the same login (a proxy such as CLIProxyAPI / EasyCLI, a second machine) and refreshes
+    first, the CLI's refresh token is spent and the CLI is logged out. `claude setup-token` issues a token that
+    needs no refresh; put it in `~/.dsh-krouter-keys.env` as `CLAUDE_CODE_OAUTH_TOKEN=…` and every KRouter call
+    uses it instead of the keychain."""
+    env = dict(os.environ)
+    path = keys_file()
+    if path.is_file():
+        for name, val in _parse(path.read_text(encoding="utf-8", errors="replace")).items():
+            if name in CLI_TOKEN_NAMES and not env.get(name):
+                env[name] = val
+    return env
+
+
+class _CliLock:
+    """One `claude` at a time across KRouter processes: concurrent CLIs refreshing the same keychain login race,
+    and the loser's refresh token is spent (it logs the CLI out). A file lock, released on exit or crash."""
+
+    def __init__(self) -> None:
+        self.fh = None
+
+    def __enter__(self):
+        try:
+            import fcntl
+        except ImportError:  # Windows: no flock; the long-lived token is the fix there
+            return self
+        path = Path(os.environ.get("KROUTER_STATE_DIR") or Path.home() / ".local/state/krouter") / "cli.lock"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.fh = open(path, "w")
+        fcntl.flock(self.fh, fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *exc) -> None:
+        if self.fh is not None:
+            self.fh.close()
 
 
 def text_argv(cli: str, prompt_file: str) -> tuple[list[str], bool]:
@@ -595,8 +639,10 @@ def complete(prompt: str, vault: Path | None = None) -> str:
                     prompt_file = str(Path(tmp) / "prompt.md")
                     Path(prompt_file).write_text(prompt, encoding="utf-8")
                     argv, on_stdin = text_argv(detail, prompt_file)
-                    proc = subprocess.run(argv, input=prompt if on_stdin else None, capture_output=True, text=True,
-                                          timeout=TIMEOUT, cwd=tmp, stdin=None if on_stdin else subprocess.DEVNULL)
+                    with _CliLock():
+                        proc = subprocess.run(argv, input=prompt if on_stdin else None, capture_output=True, text=True,
+                                              timeout=TIMEOUT, cwd=tmp, stdin=None if on_stdin else subprocess.DEVNULL,
+                                              env=cli_env())
                 if proc.returncode != 0:
                     raise RuntimeError((proc.stderr or proc.stdout)[-200:])
                 _record("cli", detail, prompt, proc.stdout)

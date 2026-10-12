@@ -468,3 +468,43 @@ def test_health_page_gets_no_cards(vault):
     health = "90 系统文件/自动化/日更健康.md"
     write(vault, health, "---\ntitle: 日更健康\nstatus: active\n---\n\n# 日更健康\n\n每天 09:10 跑。\n")
     assert health not in ac.targets(vault)
+
+
+def test_cli_env_carries_the_long_lived_token(monkeypatch, tmp_path):
+    """`claude setup-token` in the keys file reaches every CLI call; the keychain login is no longer needed."""
+    import llm
+
+    keys = tmp_path / "keys.env"
+    keys.write_text("DEEPSEEK_API_KEY=sk-x\nCLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-test\n", encoding="utf-8")
+    monkeypatch.setenv("KROUTER_KEYS_ENV", str(keys))
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    env = llm.cli_env()
+    assert env["CLAUDE_CODE_OAUTH_TOKEN"] == "sk-ant-oat01-test"
+    assert "DEEPSEEK_API_KEY" not in env or env["DEEPSEEK_API_KEY"] != "sk-x"  # only the CLI token is added
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "from-env")
+    assert llm.cli_env()["CLAUDE_CODE_OAUTH_TOKEN"] == "from-env"  # an explicit env value wins
+
+
+@pytest.mark.skipif(__import__("os").name == "nt", reason="flock")
+def test_one_cli_at_a_time(monkeypatch, tmp_path):
+    import threading
+    import time
+
+    import llm
+
+    monkeypatch.setenv("KROUTER_STATE_DIR", str(tmp_path))
+    inside, peak = [0], [0]
+
+    def work():
+        with llm._CliLock():
+            inside[0] += 1
+            peak[0] = max(peak[0], inside[0])
+            time.sleep(0.05)
+            inside[0] -= 1
+
+    threads = [threading.Thread(target=work) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert peak[0] == 1

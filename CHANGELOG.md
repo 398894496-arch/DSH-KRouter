@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.1 — 2026-10-11
+
+- **`claude` stops getting logged out.** A logged-in `claude` keeps a short-lived token and a single-use refresh token in the keychain. When another program holds the same login — on the author's machine a CLIProxyAPI / EasyCLI copy that refreshes every ~8 hours — whichever refreshes first spends the token and the other is logged out: the CLI went to `loggedIn: false` half an hour after the proxy's refresh, while the desktop app (a separate login) kept working. Concurrent `claude` processes refreshing at once race the same way. Now every KRouter call to `claude` — nightly steps, the writer, the login probe — uses `CLAUDE_CODE_OAUTH_TOKEN` from `~/.dsh-krouter-keys.env` when present (`claude setup-token` issues one that lasts a year and needs no refresh), and runs one `claude` at a time (file lock).
+- **The claude writer's allow-list, tested end to end** (the CLI was logged out when 0.12.0 shipped): the router answers, a file outside the vault is denied through both the Read tool and the shell, writing inside the vault works. The runtime prompt now says to run the router exactly as written (a `VAR=` prefix does not match the allow-list), and the allow-list accepts `sh` / `bash` / `/bin/sh` forms.
+
 ## 0.12.0 — 2026-10-11
 
 **Renamed: DSH-KRouter → KRouter.** It was never specific to DeepSeek Harness. Old links, the old clone URL, the old
