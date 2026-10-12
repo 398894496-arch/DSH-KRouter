@@ -1,8 +1,13 @@
 #!/bin/sh
 set -eu
 
+# 没设 OBSIDIAN_VAULT 时用一键安装记下的路径（~/.config/krouter/vault，同 krouter_home.py）
 if [ -z "${OBSIDIAN_VAULT:-}" ]; then
-  printf '%s\n' "set OBSIDIAN_VAULT to your vault root" >&2
+  _vf=${KROUTER_VAULT_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/krouter/vault}
+  [ -f "$_vf" ] && OBSIDIAN_VAULT=$(head -n 1 "$_vf") && export OBSIDIAN_VAULT
+fi
+if [ -z "${OBSIDIAN_VAULT:-}" ]; then
+  printf '%s\n' "set OBSIDIAN_VAULT to your vault root (or run the one-line install, which records it)" >&2
   exit 2
 fi
 VAULT=$OBSIDIAN_VAULT

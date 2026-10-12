@@ -50,6 +50,15 @@ QUERY_STOP = {
     "是什", "么样", "要不", "不要", "还是", "这个", "那个", "如何", "多少", "吗我",
     "关于", "帮我", "请问", "一首", "一个", "一下",
 }
+# 英文问句里的功能词：小库里多半一次都没出现，但它们不是「问的东西」。不当库外词数，只影响拒答
+EN_FUNCTION = set("""
+a an the and or but if then so of to in on at by for from with about into over under as is are was were be been
+being am do does did done doing have has had having can could should would will shall may might must need needs
+what which who whom whose when where why how many much long often far old there here this that these those it its
+i me my we us our you your he him his she her they them their one ones any some all each every no not more most
+less other else than too very just also only ever still again use used using get got make made way ways thing things
+please tell know want like
+""".split())
 # 含这些虚字的双字（`天的`、`帮我`）出现得极频繁，"像词"指标会误判；只影响拒答，不影响排序
 FUNCTION_CHARS = set("的了我你他她吗呢吧啊么什")
 CJK_RE = re.compile(r"[㐀-鿿豈-﫿]+")
@@ -328,9 +337,13 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
             continue  # 单个汉字（`的`）不是词
         if t not in QUERY_STOP and t not in raw:
             raw.append(t)
+    # 英文功能词（what / is / the / do）不参与排序和拒答判断：小库里它们只会把「Error messages」这种
+    # 恰好写了 what 和 do 的页顶上来。全是功能词的问句照旧用原词
+    raw = [t for t in raw if t not in EN_FUNCTION] or raw
     if not raw:
         return {"hits": [], "stats": stats, "query_tokens": [], "confidence": "none", "margin": 0.0}
-    df = term_df(con, raw + [c for t in raw if is_cjk_bigram(t) for c in t])
+    df = term_df(con, raw + [c for t in raw if is_cjk_bigram(t) for c in t]
+                 + [f for t in raw if not is_cjk_bigram(t) for f in latin_forms(t)])
     present = [t for t in raw if df.get(t, 0) > 0]
     bigrams = [t for t in present if is_cjk_bigram(t)]
     named = phrase_terms(con, bigrams)
@@ -484,10 +497,26 @@ def alien_chars(raw: list[str], df: dict[str, int]) -> int:
     return sum(1 for c in chars if not df.get(c, 0))
 
 
+def latin_forms(t: str) -> list[str]:
+    """`services` 和库里的 `service` 是同一个词：复数 / 单数互认。"""
+    forms = [t + "s", t + "es"]
+    if t.endswith("ies"):
+        forms.append(t[:-3] + "y")
+    if t.endswith("es"):
+        forms.append(t[:-2])
+    if t.endswith("s"):
+        forms.append(t[:-1])
+    return forms
+
+
+def _known_latin(t: str, df: dict[str, int]) -> bool:
+    return any(df.get(f, 0) for f in [t, *latin_forms(t)])
+
+
 def unknown_content_terms(raw: list[str], df: dict[str, int]) -> int:
     n = 0
     for t in raw:
-        if df.get(t, 0):
+        if df.get(t, 0) or t in EN_FUNCTION or (not is_cjk_bigram(t) and _known_latin(t, df)):
             continue
         # 只看拉丁专名（`Kubernetes`）。中文词库里没有多半只是换了说法（`讲究`），不代表问的是库外
         if not is_cjk_bigram(t):

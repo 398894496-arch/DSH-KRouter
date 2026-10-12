@@ -19,4 +19,8 @@ A change to a scoring constant (`SCORE_MIN`, `TITLE_HIT`, `TOPIC_*`, `CARD_MIN`,
 
 Tests and evaluation runs must not write the host's query log (`~/.local/state/krouter/queries.jsonl`): it is what the nightly learning reads, so test questions in it become learned triggers, and held-out questions in it stop being held out. `tests/conftest.py` points `KROUTER_STATE_DIR` and `KROUTER_CACHE_DIR` at a temp dir; evaluation scripts set `KROUTER_NO_QUERY_LOG=1`.
 
-`main` takes reviewed changes; hosts should pin a release tag.
+`main` takes reviewed changes; hosts should pin a release tag. Releases are weekly milestones: fixes merge to `main` as they come, and a tagged release goes out once a week with a "what you will notice" summary at the top of its changelog entry.
+
+## Good first issues
+
+Issues labeled [`good first issue`](https://github.com/398894496-arch/KRouter/labels/good%20first%20issue) are small and self-contained. Typical ones: import sessions from another agent (Cursor, Gemini CLI, OpenCode) in `import_sessions.py`; a vault template for another field; an adapter for the memory honesty bench ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)) that runs another memory system on the same 30 questions.

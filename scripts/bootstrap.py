@@ -50,6 +50,17 @@ MSG = {
         "prefer_key": "更稳妥的是用 API key：它直接调用接口，不在本机运行任何 agent（把 key 贴到知识库的「自进化钥匙」页就行）。\n",
         "timer_off": "没有开启每晚自动整理。想开的时候运行：{cmd}",
         "timer_skip_noninteractive": "不是在交互终端里运行，所以没有开启每晚自动整理（需要你明确同意）。想开的时候运行：{cmd}",
+        "import_ask": "要把本机已有的 agent 会话导进知识库吗？找到近 7 天 {agents} 的 {sessions} 个会话、{turns} 轮。"
+        "只留你的提问和每轮最后的回答，先脱敏，只写在本机这个库里，不发给任何模型；以后每晚也导入前一天的。导入？[y/N] ",
+        "distill_ask": "再让 {lane} 把最近 {n} 个会话「定了什么、改了什么」提炼出来吗？会发出约 {chars} 字（已脱敏），"
+        "需要几分钟；以后每晚只提炼前一天的。提炼？[y/N] ",
+        "import_none": "本机没找到近 7 天的 Claude Code / Codex 会话，跳过导入。",
+        "import_off": "没有导入会话。想导的时候运行：{cmd}",
+        "import_done": "导入了 {pages} 页会话摘录（{folder}）{distilled}。",
+        "distilled": "，其中 {n} 个会话已提炼出定下来的事",
+        "distilling": "正在提炼（每个会话一次模型调用）…",
+        "try": "现在就可以问你的 agent，比如：「{q}」——它会先查这个库，答案带出处页；库里没有的会直说没有。",
+        "mcp": "已把 KRouter 注册成 {cli} 的 MCP 工具（krouter_ask）。",
     },
     "en": {
         "plan": "Plan", "vault_new": "New vault", "vault_merge": "Existing vault (adds only missing skeleton files; overwrites nothing)",
@@ -69,6 +80,19 @@ MSG = {
         "prefer_key": "The safer choice is an API key: a direct API call, no agent runs on this machine (paste it on the vault's key page).\n",
         "timer_off": "Nightly upkeep is off. To turn it on later: {cmd}",
         "timer_skip_noninteractive": "Not run from an interactive terminal, so the nightly upkeep was not turned on (it needs your yes). To turn it on: {cmd}",
+        "import_ask": "Import the agent sessions already on this machine? Found {sessions} sessions ({turns} turns) from {agents} "
+        "in the last 7 days. Only your questions and each turn's closing answer are kept, redacted, written to this vault "
+        "on this machine, and sent to no model; each night it imports the previous day too. Import? [y/N] ",
+        "distill_ask": "Also have {lane} pull out what was decided and what changed in the latest {n} sessions? It sends about "
+        "{chars} characters (redacted) and takes a few minutes; after that only the previous day, each night. Distill? [y/N] ",
+        "import_none": "No Claude Code / Codex sessions from the last 7 days on this machine; nothing to import.",
+        "import_off": "Sessions were not imported. To import them later: {cmd}",
+        "import_done": "Imported {pages} session excerpt pages ({folder}){distilled}.",
+        "distilled": "; {n} sessions distilled into what was decided",
+        "distilling": "Distilling (one model call per session) …",
+        "try": "Ask your agent now, for example: \"{q}\" — it checks this vault first and cites the page; what the vault "
+        "does not hold, it says so.",
+        "mcp": "Registered KRouter as an MCP tool for {cli} (krouter_ask).",
     },
 }
 KEEP = ("canonical_sources.psv", "canonical_alias_ledger.jsonl")
@@ -262,6 +286,92 @@ def decide_timer(args: argparse.Namespace, vault: Path, t: dict) -> tuple[bool, 
     return answer.strip().lower() in {"y", "yes", "是", "好", "开"}, True
 
 
+IMPORT = ROOT / "skill/krouter-obsidian/scripts/import_sessions.py"
+DISTILL_AT_INSTALL = 8  # 安装时只提炼最近几个会话，免得一装就等十几分钟
+
+
+def run_import(vault: Path, *extra: str) -> dict:
+    env = {**os.environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_NO_QUERY_LOG": "1"}
+    res = subprocess.run([sys.executable, str(IMPORT), "--vault", str(vault), *extra], env=env, capture_output=True,
+                         text=True, timeout=3600)
+    try:
+        return json.loads(res.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return {}
+
+
+def decide_import(args: argparse.Namespace, vault: Path, t: dict, lane_kind: str) -> tuple[bool, bool, bool]:
+    """(import, distill, worth saying how to do it later). Copying chat text into the vault, and sending it to a
+    model, each need a yes: a flag, or `y` at the prompt. No terminal to ask on: nothing is imported."""
+    if args.no_import:
+        return False, False, False
+    preview = run_import(vault, "--dry-run")
+    if not preview.get("pages"):
+        print(t["import_none"])
+        return False, False, False
+    if args.import_sessions or args.import_distill:
+        return True, bool(args.import_distill and lane_kind), False
+    answer = ask_tty(t["import_ask"].format(sessions=preview["sessions"], turns=preview["turns"],
+                                            agents=" / ".join(preview.get("agents") or [])))
+    if answer is None or answer.strip().lower() not in {"y", "yes", "是", "好", "导"}:
+        return False, False, True
+    if not lane_kind:
+        return True, False, False
+    est = run_import(vault, "--dry-run", "--distill", "--distill-max", str(DISTILL_AT_INSTALL))
+    lane = "your API key" if lane_kind == "key" else lane_kind
+    answer = ask_tty(t["distill_ask"].format(lane=lane, n=est.get("distilled") or DISTILL_AT_INSTALL,
+                                             chars=est.get("chars") or 0))
+    return True, bool(answer and answer.strip().lower() in {"y", "yes", "是", "好"}), False
+
+
+def try_question(vault: Path, lang: str) -> str:
+    """A question this vault can answer now: the latest distilled session's first decision, else its title."""
+    folder = vault / "05 时间日志" / "会话摘录"
+    pages = sorted(folder.glob("*.md")) if folder.is_dir() else []  # 文件名以日期开头：最后一个是最近的会话
+    for page in reversed(pages):
+        head = page.read_text(encoding="utf-8")[:1500]
+        title = next((ln[7:].strip() for ln in head.splitlines() if ln.startswith("title: ")), "")
+        if "digest_turns:" in head and title:
+            return f"{title}那次最后定了什么？" if lang == "zh" else f"What did we decide in {title}?"
+    if pages:
+        title = next((ln[7:].strip() for ln in pages[-1].read_text(encoding="utf-8")[:1500].splitlines()
+                      if ln.startswith("title: ")), "")
+        if title:
+            return f"{title}那次我们聊到哪了？" if lang == "zh" else f"Where did we leave {title}?"
+    return "我们之前定过什么规矩？" if lang == "zh" else "What rules have we set before?"
+
+
+def register_mcp(t: dict, dry: bool) -> list[str]:
+    """Register the MCP server with the agent CLIs that are installed (user scope). Re-running is harmless."""
+    if os.environ.get("KROUTER_NO_MCP") == "1":
+        return []
+    skill = Path(os.environ.get("KROUTER_SKILL_HOME") or Path.home() / ".agents/skills/krouter-obsidian")
+    # python3 on PATH outlives a versioned interpreter path (a Homebrew upgrade moves python@3.x)
+    py = sys.executable if WINDOWS else (shutil.which("python3") or sys.executable)
+    server = [py, str(skill / "scripts" / "mcp_server.py")]
+    done = []
+    for cli, argv in (("claude", ["mcp", "add", "--scope", "user", "krouter", "--"]),
+                      ("codex", ["mcp", "add", "krouter", "--"])):
+        exe = shutil.which(cli)
+        if not exe:
+            continue
+        if dry:
+            print("  " + " ".join([cli, *argv, *server]))
+            continue
+        if cli == "claude":
+            subprocess.run([exe, "mcp", "remove", "--scope", "user", "krouter"], capture_output=True, timeout=60)
+        else:
+            subprocess.run([exe, "mcp", "remove", "krouter"], capture_output=True, timeout=60)
+        try:
+            ok = subprocess.run([exe, *argv, *server], capture_output=True, text=True, timeout=60).returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            ok = False
+        if ok:
+            done.append(cli)
+            print(t["mcp"].format(cli=cli))
+    return done
+
+
 def open_in_obsidian(vault: Path) -> bool:
     url = "obsidian://open?path=" + urllib.parse.quote(str(vault))
     try:
@@ -288,6 +398,10 @@ def main() -> int:
     ap.add_argument("--timer", action="store_true", help="install the nightly job without asking (you have read what it does)")
     ap.add_argument("--no-timer", action="store_true", help="do not install the nightly job, and do not ask")
     ap.add_argument("--no-open", action="store_true", help="do not open the vault in Obsidian")
+    ap.add_argument("--import", dest="import_sessions", action="store_true",
+                    help="import the last 7 days of agent sessions without asking (local only)")
+    ap.add_argument("--import-distill", action="store_true", help="import, and have the model lane distill the latest sessions")
+    ap.add_argument("--no-import", action="store_true", help="do not import agent sessions, and do not ask")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     lang = system_lang() if args.lang == "auto" else args.lang
@@ -307,8 +421,16 @@ def main() -> int:
     if rc != 0:
         return rc
     if args.dry_run:
+        register_mcp(t, True)
         print("  nightly job: " + ("yes (--timer)" if args.timer else "no (--no-timer)" if args.no_timer else "asks first"))
+        print("  session import: " + ("no (--no-import)" if args.no_import else "yes (--import)" if args.import_sessions
+                                      else "asks first"))
         return 0
+    sys.path.insert(0, str(ROOT / "skill/krouter-obsidian/scripts"))
+    from krouter_home import remember
+
+    remember(vault)  # agent、MCP、插件不用先 export OBSIDIAN_VAULT 也找得到这个库
+    mcp = register_mcp(t, False)
     os.environ.pop("KROUTER_NO_TIMER", None)
     timer, asked = decide_timer(args, vault, t)
     if timer:
@@ -321,13 +443,29 @@ def main() -> int:
     lane = model_lane(vault)
     keys = os.environ.get("KROUTER_KEYS_ENV") or str(Path.home() / ".dsh-krouter-keys.env")
     print(f"{t['model_ok']}: {lane}" if lane else t["model_none"].format(keys=keys))
+    lane_kind = "" if not lane else ("key" if lane == "API key" else lane.split(" ")[0])
+    do_import, do_distill, tell_later = decide_import(args, vault, t, lane_kind)
+    imported = {}
+    if do_import:
+        extra = ["--consent"] + (["--distill", "--distill-max", str(DISTILL_AT_INSTALL)] if do_distill else [])
+        if do_distill:
+            print(t["distilling"])
+        imported = run_import(vault, *extra)
+        n = imported.get("distilled") or 0
+        print(t["import_done"].format(pages=imported.get("pages", 0), folder="05 时间日志/会话摘录",
+                                      distilled=t["distilled"].format(n=n) if n else ""))
+    elif tell_later:
+        cmd = f"{'python' if WINDOWS else 'python3'} \"{IMPORT}\" --consent --vault \"{vault}\""
+        print(t["import_off"].format(cmd=cmd))
     skill = Path(os.environ.get("KROUTER_SKILL_HOME") or Path.home() / ".agents/skills/krouter-obsidian")
     router = skill / "scripts" / ("route_knowledge.py" if WINDOWS else "route_knowledge.sh")
     print(t["done"].format(vault=vault, router=router))
+    print(t["try"].format(q=try_question(vault, lang)))
     if state == "new" and not args.no_open:
         print(t["obsidian"] if open_in_obsidian(vault) else t["obsidian_none"].format(vault=vault))
     print(json.dumps({"vault": str(vault), "lang": lang, "state": state, "added": len(added), "model": lane or None,
-                      "timer": timer},
+                      "timer": timer, "imported": imported.get("pages", 0), "distilled": imported.get("distilled", 0),
+                      "mcp": mcp},
                      ensure_ascii=False))
     return 0
 

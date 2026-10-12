@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Nightly upkeep runner: the five steps in order, each one's outcome written where the host can see it.
 
-compile_subconscious → reconsolidate → consolidate_topics → answer_cards → checkup. Each step is a
+import_sessions → compile_subconscious → reconsolidate → consolidate_topics → answer_cards → checkup. The first one
+imports yesterday's agent sessions only after the host said yes (`import_sessions.py --consent`); until then it is
+`off`, which is not a problem to report. Each step is a
 separate process; one failing does not stop the others. Outcomes (ran / skipped / partial / failed,
 the reason, the model lane, how many model calls and how many characters left the machine) go to
 `90 系统文件/自动化/夜间维护.md` and onto the health page (`nightly`, `nightly_at`), where `status`
@@ -29,8 +31,8 @@ import llm  # noqa: E402
 import notify  # noqa: E402
 import zones  # noqa: E402
 
-STEPS = ("compile_subconscious", "reconsolidate", "consolidate_topics", "answer_cards", "checkup")
-MODEL_STEPS = {"reconsolidate", "consolidate_topics", "answer_cards"}
+STEPS = ("import_sessions", "compile_subconscious", "reconsolidate", "consolidate_topics", "answer_cards", "checkup")
+MODEL_STEPS = {"import_sessions", "reconsolidate", "consolidate_topics", "answer_cards"}
 REPORT = "90 系统文件/自动化/夜间维护.md"
 HEALTH = "90 系统文件/自动化/日更健康.md"
 
@@ -40,6 +42,8 @@ def classify(rc: int, out: str) -> tuple[str, str]:
     low = out.lower()
     if rc != 0:
         return "failed", (out.strip().splitlines() or [f"rc={rc}"])[-1][:200]
+    if '"import": "off"' in out:
+        return "off", "会话导入没开（import_sessions.py --consent 开启）"
     for line in out.splitlines():
         if "skipped" in line.lower():
             return "skipped", line.strip()[:200]
@@ -81,7 +85,7 @@ def overall(results: list[dict]) -> str:
         return "failed"
     if "skipped" in states:  # 有一步因为没有可用模型而没做：这是宿主要处理的事
         return "skipped"
-    if states - {"ok"}:
+    if states - {"ok", "off"}:
         return "degraded"
     return "ok"
 
@@ -91,6 +95,8 @@ def run_step(step: str, vault: Path, extra: list[str], dry: bool) -> dict:
     if not path.is_file():
         return {"step": step, "state": "missing", "reason": "script not found"}
     argv = [sys.executable, str(path), "--vault", str(vault)]
+    if step == "import_sessions":
+        argv.append("--nightly")
     if step in MODEL_STEPS:
         argv += extra
     if dry:
@@ -145,7 +151,8 @@ def write_report(vault: Path, results: list[dict], state: str, lane_name: str, a
         "机器生成，每晚覆盖。只记元数据（步骤、结果、调用次数、发出的字数），不记内容。", "",
         f"结果：**{state}**（通道：{lane_name}）", "",
         "| 步骤 | 结果 | 模型调用 / 发出 | 秒 | 原因 |", "|---|---|---|---|---|", *rows, "",
-        "发出的内容：规则页 / 主题页全文（问答卡）、主题证据（主题档案）、路由器没答好的查询原文（夜间学习）。"
+        "发出的内容：规则页 / 主题页全文（问答卡）、主题证据（主题档案）、路由器没答好的查询原文（夜间学习）；"
+        "开了会话导入并选了提炼时，还有昨天会话的脱敏摘录。"
         "`KROUTER_NIGHTLY=0` 关掉；`run.sh --dry-run` 先看会发什么。", "",
     ])
     out = zones.path(vault, REPORT)

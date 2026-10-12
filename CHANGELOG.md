@@ -1,5 +1,52 @@
 # Changelog
 
+Releases are weekly milestones from 0.13.0 on; fixes in between land on `main`. Each entry starts with what you will
+notice, then the details.
+
+## 0.13.0 — 2026-10-12
+
+**What you will notice**
+- **Useful in five minutes, not after a night.** The install asks whether to import the Claude Code and Codex
+  sessions already on the machine (the last 7 days). On a yes, each session becomes a page (your questions and
+  each turn's closing answer, redacted first, written only on this machine). A second question asks whether your
+  model should write "what was decided, what changed" at the top of the latest sessions' pages, and says how many
+  characters that sends first. Then it suggests a question to ask your agent.
+- **Claude Code and Codex find the vault on their own.** The install registers KRouter as an MCP server
+  (`krouter_ask`, `krouter_status`) with each CLI it finds and records the vault path, so no one has to export
+  `OBSIDIAN_VAULT` first. Claude Code can also install it as a plugin:
+  `/plugin install krouter --marketplace 398894496-arch/KRouter`.
+- **A new front page.** One sentence on what it does, a 30-second demo (real Claude Code output), one install line,
+  and how it differs from typical agent memory. Everything else moved to [`docs/DETAILS.md`](docs/DETAILS.md); facts
+  for an agent deciding whether to recommend it moved to [`docs/FOR-AGENTS.md`](docs/FOR-AGENTS.md), phrased as
+  facts rather than instructions.
+- **A public memory honesty bench** ([`docs/BENCHMARK.md`](docs/BENCHMARK.md)): wrong-citation rate, refusals on
+  neighbour questions, corrections followed. Plain full-text search that always answers: 63% wrong citations.
+  KRouter 0.12.1, first run: 22%. 0.13.0: 0%, all 10 neighbour questions refused, 8 of 10 corrections followed
+  (a development-set number: the fix below was found on this bench).
+
+**Details**
+- `import_sessions.py`: Claude Code `~/.claude/projects`, Codex `~/.codex/sessions`; one page per session and day
+  under `05 时间日志/会话摘录/`, named after the session title. Headless runs (`claude -p`, `codex exec`, the nightly
+  job's own calls), tool output, thinking, injected context and subagents are left out. A page it did not write is
+  never touched. A session that grows is re-rendered, keeping its digest until the session changes. `--dry-run`,
+  `--consent` and `--revoke` are supported, and the nightly job imports yesterday only after `--consent`. Imported
+  pages rank as logs: clues, not rules.
+- `nightly.py` gains `import_sessions` as its first step. It is `off` until the host consents, and `off` is not
+  reported as a problem.
+- `mcp_server.py`: MCP over stdio, standard library only. `krouter_home.py`: the router, the shell router and the
+  MCP server fall back to `~/.config/krouter/vault` when `OBSIDIAN_VAULT` is unset.
+- **Recall: English function words no longer count as unknown words.** `what`, `which`, `does`, `should` and the
+  like were in no stop list, so in a small vault they counted as words the vault had never seen. That refused real
+  questions and let neighbour questions through on `what` and `do`. They are now dropped from ranking and refusal,
+  and plural and singular forms match each other (`services` / `service`). The author's Chinese vault scores the same
+  before and after.
+- **Fix: re-installing no longer deletes lines from the keys file.** The key probe rewrote
+  `~/.dsh-krouter-keys.env` from its own results, dropping the claude long-lived token, pending keys, keys that
+  failed that day's probe, and comments. It now updates only the names it manages. Found while testing this release
+  on the author's machine: the token was restored and nothing was sent.
+- Removed from the docs: the claim that the claude writer runs with `--dangerously-skip-permissions` and that the
+  Windows task was never run on a real host. Both stopped being true in 0.12.
+
 ## 0.12.1 — 2026-10-11
 
 - **`claude` stops getting logged out.** A logged-in `claude` keeps a short-lived token and a single-use refresh token in the keychain. When another program holds the same login — on the author's machine a CLIProxyAPI / EasyCLI copy that refreshes every ~8 hours — whichever refreshes first spends the token and the other is logged out: the CLI went to `loggedIn: false` half an hour after the proxy's refresh, while the desktop app (a separate login) kept working. Concurrent `claude` processes refreshing at once race the same way. Now every KRouter call to `claude` — nightly steps, the writer, the login probe — uses `CLAUDE_CODE_OAUTH_TOKEN` from `~/.dsh-krouter-keys.env` when present (`claude setup-token` issues one that lasts a year and needs no refresh), and runs one `claude` at a time (file lock).

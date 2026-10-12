@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import zones
+from krouter_home import vault_path
 from krouter_redact import redact
 from canonical_lookup import (
     map_for,
@@ -367,9 +368,9 @@ def main() -> int:
         return 2
     route = sys.argv[1]
     query = sys.argv[2] if len(sys.argv) > 2 else ""
-    vault_raw = os.environ.get("OBSIDIAN_VAULT", "")
+    vault_raw = vault_path()
     if not vault_raw:
-        print("set OBSIDIAN_VAULT to your vault root", file=sys.stderr)
+        print("set OBSIDIAN_VAULT to your vault root (or run the one-line install, which records it)", file=sys.stderr)
         return 2
     vault = Path(vault_raw)
     if not vault.is_dir():
