@@ -88,7 +88,7 @@ def test_import_both_schema_generations(env, old):
     if old:
         env["env"]["KROUTER_CLAUDE_MEM_DB"] = str(_db(env["tmp"] / "old.db", old=True))
     out = _run(env)
-    assert out["sessions"] == 3 and out["projects"] == 2 and out["decisions"] == 3 and out["chars"] == 0
+    assert out["sessions"] == 3 and out["projects"] == 2 and out["decisions"] == 4 and out["chars"] == 0  # 3 条 decision + 1 条 bugfix；discovery 不收
     logs = _pages(env["vault"], "05 时间日志/claude-mem")
     assert len(logs) == 3
     release = next(v for k, v in logs.items() if "Fix the release process" in k)
@@ -138,7 +138,7 @@ def test_distill_sorts_out_what_was_replaced(env, monkeypatch):
     assert len(sent) == 2 and all(KEY not in p for p in sent)  # 每个项目一次，发出去的已脱敏
     shop = (env["vault"] / "02 经验与方法/从 claude-mem 导入/shop 的决定（claude-mem）.md").read_text(encoding="utf-8")
     assert "原来手动打 tag → 改成 CI 发版（#1 → #3）" in shop and "以上" not in shop
-    assert "how: 只从 main 上的 tag 发版，CI 发布（#3，近日）" in shop
+    assert "how: shop 在 claude-mem 里记下的 2 条决定和改动（待你确认），现在有效的和被取代的已整理在页首" in shop
     monkeypatch.setattr(sys, "argv", ["import_claude_mem.py", "--distill"])
     assert icm.main() == 0 and len(sent) == 2  # 决定没变：不重复整理
 

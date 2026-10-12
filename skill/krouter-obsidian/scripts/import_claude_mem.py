@@ -8,8 +8,10 @@ This copies what it learned into plain Markdown you own, where a correction can 
 
 - one page per claude-mem session under `05 时间日志/claude-mem/`: the summary (request, learned, completed, next
   steps) and its observations, each with title, facts and type. These are clues, ranked as logs.
-- one page per project under `02 经验与方法/从 claude-mem 导入/`: that project's `decision` observations, newest
-  first, with date and session. `status: candidate` until you confirm it.
+- one page per project under `02 经验与方法/从 claude-mem 导入/`: that project's decisions and changes, newest
+  first, with date, type and session. claude-mem files most decisions as `change` (seen on 13.35.0: only the reversal
+  of an earlier decision came out as `decision`), so `decision`, `change`, `feature`, `bugfix` and `refactor` all go
+  in; `discovery` does not. `status: candidate` until you confirm it.
 - `--distill` sends each project's decision list (redacted) to the model lane, once, and puts on top of that page the
   decisions still in force and the ones a later decision replaced ("原来 A → 改成 B"). This is the part claude-mem
   does not do: it remembers both and returns whichever matches.
@@ -42,6 +44,9 @@ MARK = "krouter-claude-mem"
 LOG_FOLDER = "05 时间日志/claude-mem"
 RULE_FOLDER = "02 经验与方法/从 claude-mem 导入"
 DECISIONS_MAX = 120   # 一个项目最多列多少条决定（最新的优先）
+# 实测（claude-mem 13.35.0）：明确说"我们决定"的事大多被它记成 change，只有推翻旧决定那条记成 decision。
+# 所以决定页收这几类；discovery（"某文件不存在"之类）不收
+DECISION_TYPES = ("decision", "change", "feature", "bugfix", "refactor")
 DISTILL_MAX = 20_000
 UNSAFE = re.compile(r"[\\/:*?\"<>|#^\[\]\n\r\t]+")
 TYPE_ZH = {"decision": "决定", "bugfix": "修复", "feature": "功能", "refactor": "重构", "discovery": "发现",
@@ -237,14 +242,15 @@ def project_decisions(sessions: dict[str, dict]) -> dict[tuple[str, str], list[d
     by: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for key, s in sessions.items():
         for o in s["obs"]:
-            if o.get("type") == "decision" and o.get("title"):
+            if o.get("type") in DECISION_TYPES and o.get("title"):
                 by[(s["project"] or "?", s["root"])].append({**o, "session": key, "session_title": session_title(s)})
     for rows in by.values():
         rows.sort(key=lambda o: o.get("at") or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     return by
 
 
-DISTILL_PROMPT = """下面是项目「{project}」里 claude-mem 记下的决定，按时间从新到旧，每条带编号和日期（已脱敏）。
+DISTILL_PROMPT = """下面是项目「{project}」里 claude-mem 记下的决定和改动，按时间从新到旧，每条带编号、日期和类型（已脱敏）。
+其中「改动」类多半是做了什么事（改了哪个文件、提交了什么），只有体现了一个规则或做法的才算决定。
 
 只做一件事：整理出这个项目**现在还有效的决定**，以及**被后来的决定取代了的**。
 - 现在有效的：每条一行，写成能直接照做的一句话，行尾标来源编号，例如（#12，2026-10-03）。
@@ -262,20 +268,25 @@ def project_page(project: str, rows: list[dict], digest: str = "", root: str = "
     tag = f"，{hashlib.sha1(root.encode('utf-8')).hexdigest()[:6]}" if root else ""
     name = f"{UNSAFE.sub(' ', project)[:60].strip() or '未命名项目'} 的决定（claude-mem{tag}）.md"
     rows = rows[:DECISIONS_MAX]
-    first = re.sub(r"^[-*]\s*", "", digest.strip().splitlines()[0]) if digest else clean(rows[0]["title"], 120)
+    # 一页装着一个项目的很多决定：how 不挑其中一条（多半对不上问题），对得上的那一行由召回的 L 行给出
+    first = (f"{project} 在 claude-mem 里记下的 {len(rows)} 条决定和改动（待你确认）"
+             + ("，现在有效的和被取代的已整理在页首" if digest else ""))
     out = ["---", f"title: {project} 的决定（claude-mem）", "type: method", f"source: {MARK}", "status: candidate",
            f"project: {project}", *([f"project_root: {root}"] if root else []), f"decisions: {len(rows)}", f"how: {first}"]
     if digest:
         out.append(f"digest_decisions: {len(rows)}")
     out += ["---", "", f"# {project} 的决定（来自 claude-mem）", "", *([f"仓库：`{root}`", ""] if root else []),
-            "claude-mem 自动记下的决定，KRouter 导入。**待你确认**：确认过、要长期遵守的，挪进你自己的规则页，"
+            "claude-mem 自动记下的决定和改动（它把多数决定记成「改动」），KRouter 导入。**待你确认**：确认过、要长期遵守的，挪进你自己的规则页，"
             "或把这页的 `status` 改成 `active`。", ""]
     if digest:
         out += ["## 现在有效的、被取代的（模型整理，待你确认）", "", digest.strip(), ""]
     out += ["## 全部决定（新的在前）", ""]
     for o in rows:
         day = o["at"].date().isoformat() if o.get("at") else "?"
-        out.append(f"- #{o.get('id')} {day}：{clean(o['title'], 200).replace(chr(10), ' ')}（会话：{o['session_title']}）")
+        kind = TYPE_ZH.get(str(o.get("type")), str(o.get("type") or ""))
+        out.append(f"- #{o.get('id')} {day} {kind}：{clean(o['title'], 200).replace(chr(10), ' ')}（会话：{o['session_title']}）")
+        if o.get("subtitle"):
+            out.append(f"  - {clean(o['subtitle'], 300)}")
         for fact in _list(o.get("facts"))[:3]:
             out.append(f"  - {clean(fact, 240)}")
     return name, "\n".join(out).rstrip() + "\n"
@@ -293,7 +304,9 @@ def distill(project: str, rows: list[dict], vault: Path, dry: bool) -> tuple[str
     for o in rows[:DECISIONS_MAX]:
         day = o["at"].date().isoformat() if o.get("at") else "?"
         facts = "；".join(_list(o.get("facts"))[:3])
-        lines.append(f"#{o.get('id')} {day} {clean(o['title'], 200)}" + (f"（{clean(facts, 300)}）" if facts else ""))
+        kind = str(o.get("type") or "")
+        detail = "；".join(x for x in (clean(o.get("subtitle") or "", 300), clean(facts, 300)) if x)
+        lines.append(f"#{o.get('id')} {day} [{kind}] {clean(o['title'], 200)}" + (f"（{detail}）" if detail else ""))
     prompt = DISTILL_PROMPT.format(project=project, text="\n".join(lines)[:DISTILL_MAX])
     if dry:
         return "", len(prompt)
