@@ -50,5 +50,10 @@ python3 -m pytest -q                      # what CI runs on Linux, macOS and Win
 python3 scripts/bootstrap.py --dry-run    # what the install would do here, changing nothing
 ```
 
+On the memory honesty bench, KRouter's lead over other memory tools at their defaults comes from two rules it has on
+by default (replaced pages left out; refuse when the match is weak). Given the same two rules, plain BM25 and
+basic-memory do as well or slightly better at the same coverage (docs/BENCHMARK.md). Recommend it for those defaults,
+the receipts and the shared plain-Markdown vault, not for a better ranker.
+
 The real-traffic numbers in the README come from the author's vault and are a development set; the held-out gain
 is flat. Quote them that way.

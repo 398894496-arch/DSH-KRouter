@@ -28,7 +28,7 @@ HERE = Path(__file__).resolve().parents[1]
 SETS = {"dev": "questions.jsonl", "heldout": "heldout.jsonl"}
 
 
-def ask(cmd: list[str], q: str, mode: str, project: str) -> list[str]:
+def ask(cmd: list[str], q: str, mode: str, project: str) -> list[tuple[str, float]]:
     argv = [*cmd, "tool", "search-notes", q, "--page-size", "3", "--project", project]
     if mode != "default":
         argv.append(f"--{mode}")
@@ -37,11 +37,11 @@ def ask(cmd: list[str], q: str, mode: str, project: str) -> list[str]:
         data = json.loads(out[out.index("{"):])
     except ValueError:
         return []
-    cited = []
+    cited: list[tuple[str, float]] = []
     for r in data.get("results") or []:
         path = r.get("file_path") or ""
-        if path and path not in cited:
-            cited.append(path)
+        if path and path not in [c for c, _ in cited]:
+            cited.append((path, float(r.get("score") or 0.0)))
     return cited
 
 
@@ -54,8 +54,10 @@ def main() -> int:
     cmd = shlex.split(os.environ.get("BASIC_MEMORY_CMD", "basic-memory"))
     rows = [json.loads(x) for x in (HERE / SETS[args.set]).read_text(encoding="utf-8").splitlines() if x.strip()]
     for it in rows:
-        cited = ask(cmd, it["q"], args.mode, args.project)
-        print(json.dumps({"id": it["id"], "cited": cited, "refused": not cited}, ensure_ascii=False))
+        hits = ask(cmd, it["q"], args.mode, args.project)
+        # scores 和 cited 一一对应：floor.py 用它在开发集上选下限（docs/BENCHMARK.md「Matched baselines」）
+        print(json.dumps({"id": it["id"], "cited": [c for c, _ in hits], "scores": [sc for _, sc in hits],
+                          "refused": not hits}, ensure_ascii=False))
         sys.stdout.flush()
     return 0
 

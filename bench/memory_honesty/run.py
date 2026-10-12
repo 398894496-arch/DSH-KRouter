@@ -22,6 +22,7 @@ Metrics
 
     python3 bench/memory_honesty/run.py                 # KRouter
     python3 bench/memory_honesty/run.py --adapter bm25  # baseline: plain full-text search, always answers
+    python3 bench/memory_honesty/run.py --adapter bm25-floor  # + superseded pages skipped + a floor picked on dev
     python3 bench/memory_honesty/run.py --answers other.jsonl
 
 Held-out set (`heldout.jsonl`, rules in `HELDOUT.md`): 25 questions on the same vault, never used for tuning.
@@ -103,6 +104,64 @@ def bm25_answers(rows: list[dict]) -> list[dict]:
     return out
 
 
+def _bm25_index(skip_superseded: bool):
+    import re
+    import sqlite3
+
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE VIRTUAL TABLE d USING fts5(rel UNINDEXED, body)")
+    for path in sorted((HERE / "vault").rglob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        if skip_superseded and re.search(r"(?m)^status:\s*superseded\s*$", text.split("\n---", 1)[0]):
+            continue
+        con.execute("INSERT INTO d VALUES (?, ?)", (path.relative_to(HERE / "vault").as_posix(), text))
+    return con
+
+
+def bm25_scored(rows: list[dict], skip_superseded: bool = True) -> list[tuple[str, list[tuple[str, float]]]]:
+    """[(id, [(page, score)])] — BM25 over the pages, superseded pages left out, score = -bm25 (higher is better)."""
+    import re
+
+    con = _bm25_index(skip_superseded)
+    out = []
+    for it in rows:
+        words = [w for w in re.findall(r"[a-z0-9]+", it["q"].lower()) if len(w) > 2]
+        hits = con.execute("SELECT rel, -bm25(d) FROM d WHERE d MATCH ? ORDER BY bm25(d) LIMIT 3",
+                           (" OR ".join(f'"{w}"' for w in words),)).fetchall() if words else []
+        out.append((it["id"], [(r, float(sc)) for r, sc in hits]))
+    return out
+
+
+def floor_answers(scored: list[tuple[str, list[tuple[str, float]]]], floor: float) -> list[dict]:
+    out = []
+    for qid, hits in scored:
+        ok = bool(hits) and hits[0][1] >= floor
+        out.append({"id": qid, "refused": not ok, "cited": [h[0] for h in hits] if ok else []})
+    return out
+
+
+def pick_floor(rows: list[dict], scored) -> float:
+    """The floor a careful baseline would pick on the dev set: most right answers minus wrong citations; on a tie, the
+    lower floor (answer more). Picked on dev only, then applied unchanged to held-out."""
+    cands = sorted({0.0} | {h[0][1] for _, h in scored if h})
+    best, best_floor = None, 0.0
+    for f in cands:
+        res = score(rows, floor_answers(scored, f))
+        right = int(res["correction_hit"].split("/")[0]) + int(res["current_hit"].split("/")[0])
+        util = right - res["wrong_citations"]
+        if best is None or util > best:
+            best, best_floor = util, f
+    return best_floor
+
+
+def bm25_floor_answers(rows: list[dict]) -> list[dict]:
+    """Baseline with the two things anyone would add to full-text search: superseded pages left out, and a score floor
+    below which it refuses. The floor is picked on the dev set (`pick_floor`) and applied as is to any set."""
+    dev = questions("dev")
+    floor = pick_floor(dev, bm25_scored(dev))
+    return floor_answers(bm25_scored(rows), floor)
+
+
 def score(rows: list[dict], answers: list[dict]) -> dict:
     by_id = {a["id"]: a for a in answers}
     answered = wrong = refused_ok = corr_ok = cur_ok = 0
@@ -131,7 +190,7 @@ def score(rows: list[dict], answers: list[dict]) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--answers", help="grade this JSONL instead of running KRouter")
-    ap.add_argument("--adapter", choices=["krouter", "bm25"], default="krouter")
+    ap.add_argument("--adapter", choices=["krouter", "bm25", "bm25-floor"], default="krouter")
     ap.add_argument("--set", choices=sorted(SETS), default="dev", dest="qset",
                     help="dev: the 30 bench questions (tune on these); heldout: never tune on these (HELDOUT.md)")
     ap.add_argument("--reveal", action="store_true",
@@ -142,7 +201,7 @@ def main() -> int:
     if args.answers:
         answers = [json.loads(x) for x in Path(args.answers).read_text(encoding="utf-8").splitlines() if x.strip()]
     else:
-        answers = krouter_answers(rows) if args.adapter == "krouter" else bm25_answers(rows)
+        answers = {"krouter": krouter_answers, "bm25": bm25_answers, "bm25-floor": bm25_floor_answers}[args.adapter](rows)
     result = score(rows, answers)
     if args.qset == "heldout" and not args.reveal:
         result = aggregate(result)
