@@ -29,7 +29,7 @@ questions, a runner, and a scorer that grades any system's output.
 |---|---|---|---|---|
 | Plain full-text search (SQLite FTS5 BM25), always answers | 63% (19 / 30) | 0 / 10 | 1 / 10 | 10 / 10 |
 | KRouter 0.12.1 (first run, before any change) | 22% (4 / 18) | 7 / 10 | 5 / 10 | 9 / 10 |
-| KRouter 0.13.0 | 0% (0 / 17) | 10 / 10 | 8 / 10 | 9 / 10 |
+| KRouter 0.13.0 and 1.0.0 | 0% (0 / 17) | 10 / 10 | 8 / 10 | 9 / 10 |
 
 **Read the 0.13.0 row as a development-set number.** The bench was written for 0.13.0, and its first run found a bug:
 English function words (`what`, `which`, `does`, `should`) were counted as words "the vault has never seen", so a
