@@ -193,10 +193,21 @@ def transcripts(since: date) -> list[tuple[str, Path]]:
     return [(a, p) for _, a, p in sorted(found)]
 
 
-def collect(since: date, until: date) -> list[dict]:
+def agent_of(path: Path) -> str:
+    """Which agent wrote a transcript, from where it lives (or, failing that, its first lines)."""
+    for agent, root in roots().items():
+        try:
+            path.resolve().relative_to(root.resolve())
+            return agent
+        except ValueError:
+            pass
+    return "codex" if path.name.startswith("rollout-") else "claude-code"
+
+
+def collect(since: date, until: date, files: list[Path] | None = None) -> list[dict]:
     """One entry per (session, local day): {agent, id, day, project, title, turns}."""
     out: list[dict] = []
-    for agent, path in transcripts(since):
+    for agent, path in ([(agent_of(f), f) for f in files] if files else transcripts(since)):
         s = read_claude(path) if agent == "claude-code" else read_codex(path)
         by_day: dict[date, list[dict]] = defaultdict(list)
         for t in s["turns"]:
@@ -321,6 +332,8 @@ def main() -> int:
     ap.add_argument("--consent", action="store_true", help="record your yes for the nightly job, then import")
     ap.add_argument("--revoke", action="store_true", help="the nightly job stops importing")
     ap.add_argument("--nightly", action="store_true", help="run only when consent was given (used by nightly.py)")
+    ap.add_argument("--file", action="append", default=[], help="import this transcript only, all its days "
+                    "(the session-end hook); runs only when consent was given")
     ap.add_argument("--distill-max", type=int, default=DISTILL_SESSIONS, help="distill at most this many sessions, newest first")
     ap.add_argument("--cli", default="", help=argparse.SUPPRESS)
     ap.add_argument("--model", default="", help=argparse.SUPPRESS)
@@ -338,17 +351,23 @@ def main() -> int:
         return 2
     vault = Path(args.vault).expanduser()
     st = load_state()
-    if args.nightly and not st.get("consent"):
+    if (args.nightly or args.file) and not st.get("consent"):
         print(json.dumps({"import": "off", "reason": "no consent yet (import_sessions.py --consent)",
                           "chars": 0, "writes": []}))
         return 0
-    distill_on = args.distill or bool(args.nightly and st.get("distill"))
+    distill_on = args.distill or bool((args.nightly or args.file) and st.get("distill"))
     today = date.today()
     if args.yesterday or args.nightly:
         since = until = today - timedelta(days=1)
     else:
         since, until = today - timedelta(days=max(args.days, 1) - 1), today
-    entries = collect(since, until)
+    files = [Path(f).expanduser() for f in args.file if Path(f).expanduser().is_file()]
+    if args.file:
+        since, until = date(1970, 1, 1), today
+        if not files:
+            print(json.dumps({"import": "skipped", "reason": "transcript not found", "chars": 0, "writes": []}))
+            return 0
+    entries = collect(since, until, files or None)
     folder = zones.path(vault, FOLDER)
     have = existing(folder)
     to_distill = {id(e) for e in sorted((e for e in entries if len(e["turns"]) >= DISTILL_MIN_TURNS),

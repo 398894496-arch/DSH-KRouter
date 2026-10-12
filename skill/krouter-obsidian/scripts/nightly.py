@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Nightly upkeep runner: the five steps in order, each one's outcome written where the host can see it.
 
-import_sessions → compile_subconscious → reconsolidate → consolidate_topics → answer_cards → checkup. The first one
-imports yesterday's agent sessions only after the host said yes (`import_sessions.py --consent`); until then it is
-`off`, which is not a problem to report. Each step is a
+import_sessions → import_claude_mem → compile_subconscious → reconsolidate → consolidate_topics → answer_cards → checkup. The first one
+imports yesterday's agent sessions only after the host said yes (`import_sessions.py --consent`), the second
+re-imports claude-mem's memory the same way; until then they are `off`, which is not a problem to report. Each step is a
 separate process; one failing does not stop the others. Outcomes (ran / skipped / partial / failed,
 the reason, the model lane, how many model calls and how many characters left the machine) go to
 `90 系统文件/自动化/夜间维护.md` and onto the health page (`nightly`, `nightly_at`), where `status`
@@ -31,8 +31,8 @@ import llm  # noqa: E402
 import notify  # noqa: E402
 import zones  # noqa: E402
 
-STEPS = ("import_sessions", "compile_subconscious", "reconsolidate", "consolidate_topics", "answer_cards", "checkup")
-MODEL_STEPS = {"import_sessions", "reconsolidate", "consolidate_topics", "answer_cards"}
+STEPS = ("import_sessions", "import_claude_mem", "compile_subconscious", "reconsolidate", "consolidate_topics", "answer_cards", "checkup")
+MODEL_STEPS = {"import_sessions", "import_claude_mem", "reconsolidate", "consolidate_topics", "answer_cards"}
 REPORT = "90 系统文件/自动化/夜间维护.md"
 HEALTH = "90 系统文件/自动化/日更健康.md"
 
@@ -44,6 +44,8 @@ def classify(rc: int, out: str) -> tuple[str, str]:
         return "failed", (out.strip().splitlines() or [f"rc={rc}"])[-1][:200]
     if '"import": "off"' in out:
         return "off", "会话导入没开（import_sessions.py --consent 开启）"
+    if '"claude_mem": "off"' in out or '"claude_mem": "absent"' in out:
+        return "off", "claude-mem 导入没开，或本机没有 claude-mem（import_claude_mem.py --consent 开启）"
     for line in out.splitlines():
         if "skipped" in line.lower():
             return "skipped", line.strip()[:200]
@@ -95,7 +97,7 @@ def run_step(step: str, vault: Path, extra: list[str], dry: bool) -> dict:
     if not path.is_file():
         return {"step": step, "state": "missing", "reason": "script not found"}
     argv = [sys.executable, str(path), "--vault", str(vault)]
-    if step == "import_sessions":
+    if step in ("import_sessions", "import_claude_mem"):
         argv.append("--nightly")
     if step in MODEL_STEPS:
         argv += extra

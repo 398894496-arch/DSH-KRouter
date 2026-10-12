@@ -20,3 +20,4 @@ os.environ["KROUTER_CLAUDE_PROJECTS"] = str(_ISOLATED / "no-claude-projects")
 os.environ["KROUTER_CODEX_SESSIONS"] = str(_ISOLATED / "no-codex-sessions")
 os.environ["KROUTER_VAULT_FILE"] = str(_ISOLATED / "config/vault")
 os.environ["KROUTER_NO_MCP"] = "1"
+os.environ["KROUTER_CLAUDE_MEM_DB"] = str(_ISOLATED / "no-claude-mem.db")

@@ -22,6 +22,12 @@ a receipt. When nothing in the vault covers the question, the answer is `recall:
 - the whole previous chat injected into the next prompt automatically;
 - a hosted memory API, or a vault that is already full on install.
 
+## Coming from claude-mem
+
+claude-mem can stay. KRouter imports its memory read-only (session summaries as log pages, each project's
+decisions as one page to confirm) and can sort decisions into in force and replaced. The Claude Code plugin records
+each session when it ends and puts this project's recent decisions, with their pages, into the next session.
+
 ## What to know before installing
 
 1. The install asks before each of: importing past sessions (local), sending session text to a model to distill

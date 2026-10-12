@@ -3,6 +3,31 @@
 Releases are weekly milestones from 0.13.0 on; fixes in between land on `main`. Each entry starts with what you will
 notice, then the details.
 
+## Unreleased (next weekly release)
+
+**What you will notice**
+- **Coming from claude-mem.** The install finds claude-mem's memory and offers to import it. Its session summaries
+  become log pages, and each project's decisions become one page you confirm (`status: candidate`). With distilling
+  on, your model sorts each project's decisions into the ones still in force and the ones a later decision replaced
+  ("原来 A → 改成 B"). In a real run it caught "manual tags from any branch → tags on main, CI publishes". claude-mem
+  is opened read-only and never changed.
+- **The two things that make claude-mem feel like memory, in the Claude Code plugin.** When a session ends, it is
+  imported (in the background, local; distilled when you said yes to that). When a session starts, up to 8 of this
+  project's decisions from the last 30 days come with it, corrections first, each naming its page. Both run only after
+  you said yes to importing, and `KROUTER_INJECT=0` turns the second off. Tested end to end with Claude Code: a new
+  session answered "what did we decide about releases" with no tool call and named the page, and the session was in
+  the vault when it ended.
+
+**Details**
+- `import_claude_mem.py` reads both column generations of claude-mem's schema (`memory_session_id` and the older
+  `sdk_session_id`; epoch milliseconds or seconds), as of claude-mem `b3e036fa13`. The tests build both from its
+  schema; it has not been run against a live claude-mem install. Pages carry `source: krouter-claude-mem`, and a page
+  without that marker is never touched.
+- `session_hook.py start|end`, wired by `hooks/hooks.json` at the plugin root; `import_sessions.py --file` imports one
+  transcript.
+- `nightly.py` gains `import_claude_mem`. It stays `off` until consent, and is also `off` when claude-mem is not
+  installed.
+
 ## 0.13.0 — 2026-10-12
 
 **What you will notice**

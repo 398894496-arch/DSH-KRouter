@@ -61,6 +61,13 @@ MSG = {
         "distilling": "正在提炼（每个会话一次模型调用）…",
         "try": "现在就可以问你的 agent，比如：「{q}」——它会先查这个库，答案带出处页；库里没有的会直说没有。",
         "mcp": "已把 KRouter 注册成 {cli} 的 MCP 工具（krouter_ask）。",
+        "cmem_ask": "发现 claude-mem 的记忆库：{sessions} 个会话、{decisions} 条决定（{projects} 个项目）。要导进知识库吗？"
+        "只读它的库、不改 claude-mem，脱敏后写在本机{distill}；以后每晚同步一次。导入？[y/N] ",
+        "cmem_distill": "，并让模型把每个项目的决定理一遍：哪些还有效、哪些被后来的取代了（约 {chars} 字）",
+        "cmem_done": "从 claude-mem 导入了 {sessions} 个会话、{decisions} 条决定{distilled}。",
+        "cmem_distilled": "，{n} 个项目已理出现在有效的决定",
+        "plugin_hint": "用 Claude Code 的话，装上插件还能在会话结束时自动记下、开会话时自动带上本项目的决定："
+        "/plugin install krouter --marketplace 398894496-arch/KRouter",
     },
     "en": {
         "plan": "Plan", "vault_new": "New vault", "vault_merge": "Existing vault (adds only missing skeleton files; overwrites nothing)",
@@ -93,6 +100,14 @@ MSG = {
         "try": "Ask your agent now, for example: \"{q}\" — it checks this vault first and cites the page; what the vault "
         "does not hold, it says so.",
         "mcp": "Registered KRouter as an MCP tool for {cli} (krouter_ask).",
+        "cmem_ask": "Found a claude-mem memory: {sessions} sessions, {decisions} decisions ({projects} projects). Import it? "
+        "It is read only (claude-mem is not changed), redacted, written on this machine{distill}, then synced nightly. "
+        "Import? [y/N] ",
+        "cmem_distill": ", and the model sorts each project's decisions into still in force and replaced (about {chars} characters)",
+        "cmem_done": "Imported {sessions} sessions and {decisions} decisions from claude-mem{distilled}.",
+        "cmem_distilled": "; {n} projects sorted into the decisions in force",
+        "plugin_hint": "On Claude Code, the plugin also records each session when it ends and brings this project's "
+        "decisions when one starts: /plugin install krouter --marketplace 398894496-arch/KRouter",
     },
 }
 KEEP = ("canonical_sources.psv", "canonical_alias_ledger.jsonl")
@@ -324,6 +339,39 @@ def decide_import(args: argparse.Namespace, vault: Path, t: dict, lane_kind: str
     return True, bool(answer and answer.strip().lower() in {"y", "yes", "是", "好"}), False
 
 
+CLAUDE_MEM = ROOT / "skill/krouter-obsidian/scripts/import_claude_mem.py"
+
+
+def run_claude_mem(vault: Path, *extra: str) -> dict:
+    env = {**os.environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_NO_QUERY_LOG": "1"}
+    res = subprocess.run([sys.executable, str(CLAUDE_MEM), "--vault", str(vault), *extra], env=env,
+                         capture_output=True, text=True, timeout=3600)
+    try:
+        return json.loads(res.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return {}
+
+
+def offer_claude_mem(args: argparse.Namespace, vault: Path, t: dict, distill: bool) -> dict:
+    """claude-mem users already have a memory: offer to bring it in. Same rule as the sessions — a yes or a flag."""
+    if args.no_import:
+        return {}
+    preview = run_claude_mem(vault, "--dry-run", *(["--distill"] if distill else []))
+    if preview.get("claude_mem") != "dry-run" or not preview.get("sessions"):
+        return {}
+    if not (args.import_sessions or args.import_distill):
+        note = t["cmem_distill"].format(chars=preview.get("chars") or 0) if distill else ""
+        answer = ask_tty(t["cmem_ask"].format(sessions=preview["sessions"], decisions=preview.get("decisions", 0),
+                                              projects=preview.get("projects", 0), distill=note))
+        if not answer or answer.strip().lower() not in {"y", "yes", "是", "好", "导"}:
+            return {}
+    out = run_claude_mem(vault, "--consent", *(["--distill"] if distill else []))
+    n = out.get("distilled") or 0
+    print(t["cmem_done"].format(sessions=out.get("sessions", 0), decisions=out.get("decisions", 0),
+                                distilled=t["cmem_distilled"].format(n=n) if n else ""))
+    return out
+
+
 def try_question(vault: Path, lang: str) -> str:
     """A question this vault can answer now: the latest distilled session's first decision, else its title."""
     folder = vault / "05 时间日志" / "会话摘录"
@@ -399,7 +447,7 @@ def main() -> int:
     ap.add_argument("--no-timer", action="store_true", help="do not install the nightly job, and do not ask")
     ap.add_argument("--no-open", action="store_true", help="do not open the vault in Obsidian")
     ap.add_argument("--import", dest="import_sessions", action="store_true",
-                    help="import the last 7 days of agent sessions without asking (local only)")
+                    help="import the last 7 days of agent sessions, and claude-mem's memory if present, without asking (local only)")
     ap.add_argument("--import-distill", action="store_true", help="import, and have the model lane distill the latest sessions")
     ap.add_argument("--no-import", action="store_true", help="do not import agent sessions, and do not ask")
     ap.add_argument("--dry-run", action="store_true")
@@ -457,6 +505,9 @@ def main() -> int:
     elif tell_later:
         cmd = f"{'python' if WINDOWS else 'python3'} \"{IMPORT}\" --consent --vault \"{vault}\""
         print(t["import_off"].format(cmd=cmd))
+    cmem = offer_claude_mem(args, vault, t, do_distill)
+    if "claude" in mcp:
+        print(t["plugin_hint"])
     skill = Path(os.environ.get("KROUTER_SKILL_HOME") or Path.home() / ".agents/skills/krouter-obsidian")
     router = skill / "scripts" / ("route_knowledge.py" if WINDOWS else "route_knowledge.sh")
     print(t["done"].format(vault=vault, router=router))
@@ -465,6 +516,7 @@ def main() -> int:
         print(t["obsidian"] if open_in_obsidian(vault) else t["obsidian_none"].format(vault=vault))
     print(json.dumps({"vault": str(vault), "lang": lang, "state": state, "added": len(added), "model": lane or None,
                       "timer": timer, "imported": imported.get("pages", 0), "distilled": imported.get("distilled", 0),
+                      "claude_mem": cmem.get("sessions", 0),
                       "mcp": mcp},
                      ensure_ascii=False))
     return 0

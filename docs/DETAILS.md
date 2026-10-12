@@ -2,6 +2,21 @@
 
 Everything the front page leaves out: install options, what leaves the machine, the evidence, versions, how the nightly writer works, the four mounts, and the comparison with typical agent memory. Back to the [front page](../README.md).
 
+## Importing what you already have
+
+- **Agent sessions** (`import_sessions.py`): Claude Code and Codex transcripts become one page per session and day
+  under `05 时间日志/会话摘录/`. Each page keeps your questions and each turn's closing answer, redacted. Tool output,
+  thinking, injected context, subagents and headless runs are left out. `--distill` adds "what was decided, what
+  changed" from the model lane. `--consent` lets the nightly job import yesterday; `--file PATH` imports one
+  transcript (the plugin's session-end hook).
+- **claude-mem** (`import_claude_mem.py`): `~/.claude-mem/claude-mem.db`, opened read-only. Session summaries and
+  observations become pages under `05 时间日志/claude-mem/`, and each project's `decision` observations become one
+  page under `02 经验与方法/从 claude-mem 导入/` (`status: candidate`). `--distill` sorts them into still in force
+  and replaced.
+- **Session hooks** (Claude Code plugin, `session_hook.py`): `SessionEnd` imports the session that ended, in the
+  background; `SessionStart` adds up to 8 recent decisions for this project, each naming its page. Neither does
+  anything before consent; `KROUTER_INJECT=0` turns the second off.
+
 ## Install — one line, nothing to know
 
 ```bash
