@@ -143,6 +143,30 @@ request "needs approvals" where the page says "merge"; an on-call "shift" where 
 where the page says "local development". Lexical recall cannot bridge those. An embedding system would answer them,
 and it would answer the neighbour questions too.
 
+## Second bench: a bilingual vault nobody has tuned on (2026-10-12)
+
+The first vault now carries 105 questions on 30 pages, and a round of changes that helped both of its dev sets made
+its held-out set worse ("Tried and not shipped" above). So the outside reviewer wrote a second one: `vault2/`, 60
+pages (30 English, 30 Chinese; 20 replaced decisions with their old pages, 20 that were not replaced), with 100
+questions split 50 / 50 by a fixed seed into `questions_dev3.jsonl` (tune on it) and `heldout2.jsonl.gz` (never; stored
+gzipped so it does not turn up in a grep). Each set: 15 corrections, 15 current, 20 neighbour questions, half of each
+in Chinese. Every neighbour question names a term no page contains, checked in CI, so it cannot be answered by
+accident. Provenance, rules and log: [`HELDOUT.md`](../bench/memory_honesty/HELDOUT.md), "Held-out set 2".
+
+On vault2 the BM25 baselines split Chinese into character pairs (otherwise every Chinese question would be "refused"
+for having no Latin words, which flatters the baseline), and `bm25-floor` picks its floor on dev3.
+
+| System | heldout2: wrong citations | neighbours refused | answerable right | dev3: wrong citations | refused | answerable right |
+|---|---|---|---|---|---|---|
+| Plain BM25, always answers | 61% (30 / 49) | 1 / 20 | 19 / 30 | 55% (27 / 49) | 1 / 20 | 22 / 30 |
+| BM25 + skip superseded + dev3-picked floor | 23% (5 / 22) | 15 / 20 | 17 / 30 | 4% (1 / 22) | 19 / 20 | 21 / 30 |
+| KRouter 1.0.3 | 33% (12 / 36) | 9 / 20 | 24 / 30 | 24% (8 / 34) | 13 / 20 | 26 / 30 |
+
+Read plainly: on questions written by someone else, on a vault nobody tuned for, KRouter answers more questions right
+than the careful BM25 baseline (24 vs 17 of 30) but cites a wrong page more often (33% vs 23%) and refuses fewer
+neighbour questions (9 vs 15 of 20). It sits at a different point on the same trade-off, not above it. basic-memory and
+claude-mem have not been run on vault2 yet; their adapters take the vault1 sets only.
+
 ## Run it
 
 ```bash
@@ -150,6 +174,8 @@ python3 bench/memory_honesty/run.py                  # KRouter, in-process
 python3 bench/memory_honesty/run.py --adapter bm25   # the plain full-text baseline
 python3 bench/memory_honesty/run.py --answers mine.jsonl
 python3 bench/memory_honesty/run.py --set heldout     # held-out set: aggregates only (HELDOUT.md)
+python3 bench/memory_honesty/run.py --set dev3        # second vault (vault2/), dev set
+python3 bench/memory_honesty/run.py --set heldout2    # second vault, held-out: aggregates only
 ```
 
 To grade another system, index `bench/memory_honesty/vault/` with it, ask each question in

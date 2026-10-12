@@ -10,6 +10,12 @@ notice, then the details.
 - Benchmark: a negative result recorded. Recall changes that were better on both dev sets were worse on held-out
   (38% / 31% wrong citations vs 25%), so they were not shipped (`docs/BENCHMARK.md`, "Tried and not shipped"). A
   second dev set, `questions_dev2.jsonl` (50 questions, written by the maintainer), is added for tuning.
+- Benchmark: a second, bilingual bench written by the outside reviewer. `vault2/` (60 pages, half Chinese), 50 dev
+  questions (`questions_dev3.jsonl`) and 50 held-out (`heldout2.jsonl.gz`, gzipped so it stays out of greps), each
+  with 20 neighbour questions whose missing term CI checks is on no page. First run, before any change: KRouter 33%
+  wrong citations on heldout2 (9 / 20 neighbours refused, 24 / 30 answerable right); BM25 with the two rules 23%
+  (15 / 20, 17 / 30); plain BM25 61%. `run.py --set dev3|heldout2`; the vault2 BM25 baselines search Chinese by
+  character pairs.
 
 ## 1.0.3 — 2026-10-12
 

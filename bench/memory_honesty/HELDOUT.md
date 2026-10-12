@@ -63,3 +63,47 @@ What has been seen, by whom. Append; never rewrite.
 | 2026-10-12 | Outside reviewer ran held-out **aggregates** for a baseline (BM25 + skip superseded + score floor) at several floors, reporting only the dev-picked one. Baseline only, no KRouter change. |
 | 2026-10-12 | Maintainer's session ran held-out **aggregates** for the matched baselines (BM25 and basic-memory, skip superseded + dev-picked floor) and a coverage sweep of those two baselines to find their point at KRouter's coverage. Baselines only; no `--reveal`; no KRouter change. |
 | 2026-10-12 | **Used for one go / no-go decision.** Maintainer's session tried a set of recall changes on branch `recall/paraphrase` (English stemming, following `superseded_by` to the newer page, a relaxed unknown-word refusal, a missing-topic refusal, English answer cards), tuned on `questions.jsonl` and a new maintainer-written `questions_dev2.jsonl`. One held-out run, aggregates only: worse than 1.0.3 (38% wrong citations without cards, 31% with, vs 25%; neighbours refused 5 / 10 vs 8 / 10). Not shipped. No `--reveal`. A further change chosen by held-out aggregates would be tuning on this set; the next claim of a ranking gain needs `heldout-2.jsonl` from someone who has not seen these changes. |
+
+## Held-out set 2 (`heldout2.jsonl.gz`)
+
+50 questions on a second vault, `vault2/` (60 pages: 30 English under `Engineering/`, 30 Chinese under `工程规范/`;
+20 decisions that were replaced, each with its old page, and 20 that were not). A development set of 50 on the same
+vault comes with it, `questions_dev3.jsonl`, to tune on. All rules above apply to set 2 unchanged.
+
+**Why a second vault.** By 2026-10-12 the first vault carried 105 questions on 30 pages, its wording had been studied
+closely, and a round of changes that improved both dev sets made held-out worse (log above). Questions on a vault
+nobody has tuned against are the cleaner test, and half of it is Chinese, which most KRouter users write in.
+
+**Where the questions come from.**
+- Written on 2026-10-12 (Pacific) by the same outside reviewer as set 1, together with the vault and `questions_dev3.jsonl`,
+  for the maintainer's request that an independent writer produce the neighbour questions.
+- 100 questions in six strata (English / Chinese × correction / current / neighbour), split 50 / 50 between dev3 and
+  heldout2 with a fixed seed (20261012), stratified, so the two sets are the same kind of question: each has 15
+  corrections, 15 current, 20 neighbours, 25 English and 25 Chinese.
+- Every answerable question carries the sentence from its gold page that answers it (`evidence`); every neighbour
+  question names the page it borrows from (`neighbor`) and a term that appears on no page of the vault (`absent`),
+  so a neighbour question cannot be answered by accident. Both are checked by `tests/test_memory_honesty_v2.py`.
+- Checked by script before KRouter was run on any of them; one held-out question repeated a maintainer dev2 question
+  word for word and was replaced before the first run. Not edited after the first run.
+- What the reviewer knew when writing: the vault-1 questions (all three sets), and the one-paragraph description of
+  the not-shipped recall changes in `docs/BENCHMARK.md` ("Tried and not shipped"). Not their code, and not their
+  per-question effects.
+- **Exposure.** The questions were written in the reviewer's session, which the maintainer can read. The file is
+  gzipped so that the maintainer's Claude Code session does not meet a question in a grep or a diff; it should apply
+  the patch without decompressing the file.
+
+**Baseline at freeze** (KRouter at `main` `f9d0be9`, i.e. 1.0.3 plus docs; first run of any system on these questions).
+On vault2 the BM25 baselines split Chinese into character pairs; `bm25-floor` picks its floor on dev3.
+
+| System | heldout2: wrong citations | neighbours refused | answerable right | dev3: wrong citations | refused | answerable right |
+|---|---|---|---|---|---|---|
+| Plain BM25, always answers | 61% (30 / 49) | 1 / 20 | 19 / 30 | 55% (27 / 49) | 1 / 20 | 22 / 30 |
+| BM25 + skip superseded + dev3-picked floor | 23% (5 / 22) | 15 / 20 | 17 / 30 | 4% (1 / 22) | 19 / 20 | 21 / 30 |
+| KRouter 1.0.3 | 33% (12 / 36) | 9 / 20 | 24 / 30 | 24% (8 / 34) | 13 / 20 | 26 / 30 |
+
+### Log, set 2
+
+| Date | Event |
+|---|---|
+| 2026-10-12 | Vault, dev3 and heldout2 written by the reviewer; integrity checked by script; one duplicate of a dev2 question replaced; frozen; first run, **aggregates only** for KRouter, BM25 and BM25-floor (table above). The reviewer has not looked at per-question held-out results. |
+| 2026-10-12 | Applied by the maintainer's Claude Code session (the one that changes the ranker). The file was decompressed only by code: a count of rows and a scan for key-shaped text, nothing printed; the session did not read the questions. Aggregates only, matching the baseline (KRouter 33%, 9 / 20, 24 / 30). |
