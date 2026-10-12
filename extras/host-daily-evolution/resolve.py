@@ -313,7 +313,8 @@ def write_runtime_prompt(base: Path, vault: Path, router: Path) -> Path:
         "# Runtime lock (injected by the timer)\n\n"
         f"OBSIDIAN_VAULT={vault}\n"
         f"KROUTER_ROUTER={router}\n\n"
-        f"Run `{router} status` (then search / correction as needed). "
+        f"Run `{router} status` (then search / correction as needed), exactly as written: no `env` or `VAR=` prefix, "
+        "no other command — the writer's permissions allow the router and nothing else. "
         "Write only inside that vault. "
         "Do not read or run ~/.agents/skills/obsidian-knowledge-router "
         "or any other knowledge router.\n\n"
@@ -367,7 +368,8 @@ def claude_allow(vault: Path, router: Path) -> list[str]:
     the vault, run only the router, no other shell command, no web fetch; anything else is refused (`dontAsk`)."""
     v = str(vault).rstrip("/")
     r = str(router)
-    return [f"Read(/{v}/**)", f"Edit(/{v}/**)", "Glob", "Grep", f"Bash(sh {r}:*)", f"Bash({r}:*)"]
+    return [f"Read(/{v}/**)", f"Edit(/{v}/**)", "Glob", "Grep", f"Bash(sh {r}:*)", f"Bash({r}:*)", f"Bash(bash {r}:*)",
+            f"Bash(/bin/sh {r}:*)"]
 
 
 def writer_invoke(writer: str, prompt: Path, vault: Path, router: Path | None = None) -> list[str]:
@@ -522,7 +524,7 @@ def run_cli_writer(writer: str, vault: Path, router: Path) -> int:
         handle = open(prompt, "rb")
         stdin = handle
     try:
-        proc = subprocess.run(argv, cwd=str(vault), stdin=stdin)
+        proc = subprocess.run(argv, cwd=str(vault), stdin=stdin, env=_lane.cli_env())  # long-lived CLI token, if any
         code = int(proc.returncode or 0)
     except OSError:
         code = 1
