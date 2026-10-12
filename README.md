@@ -36,7 +36,7 @@ From then on a nightly job, which also asks first, imports yesterday, distills i
 | Every answer | Carries its source page and a receipt | Usually unsourced |
 | Who shares it | One vault for every agent on the machine (MCP, skill, rules) | Usually one tool |
 
-**Coming from [claude-mem](https://github.com/thedotmack/claude-mem)?** Keep it. The importer is beta: it is tested against claude-mem's published schema, not yet against a live install. The installer finds its memory and offers to import it: session summaries become pages, and each project's decisions become one page you confirm. Your model can then sort those decisions into the ones still in force and the ones a later decision replaced, which claude-mem itself does not do. The Claude Code plugin also does what makes claude-mem feel like memory, in plain Markdown: when a session ends it is recorded, and when a new one starts, this repository's confirmed decisions and recent corrections come with it, each naming its page. Repositories are told apart by their path, never by folder name. Both happen only after you said yes to importing.
+**Coming from [claude-mem](https://github.com/thedotmack/claude-mem)?** Keep it. The importer has been run end to end against a live claude-mem 13.35.0 install. The installer finds its memory and offers to import it: session summaries become pages, and each project's decisions become one page you confirm. Your model can then sort those decisions into the ones still in force and the ones a later decision replaced, which claude-mem itself does not do. The Claude Code plugin also does what makes claude-mem feel like memory, in plain Markdown: when a session ends it is recorded, and when a new one starts, this repository's confirmed decisions and recent corrections come with it, each naming its page. Repositories are told apart by their path, never by folder name. Both happen only after you said yes to importing.
 
 ## What leaves your machine
 
@@ -47,7 +47,7 @@ Queries never do: lookup is a local SQLite full-text index, about 110 ms. Sessio
 | Measured | Result |
 |---|---|
 | Refuses instead of guessing (public benches, CI) | Off-topic questions refused 12/12 (English) and 6/6 (Chinese) |
-| Wrong citations on questions it has not seen ([memory honesty bench](docs/BENCHMARK.md)) | About 22–25%, vs about 60% for plain full-text search. On the bench's own questions, where a bug was found and fixed, 0% (a development-set number) |
+| Wrong citations on questions it was never tuned on ([memory honesty bench](docs/BENCHMARK.md), 25 held-out questions) | KRouter 25%; basic-memory 60%, claude-mem 60%, plain full-text search 61%. Neighbour questions refused: 8 / 10 vs 0, 0 and 1. The cost: of 15 answerable questions KRouter got 9 right, basic-memory and claude-mem 10, full-text search 9 |
 | Exact match vs embeddings on a supersede / neighbor set (CI) | Exact match refuses where TF-IDF, MiniLM and BGE-M3 cite a neighbor |
 | Real traffic, author's vault | 0.62 → 1.47 of 2, blind-judged. **This is a development set**: on held-out questions the gain is flat. A blind test on fresh traffic runs 2026-10-16 |
 

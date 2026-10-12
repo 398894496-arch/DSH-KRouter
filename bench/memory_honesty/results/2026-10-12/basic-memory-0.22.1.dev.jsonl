@@ -1,0 +1,30 @@
+{"id": "C-release", "cited": ["Engineering/Release process (old).md", "Engineering/Release process.md"], "refused": false}
+{"id": "C-db-backup", "cited": ["Engineering/Database backups.md", "Engineering/Database backups (old).md", "Engineering/Performance budget.md"], "refused": false}
+{"id": "C-code-review", "cited": ["Engineering/Code review rule.md", "Engineering/Code review rule (old).md", "Engineering/API timeout.md"], "refused": false}
+{"id": "C-api-timeout", "cited": ["Engineering/API timeout.md", "Engineering/API timeout (old).md", "Engineering/Performance budget.md"], "refused": false}
+{"id": "C-node-version", "cited": ["Engineering/Node version (old).md", "Engineering/Node version.md", "Engineering/Where secrets live.md"], "refused": false}
+{"id": "C-logging", "cited": ["Engineering/Logging level.md", "Engineering/Logging level (old).md", "Engineering/Incident reports.md"], "refused": false}
+{"id": "C-branch-names", "cited": ["Engineering/Branch naming.md", "Engineering/Branch naming (old).md", "Engineering/Code review rule (old).md"], "refused": false}
+{"id": "C-secrets", "cited": ["Engineering/Where secrets live.md", "Engineering/Where secrets live (old).md"], "refused": false}
+{"id": "C-on-call", "cited": ["Engineering/On-call rotation.md", "Engineering/On-call rotation (old).md", "Engineering/Performance budget.md"], "refused": false}
+{"id": "C-css", "cited": ["Engineering/CSS approach (old).md", "Engineering/CSS approach.md", "Engineering/Translations.md"], "refused": false}
+{"id": "S-ports", "cited": ["Engineering/Local ports.md", "Engineering/Where docs live.md", "Engineering/API timeout (old).md"], "refused": false}
+{"id": "S-tests", "cited": ["Engineering/Running tests.md", "Engineering/Node version (old).md", "Engineering/Local ports.md"], "refused": false}
+{"id": "S-dates", "cited": ["Engineering/Date format.md", "Engineering/Database backups.md", "Engineering/Database backups (old).md"], "refused": false}
+{"id": "S-feature-flags", "cited": ["Engineering/Feature flags.md", "Engineering/Branch naming.md", "Engineering/Branch naming (old).md"], "refused": false}
+{"id": "S-errors", "cited": ["Engineering/Error messages.md", "Engineering/Translations.md", "Engineering/Performance budget.md"], "refused": false}
+{"id": "S-deps", "cited": ["Engineering/Adding dependencies.md", "Engineering/Node version (old).md", "Engineering/Code review rule.md"], "refused": false}
+{"id": "S-incidents", "cited": ["Engineering/Incident reports.md", "Engineering/Logging level.md", "Engineering/Error messages.md"], "refused": false}
+{"id": "S-docs", "cited": ["Engineering/Where docs live.md", "Engineering/Where secrets live (old).md", "Engineering/Where secrets live.md"], "refused": false}
+{"id": "S-translations", "cited": ["Engineering/Translations.md", "Engineering/CSS approach (old).md", "Engineering/Error messages.md"], "refused": false}
+{"id": "S-perf", "cited": ["Engineering/Performance budget.md", "Engineering/Node version (old).md"], "refused": false}
+{"id": "R-01", "cited": ["Engineering/Node version (old).md", "Engineering/Node version.md", "Engineering/Where secrets live.md"], "refused": false}
+{"id": "R-02", "cited": ["Engineering/On-call rotation (old).md", "Engineering/On-call rotation.md", "Engineering/CSS approach (old).md"], "refused": false}
+{"id": "R-03", "cited": [], "refused": true}
+{"id": "R-04", "cited": [], "refused": true}
+{"id": "R-05", "cited": ["Engineering/Incident reports.md", "Engineering/Logging level.md", "Engineering/Code review rule (old).md"], "refused": false}
+{"id": "R-06", "cited": ["Engineering/API timeout.md", "Engineering/API timeout (old).md", "Engineering/Performance budget.md"], "refused": false}
+{"id": "R-07", "cited": ["Engineering/Database backups (old).md", "Engineering/Database backups.md", "Engineering/Performance budget.md"], "refused": false}
+{"id": "R-08", "cited": ["Engineering/Node version (old).md", "Engineering/Node version.md", "Engineering/Running tests.md"], "refused": false}
+{"id": "R-09", "cited": ["Engineering/Code review rule.md", "Engineering/Code review rule (old).md", "Engineering/Adding dependencies.md"], "refused": false}
+{"id": "R-10", "cited": ["Engineering/Where secrets live.md", "Engineering/Where secrets live (old).md"], "refused": false}

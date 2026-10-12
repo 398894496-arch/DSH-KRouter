@@ -5,7 +5,7 @@
 ## 导入你已经有的东西
 
 - **agent 会话**（`import_sessions.py`）：Claude Code 和 Codex 的会话记录，每个会话每天一页，放在 `05 时间日志/会话摘录/`。只留你的提问和每轮最后的回答，先脱敏；工具输出、思考过程、注入的上下文、子 agent 和无头运行都不收。加 `--distill` 让模型写出「定了什么、改了什么」。`--consent` 之后，夜间任务每天导入前一天的会话；`--file 路径` 只导一个会话，插件的会话结束 hook 用的就是这个。
-- **claude-mem**（`import_claude_mem.py`，beta：按它的表结构测过，还没在真实安装上跑过）：按会话所在仓库的路径（claude-mem 的 `cwd`）区分项目；老版本没有这个字段，那些会话照样导入，但不会自动带进新会话。只读打开 `~/.claude-mem/claude-mem.db`。会话总结和记录写进 `05 时间日志/claude-mem/`；每个项目的「决定」汇成一页，放在 `02 经验与方法/从 claude-mem 导入/`，状态是 `status: candidate`。加 `--distill` 会把这些决定分成「还有效的」和「被取代的」。
+- **claude-mem**（`import_claude_mem.py`，已在 claude-mem 13.35.0 的真实安装上跑通）：按会话所在仓库的路径（claude-mem 的 `cwd`）区分项目；老版本没有这个字段，那些会话照样导入，但不会自动带进新会话。只读打开 `~/.claude-mem/claude-mem.db`。会话总结和记录写进 `05 时间日志/claude-mem/`；每个项目的「决定」汇成一页，放在 `02 经验与方法/从 claude-mem 导入/`，状态是 `status: candidate`。加 `--distill` 会把这些决定分成「还有效的」和「被取代的」。
 - **会话 hook**（Claude Code 插件里的 `session_hook.py`）：会话结束时，在后台导入刚结束的这个会话；新会话开始时，带上这个仓库（按 git 根目录匹配，不按文件夹名）最近的至多 8 条决定，每条注明出处页。默认只带你确认过的页（`status: active` 或 `confirmed: true`）里的全部条目，加上其他页里的纠错条目，并标「待确认」。没同意之前两个都不做；`KROUTER_INJECT=all` 全部带上，`KROUTER_INJECT=0` 都不带。
 
 ## 安装 —— 一行，什么都不用懂
@@ -20,7 +20,7 @@ Windows（PowerShell，不需要管理员）：
 irm https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.ps1 | iex
 ```
 
-它会下载最新发布版（tag，永远不是 `main`），先按 release 里的 `SHA256SUMS` 核对 SHA-256，再在 `文稿/第二大脑` 建一座库（系统语言是中文就用中文模板），装好路由器和 agent 规则，并在 Obsidian 里打开这座库。然后它会**先问你**要不要装夜间任务，用一句话说清：会用哪个 CLI、以什么权限运行，每晚会发出多少页、多少 token——数字来自在新库上的一次预演。没有终端可问就不装；`--timer` 表示事先同意，`--no-timer` 表示不要。想固定在某个版本：`… | KROUTER_TAG=v1.0.1 sh`（Windows 先设 `$env:KROUTER_TAG`）。已有的库（`… | sh -s -- --vault ~/MyVault`）一个文件都不动，只补缺失的骨架文件。同一行再跑一次就是升级。唯一的前提是 Python 3（Windows 脚本缺 Python 时会用 winget 自动装）。最后一行会告诉你还剩哪一步：登录一个 AI 编程工具，或者贴一个 API key。之后不需要维护任何东西——锁名词只是可选的快捷方式，不是前提；召回自己就能按页面标题和正文答，答不了就直说，不硬猜。哪天晚上的活没干成，会弹桌面通知说明原因。数据去向、CLI 写入器能看到什么：[`SECURITY.md`](../SECURITY.md)。
+它会下载最新发布版（tag，永远不是 `main`），先按 release 里的 `SHA256SUMS` 核对 SHA-256，再在 `文稿/第二大脑` 建一座库（系统语言是中文就用中文模板），装好路由器和 agent 规则，并在 Obsidian 里打开这座库。然后它会**先问你**要不要装夜间任务，用一句话说清：会用哪个 CLI、以什么权限运行，每晚会发出多少页、多少 token——数字来自在新库上的一次预演。没有终端可问就不装；`--timer` 表示事先同意，`--no-timer` 表示不要。想固定在某个版本：`… | KROUTER_TAG=v1.0.2 sh`（Windows 先设 `$env:KROUTER_TAG`）。已有的库（`… | sh -s -- --vault ~/MyVault`）一个文件都不动，只补缺失的骨架文件。同一行再跑一次就是升级。唯一的前提是 Python 3（Windows 脚本缺 Python 时会用 winget 自动装）。最后一行会告诉你还剩哪一步：登录一个 AI 编程工具，或者贴一个 API key。之后不需要维护任何东西——锁名词只是可选的快捷方式，不是前提；召回自己就能按页面标题和正文答，答不了就直说，不硬猜。哪天晚上的活没干成，会弹桌面通知说明原因。数据去向、CLI 写入器能看到什么：[`SECURITY.md`](../SECURITY.md)。
 
 ## 什么会离开本机，要花多少
 

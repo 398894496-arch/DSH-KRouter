@@ -1,0 +1,30 @@
+{"id": "C-release", "refused": false, "cited": ["Engineering/Release process (old).md", "Engineering/Release process.md"]}
+{"id": "C-db-backup", "refused": false, "cited": ["Engineering/Database backups (old).md", "Engineering/Database backups.md", "Engineering/Local ports.md"]}
+{"id": "C-code-review", "refused": false, "cited": ["Engineering/Running tests.md", "Engineering/Code review rule.md"]}
+{"id": "C-api-timeout", "refused": false, "cited": ["Engineering/API timeout (old).md", "Engineering/API timeout.md", "Engineering/Error messages.md"]}
+{"id": "C-node-version", "refused": false, "cited": ["Engineering/Node version.md", "Engineering/Node version (old).md"]}
+{"id": "C-logging", "refused": false, "cited": ["Engineering/Logging level (old).md", "Engineering/Logging level.md", "Engineering/Error messages.md"]}
+{"id": "C-branch-names", "refused": false, "cited": ["Engineering/Branch naming (old).md", "Engineering/Branch naming.md", "Engineering/Release process (old).md"]}
+{"id": "C-secrets", "refused": false, "cited": ["Engineering/Where secrets live (old).md", "Engineering/Where secrets live.md", "Engineering/Where docs live.md"]}
+{"id": "C-on-call", "refused": false, "cited": ["Engineering/On-call rotation (old).md", "Engineering/On-call rotation.md"]}
+{"id": "C-css", "refused": false, "cited": ["Engineering/CSS approach (old).md", "Engineering/CSS approach.md", "Engineering/Incident reports.md"]}
+{"id": "S-ports", "refused": false, "cited": ["Engineering/Local ports.md", "Engineering/API timeout (old).md", "Engineering/API timeout.md"]}
+{"id": "S-tests", "refused": false, "cited": ["Engineering/Running tests.md", "Engineering/Node version (old).md", "Engineering/Release process.md"]}
+{"id": "S-dates", "refused": false, "cited": ["Engineering/Date format.md"]}
+{"id": "S-feature-flags", "refused": false, "cited": ["Engineering/Feature flags.md", "Engineering/Code review rule.md", "Engineering/Logging level.md"]}
+{"id": "S-errors", "refused": false, "cited": ["Engineering/Error messages.md", "Engineering/Date format.md"]}
+{"id": "S-deps", "refused": false, "cited": ["Engineering/Adding dependencies.md", "Engineering/Error messages.md", "Engineering/Running tests.md"]}
+{"id": "S-incidents", "refused": false, "cited": ["Engineering/Incident reports.md"]}
+{"id": "S-docs", "refused": false, "cited": ["Engineering/Where docs live.md", "Engineering/Where secrets live.md", "Engineering/Where secrets live (old).md"]}
+{"id": "S-translations", "refused": false, "cited": ["Engineering/Translations.md", "Engineering/Code review rule (old).md", "Engineering/Code review rule.md"]}
+{"id": "S-perf", "refused": false, "cited": ["Engineering/Performance budget.md", "Engineering/Error messages.md", "Engineering/Logging level.md"]}
+{"id": "R-01", "refused": false, "cited": ["Engineering/Error messages.md"]}
+{"id": "R-02", "refused": false, "cited": ["Engineering/Local ports.md", "Engineering/Where docs live.md", "Engineering/Release process (old).md"]}
+{"id": "R-03", "refused": false, "cited": ["Engineering/Error messages.md", "Engineering/Logging level.md", "Engineering/Local ports.md"]}
+{"id": "R-04", "refused": false, "cited": ["Engineering/Logging level.md", "Engineering/Local ports.md", "Engineering/Where docs live.md"]}
+{"id": "R-05", "refused": false, "cited": ["Engineering/Logging level.md", "Engineering/Logging level (old).md", "Engineering/Where secrets live (old).md"]}
+{"id": "R-06", "refused": false, "cited": ["Engineering/API timeout.md", "Engineering/API timeout (old).md", "Engineering/Error messages.md"]}
+{"id": "R-07", "refused": false, "cited": ["Engineering/Translations.md", "Engineering/Database backups (old).md", "Engineering/Where secrets live (old).md"]}
+{"id": "R-08", "refused": false, "cited": ["Engineering/Node version (old).md", "Engineering/Node version.md"]}
+{"id": "R-09", "refused": false, "cited": ["Engineering/Running tests.md", "Engineering/Code review rule.md"]}
+{"id": "R-10", "refused": false, "cited": ["Engineering/Where secrets live (old).md", "Engineering/Where secrets live.md", "Engineering/Local ports.md"]}

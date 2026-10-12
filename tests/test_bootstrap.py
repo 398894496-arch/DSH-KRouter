@@ -195,5 +195,5 @@ def test_install_offers_claude_mem_and_imports_it_on_a_yes(tmp_path):
     assert res.returncode == 0 and out["claude_mem"] == 0  # 没有终端可问：不导
     res, out = _boot(env, "--lang", "zh", "--vault", str(tmp_path / "v2"), "--no-timer", "--import")
     assert res.returncode == 0 and out["claude_mem"] == 3, res.stdout[-1500:]
-    assert "从 claude-mem 导入了 3 个会话、3 条决定" in res.stdout
+    assert "从 claude-mem 导入了 3 个会话、4 条决定和改动" in res.stdout
     assert (tmp_path / "v2/02 经验与方法/从 claude-mem 导入/shop 的决定（claude-mem）.md").is_file()

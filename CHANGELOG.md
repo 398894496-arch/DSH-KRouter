@@ -4,9 +4,22 @@ Releases are weekly milestones from 0.13.0 on; fixes in between land on `main`. 
 semantic versioning; what counts as the stable surface is listed in [`docs/DETAILS.md`](docs/DETAILS.md#stability-and-versions). Each entry starts with what you will
 notice, then the details.
 
-## Unreleased
+## 1.0.2 — 2026-10-12
 
 **What you will notice**
+- **A comparison, with the other systems actually run.** On the 25 held-out questions, KRouter cites the wrong page
+  25% of the time. basic-memory 0.22.1 does 60%, claude-mem 13.35.0 60%, and plain full-text search 61%. Of 10
+  neighbour questions, KRouter refuses 8; the others refuse 0, 0 and 1. The cost is stated next to it: KRouter got 9
+  of 15 answerable held-out questions right, basic-memory and claude-mem 10, full-text search 9, because KRouter refuses some questions phrased in
+  words the page does not use. Both sets, how each system was run, and every system's raw per-question output on the
+  dev set are in `docs/BENCHMARK.md` and `bench/memory_honesty/results/`.
+- **claude-mem import, checked on a live install (13.35.0), is no longer beta.** One fix came from the real data:
+  claude-mem files most decisions as `change` (only the reversal of an earlier decision came out as `decision`), so
+  the decisions page now takes `decision`, `change`, `feature`, `bugfix` and `refactor`. In the live run, the model
+  pass sorted them correctly: "any branch, manual upload → tags on main, CI publishes" was marked as replaced, and the
+  session-start hook brought exactly that correction into a new session in the same repository and nothing into the
+  other one. The decisions page's `how` line is now a summary of the page; the line matching the question comes from
+  recall.
 - **The memory honesty bench has a held-out set.** The 25 questions the 1.0.1 headline number comes from are now in
   `bench/memory_honesty/heldout.jsonl`: 9 corrections, 6 current, 10 neighbour questions on the same vault, written
   by the outside reviewer and never used for tuning. `run.py --set heldout` prints aggregates only; `--reveal` prints
@@ -14,9 +27,13 @@ notice, then the details.
   seen what: `bench/memory_honesty/HELDOUT.md`.
 
 **Details**
+- The held-out set from the outside review (#32): `bench/memory_honesty/heldout.jsonl`, 25 questions; `run.py
+  --set heldout` prints aggregates only, `--reveal` shows misses and burns the set; rules and log in `HELDOUT.md`.
 - `tests/test_memory_honesty_heldout.py` pins a SHA-256 of the questions and of the bench vault (line endings
   normalized), checks the set does not overlap the development questions, and checks only a sanity guard: fewer
   wrong citations and at least as many refusals as plain full-text search. No floor on the held-out score.
+- Adapters for basic-memory and claude-mem (`bench/memory_honesty/adapters/`); `tests/test_memory_honesty_competitors.py`
+  re-grades the stored raw output and re-runs KRouter and BM25 against the published dev rows.
 - No ranking, refusal or card change. Held-out at freeze (1.0.1): 25% wrong citations (3 / 12), 8 / 10 refused,
   5 / 9 corrections, 4 / 6 current; BM25 61% (14 / 23), 1 / 10.
 
