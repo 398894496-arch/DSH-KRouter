@@ -1,0 +1,25 @@
+{"id": "H-A1", "kind": "correction", "q": "Which Node release should a new service target?", "gold": "Engineering/Node version.md", "stale": "Engineering/Node version (old).md"}
+{"id": "H-A2", "kind": "correction", "q": "Can I commit a .env file with secrets?", "gold": "Engineering/Where secrets live.md", "stale": "Engineering/Where secrets live (old).md"}
+{"id": "H-A3", "kind": "correction", "q": "Is debug logging allowed in prod?", "gold": "Engineering/Logging level.md", "stale": "Engineering/Logging level (old).md"}
+{"id": "H-A4", "kind": "correction", "q": "What format should a git branch name follow?", "gold": "Engineering/Branch naming.md", "stale": "Engineering/Branch naming (old).md"}
+{"id": "H-A5", "kind": "correction", "q": "Who has to sign off before merging?", "gold": "Engineering/Code review rule.md", "stale": "Engineering/Code review rule (old).md"}
+{"id": "H-A6", "kind": "correction", "q": "Do we still write Sass?", "gold": "Engineering/CSS approach.md", "stale": "Engineering/CSS approach (old).md"}
+{"id": "H-A7", "kind": "current", "q": "What time zone do we save timestamps in?", "gold": "Engineering/Date format.md", "stale": null}
+{"id": "H-A8", "kind": "current", "q": "Can we show a stack trace to users?", "gold": "Engineering/Error messages.md", "stale": null}
+{"id": "H-A9", "kind": "current", "q": "How soon after an outage is the postmortem due?", "gold": "Engineering/Incident reports.md", "stale": null}
+{"id": "H-A10", "kind": "current", "q": "What port does the web app run on in dev?", "gold": "Engineering/Local ports.md", "stale": null}
+{"id": "H-A11", "kind": "current", "q": "When must an old feature flag be removed?", "gold": "Engineering/Feature flags.md", "stale": null}
+{"id": "H-A12", "kind": "current", "q": "Do I need Docker to run tests?", "gold": "Engineering/Running tests.md", "stale": null}
+{"id": "H-A13", "kind": "correction", "q": "How many days of database backups do we keep?", "gold": "Engineering/Database backups.md", "stale": "Engineering/Database backups (old).md"}
+{"id": "H-A14", "kind": "correction", "q": "Can I release from a feature branch?", "gold": "Engineering/Release process.md", "stale": "Engineering/Release process (old).md"}
+{"id": "H-A15", "kind": "correction", "q": "What day is the on-call handover?", "gold": "Engineering/On-call rotation.md", "stale": "Engineering/On-call rotation (old).md"}
+{"id": "H-R1", "kind": "refuse", "q": "What is the retry policy for the email service?", "gold": null, "stale": null}
+{"id": "H-R2", "kind": "refuse", "q": "How long do we keep application logs?", "gold": null, "stale": null}
+{"id": "H-R3", "kind": "refuse", "q": "Which Java version do our services use?", "gold": null, "stale": null}
+{"id": "H-R4", "kind": "refuse", "q": "What port does Postgres run on locally?", "gold": null, "stale": null}
+{"id": "H-R5", "kind": "refuse", "q": "Where do we store user-uploaded images?", "gold": null, "stale": null}
+{"id": "H-R6", "kind": "refuse", "q": "How should release tags be named?", "gold": null, "stale": null}
+{"id": "H-R7", "kind": "refuse", "q": "What is the load-time budget for the checkout page?", "gold": null, "stale": null}
+{"id": "H-R8", "kind": "refuse", "q": "How do we translate marketing emails?", "gold": null, "stale": null}
+{"id": "H-R9", "kind": "refuse", "q": "Who is on call for the mobile team this week?", "gold": null, "stale": null}
+{"id": "H-R10", "kind": "refuse", "q": "How often do we back up the Redis cache?", "gold": null, "stale": null}
