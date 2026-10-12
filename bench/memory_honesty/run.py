@@ -31,6 +31,14 @@ reveal followed by a ranking or refusal change burns the set (see `HELDOUT.md`).
 
     python3 bench/memory_honesty/run.py --set heldout
     python3 bench/memory_honesty/run.py --set heldout --adapter bm25
+
+Second bench, written by the reviewer (`vault2/`, 60 pages, 30 English and 30 Chinese): `--set dev3` (50 questions,
+tune on these) and `--set heldout2` (50 questions, never tune on these; stored gzipped so it does not show up in a
+grep or a diff; same rules, HELDOUT.md). The BM25 baselines on vault2 split Chinese into character pairs, so a
+Chinese question is searched, not refused for having no Latin words.
+
+    python3 bench/memory_honesty/run.py --set dev3
+    python3 bench/memory_honesty/run.py --set heldout2 --adapter bm25-floor
 """
 
 from __future__ import annotations
@@ -47,12 +55,31 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 
 
-SETS = {"dev": "questions.jsonl", "dev2": "questions_dev2.jsonl", "heldout": "heldout.jsonl"}
+SETS = {"dev": "questions.jsonl", "dev2": "questions_dev2.jsonl", "heldout": "heldout.jsonl",
+        "dev3": "questions_dev3.jsonl", "heldout2": "heldout2.jsonl.gz"}
+# Sets on the second, bilingual vault (vault2/, 60 pages). Everything else runs on vault/.
+VAULT2_SETS = {"dev3", "heldout2"}
+HELDOUT_SETS = {"heldout", "heldout2"}
+
+
+def vault_of(name: str) -> Path:
+    return HERE / ("vault2" if name in VAULT2_SETS else "vault")
+
+
+def floor_dev_of(name: str) -> str:
+    """The dev set a floor is picked on: the one on the same vault."""
+    return "dev3" if name in VAULT2_SETS else "dev"
 
 
 def questions(name: str = "dev") -> list[dict]:
     path = HERE / SETS[name]
-    return [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    if path.suffix == ".gz":  # heldout2 is stored compressed so it does not show up in grep or a diff by accident
+        import gzip
+
+        text = gzip.decompress(path.read_bytes()).decode("utf-8")
+    else:
+        text = path.read_text(encoding="utf-8")
+    return [json.loads(x) for x in text.splitlines() if x.strip()]
 
 
 def aggregate(result: dict) -> dict:
@@ -60,7 +87,7 @@ def aggregate(result: dict) -> dict:
     return {k: v for k, v in result.items() if k != "misses"}
 
 
-def krouter_answers(rows: list[dict]) -> list[dict]:
+def krouter_answers(rows: list[dict], vault_src: Path | None = None) -> list[dict]:
     sys.path.insert(0, str(REPO / "skill/krouter-obsidian/scripts"))
     saved = {k: os.environ.get(k) for k in ("KROUTER_NO_QUERY_LOG", "KROUTER_CACHE_DIR", "KROUTER_MAP")}
     # Windows 上召回缓存的 SQLite 连接在进程里一直开着，临时目录删不掉也不算失败
@@ -69,7 +96,7 @@ def krouter_answers(rows: list[dict]) -> list[dict]:
         os.environ["KROUTER_CACHE_DIR"] = str(Path(tmp) / "cache")
         os.environ.pop("KROUTER_MAP", None)
         vault = Path(tmp) / "vault"
-        shutil.copytree(HERE / "vault", vault)
+        shutil.copytree(vault_src or HERE / "vault", vault)
         import recall_index as ri
 
         out = []
@@ -85,7 +112,24 @@ def krouter_answers(rows: list[dict]) -> list[dict]:
     return out
 
 
-def bm25_answers(rows: list[dict]) -> list[dict]:
+def _cjk_tokens(text: str) -> list[str]:
+    """Latin words of 3+ letters, and CJK runs split into overlapping character pairs (a single character alone)."""
+    import re
+
+    out = [w for w in re.findall(r"[a-z0-9]+", text.lower()) if len(w) > 2]
+    for run in re.findall(r"[\u4e00-\u9fff]+", text):
+        out += [run] if len(run) == 1 else [run[i:i + 2] for i in range(len(run) - 1)]
+    return out
+
+
+def bm25_answers(rows: list[dict], vault_src: Path | None = None, cjk: bool = False) -> list[dict]:
+    if cjk:
+        return [{"id": qid, "refused": not hits, "cited": [h[0] for h in hits]}
+                for qid, hits in bm25_scored(rows, skip_superseded=False, vault_src=vault_src, cjk=True)]
+    return _bm25_answers_v1(rows)
+
+
+def _bm25_answers_v1(rows: list[dict]) -> list[dict]:
     """Baseline: plain full-text search (SQLite FTS5, BM25) over the same pages, always answering with its top hit —
     what a memory that "returns the nearest chunk" does. No refusal, no notion of superseded."""
     import re
@@ -104,28 +148,30 @@ def bm25_answers(rows: list[dict]) -> list[dict]:
     return out
 
 
-def _bm25_index(skip_superseded: bool):
+def _bm25_index(skip_superseded: bool, vault_src: Path | None = None, cjk: bool = False):
     import re
     import sqlite3
 
+    root = vault_src or HERE / "vault"
     con = sqlite3.connect(":memory:")
     con.execute("CREATE VIRTUAL TABLE d USING fts5(rel UNINDEXED, body)")
-    for path in sorted((HERE / "vault").rglob("*.md")):
+    for path in sorted(root.rglob("*.md")):
         text = path.read_text(encoding="utf-8")
         if skip_superseded and re.search(r"(?m)^status:\s*superseded\s*$", text.split("\n---", 1)[0]):
             continue
-        con.execute("INSERT INTO d VALUES (?, ?)", (path.relative_to(HERE / "vault").as_posix(), text))
+        con.execute("INSERT INTO d VALUES (?, ?)", (path.relative_to(root).as_posix(), " ".join(_cjk_tokens(text)) if cjk else text))
     return con
 
 
-def bm25_scored(rows: list[dict], skip_superseded: bool = True) -> list[tuple[str, list[tuple[str, float]]]]:
+def bm25_scored(rows: list[dict], skip_superseded: bool = True, vault_src: Path | None = None,
+                cjk: bool = False) -> list[tuple[str, list[tuple[str, float]]]]:
     """[(id, [(page, score)])] — BM25 over the pages, superseded pages left out, score = -bm25 (higher is better)."""
     import re
 
-    con = _bm25_index(skip_superseded)
+    con = _bm25_index(skip_superseded, vault_src, cjk)
     out = []
     for it in rows:
-        words = [w for w in re.findall(r"[a-z0-9]+", it["q"].lower()) if len(w) > 2]
+        words = _cjk_tokens(it["q"]) if cjk else [w for w in re.findall(r"[a-z0-9]+", it["q"].lower()) if len(w) > 2]
         hits = con.execute("SELECT rel, -bm25(d) FROM d WHERE d MATCH ? ORDER BY bm25(d) LIMIT 3",
                            (" OR ".join(f'"{w}"' for w in words),)).fetchall() if words else []
         out.append((it["id"], [(r, float(sc)) for r, sc in hits]))
@@ -154,9 +200,14 @@ def pick_floor(rows: list[dict], scored) -> float:
     return best_floor
 
 
-def bm25_floor_answers(rows: list[dict]) -> list[dict]:
+def bm25_floor_answers(rows: list[dict], qset: str = "dev") -> list[dict]:
     """Baseline with the two things anyone would add to full-text search: superseded pages left out, and a score floor
     below which it refuses. The floor is picked on the dev set (`pick_floor`) and applied as is to any set."""
+    if qset in VAULT2_SETS:
+        src = vault_of(qset)
+        dev = questions(floor_dev_of(qset))
+        floor = pick_floor(dev, bm25_scored(dev, vault_src=src, cjk=True))
+        return floor_answers(bm25_scored(rows, vault_src=src, cjk=True), floor)
     dev = questions("dev")
     floor = pick_floor(dev, bm25_scored(dev))
     return floor_answers(bm25_scored(rows), floor)
@@ -201,11 +252,14 @@ def main() -> int:
     if args.answers:
         answers = [json.loads(x) for x in Path(args.answers).read_text(encoding="utf-8").splitlines() if x.strip()]
     else:
-        answers = {"krouter": krouter_answers, "bm25": bm25_answers, "bm25-floor": bm25_floor_answers}[args.adapter](rows)
+        src, cjk = vault_of(args.qset), args.qset in VAULT2_SETS
+        answers = {"krouter": lambda r: krouter_answers(r, src),
+                   "bm25": lambda r: bm25_answers(r, src, cjk),
+                   "bm25-floor": lambda r: bm25_floor_answers(r, args.qset)}[args.adapter](rows)
     result = score(rows, answers)
-    if args.qset == "heldout" and not args.reveal:
+    if args.qset in HELDOUT_SETS and not args.reveal:
         result = aggregate(result)
-    elif args.qset == "heldout":
+    elif args.qset in HELDOUT_SETS:
         print("held-out per-question results revealed: if ranking or refusal changes after this, the set is burned "
               "(bench/memory_honesty/HELDOUT.md)", file=sys.stderr)
     print(json.dumps(result, ensure_ascii=False, indent=1))

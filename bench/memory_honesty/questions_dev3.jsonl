@@ -1,0 +1,50 @@
+{"id": "D3-01", "kind": "correction", "lang": "en", "q": "Which package manager do JavaScript repos use?", "gold": "Engineering/JavaScript package manager.md", "stale": "Engineering/JavaScript package manager (old).md", "evidence": "pnpm"}
+{"id": "D3-02", "kind": "correction", "lang": "en", "q": "How do we run database migrations?", "gold": "Engineering/Database migrations.md", "stale": "Engineering/Database migrations (old).md", "evidence": "CI migrate job"}
+{"id": "D3-03", "kind": "correction", "lang": "en", "q": "How do we version the public API?", "gold": "Engineering/API versioning.md", "stale": "Engineering/API versioning (old).md", "evidence": "URL path"}
+{"id": "D3-04", "kind": "correction", "lang": "en", "q": "Who approves an $800 expense?", "gold": "Engineering/Expense approval.md", "stale": "Engineering/Expense approval (old).md", "evidence": "your manager approves"}
+{"id": "D3-05", "kind": "correction", "lang": "en", "q": "What bcrypt cost factor do we use?", "gold": "Engineering/Password hashing.md", "stale": "Engineering/Password hashing (old).md", "evidence": "rehashed with argon2id"}
+{"id": "D3-06", "kind": "correction", "lang": "en", "q": "Is it OK to run a migration from my laptop?", "gold": "Engineering/Database migrations.md", "stale": "Engineering/Database migrations (old).md", "evidence": "Never run a migration from a laptop"}
+{"id": "D3-07", "kind": "correction", "lang": "en", "q": "What base image should a service container use?", "gold": "Engineering/Container base image.md", "stale": "Engineering/Container base image (old).md", "evidence": "distroless/base-debian12"}
+{"id": "D3-08", "kind": "correction", "lang": "en", "q": "When does the weekend deploy freeze start?", "gold": "Engineering/Deploy freeze.md", "stale": "Engineering/Deploy freeze (old).md", "evidence": "Friday 12:00"}
+{"id": "D3-09", "kind": "correction", "lang": "zh", "q": "服务器用什么操作系统？", "gold": "工程规范/服务器操作系统.md", "stale": "工程规范/服务器操作系统（旧）.md", "evidence": "Rocky Linux 9"}
+{"id": "D3-10", "kind": "correction", "lang": "zh", "q": "代码评审多久要给第一轮意见？", "gold": "工程规范/代码评审时限.md", "stale": "工程规范/代码评审时限（旧）.md", "evidence": "一个工作日内"}
+{"id": "D3-11", "kind": "correction", "lang": "zh", "q": "还能用 Vue 2 开新项目吗？", "gold": "工程规范/前端框架.md", "stale": "工程规范/前端框架（旧）.md", "evidence": "只修缺陷"}
+{"id": "D3-12", "kind": "correction", "lang": "zh", "q": "新的前端项目用什么框架？", "gold": "工程规范/前端框架.md", "stale": "工程规范/前端框架（旧）.md", "evidence": "React 18"}
+{"id": "D3-13", "kind": "correction", "lang": "zh", "q": "覆盖率不达标的代码能合并吗？", "gold": "工程规范/测试覆盖率.md", "stale": "工程规范/测试覆盖率（旧）.md", "evidence": "不达标不能合并"}
+{"id": "D3-14", "kind": "correction", "lang": "zh", "q": "灰度阶段要观察多久？", "gold": "工程规范/上线方式.md", "stale": "工程规范/上线方式（旧）.md", "evidence": "观察 30 分钟"}
+{"id": "D3-15", "kind": "correction", "lang": "zh", "q": "数据库连接池上限是多少？", "gold": "工程规范/数据库连接池.md", "stale": "工程规范/数据库连接池（旧）.md", "evidence": "上限为 50"}
+{"id": "D3-16", "kind": "current", "lang": "en", "q": "What should I do if my laptop is stolen?", "gold": "Engineering/Laptop security.md", "stale": null, "evidence": "within one hour"}
+{"id": "D3-17", "kind": "current", "lang": "en", "q": "What can contractors access?", "gold": "Engineering/Contractor access.md", "stale": null, "evidence": "staging environment only"}
+{"id": "D3-18", "kind": "current", "lang": "en", "q": "How quickly must we respond to a P1 bug?", "gold": "Engineering/P1 bugs.md", "stale": null, "evidence": "30 minutes"}
+{"id": "D3-19", "kind": "current", "lang": "en", "q": "How soon does an idle company laptop lock?", "gold": "Engineering/Laptop security.md", "stale": null, "evidence": "5 minutes idle"}
+{"id": "D3-20", "kind": "current", "lang": "en", "q": "How often do the mobile apps release?", "gold": "Engineering/Mobile release train.md", "stale": null, "evidence": "every second Tuesday"}
+{"id": "D3-21", "kind": "current", "lang": "en", "q": "How should I write a commit message?", "gold": "Engineering/Commit messages.md", "stale": null, "evidence": "imperative mood"}
+{"id": "D3-22", "kind": "current", "lang": "en", "q": "How do we format Python code?", "gold": "Engineering/Python formatting.md", "stale": null, "evidence": "ruff format"}
+{"id": "D3-23", "kind": "current", "lang": "zh", "q": "接口路径里能写动词吗？", "gold": "工程规范/接口路径命名.md", "stale": null, "evidence": "路径里不写动词"}
+{"id": "D3-24", "kind": "current", "lang": "zh", "q": "哪一级告警会打电话给值班人？", "gold": "工程规范/告警分级.md", "stale": null, "evidence": "P0 告警电话通知"}
+{"id": "D3-25", "kind": "current", "lang": "zh", "q": "缓存键一定要设过期时间吗？", "gold": "工程规范/缓存键命名.md", "stale": null, "evidence": "必须设置过期时间"}
+{"id": "D3-26", "kind": "current", "lang": "zh", "q": "第三方依赖什么时候统一升级？", "gold": "工程规范/依赖升级.md", "stale": null, "evidence": "每月第一个周三"}
+{"id": "D3-27", "kind": "current", "lang": "zh", "q": "REST 接口路径怎么命名？", "gold": "工程规范/接口路径命名.md", "stale": null, "evidence": "小写复数名词"}
+{"id": "D3-28", "kind": "current", "lang": "zh", "q": "一个可用区出故障了怎么办？", "gold": "工程规范/生产环境部署.md", "stale": null, "evidence": "流量自动切到另一个"}
+{"id": "D3-29", "kind": "current", "lang": "zh", "q": "P1 告警怎么通知？", "gold": "工程规范/告警分级.md", "stale": null, "evidence": "P1 告警发即时消息"}
+{"id": "D3-30", "kind": "current", "lang": "zh", "q": "会议纪要要记哪些内容？", "gold": "工程规范/会议纪要.md", "stale": null, "evidence": "结论、负责人和截止日期"}
+{"id": "D3-31", "kind": "refuse", "lang": "en", "q": "How long do we keep raw analytics events?", "gold": null, "stale": null, "neighbor": "Engineering/Analytics event names.md", "absent": "raw"}
+{"id": "D3-32", "kind": "refuse", "lang": "en", "q": "Can I read work email on my personal phone?", "gold": null, "stale": null, "neighbor": "Engineering/Laptop security.md", "absent": "personal"}
+{"id": "D3-33", "kind": "refuse", "lang": "en", "q": "How often are container images rebuilt for security patches?", "gold": null, "stale": null, "neighbor": "Engineering/Container base image.md", "absent": "rebuilt"}
+{"id": "D3-34", "kind": "refuse", "lang": "en", "q": "What is the rate limit for the internal admin API?", "gold": null, "stale": null, "neighbor": "Engineering/Public API rate limits.md", "absent": "admin"}
+{"id": "D3-35", "kind": "refuse", "lang": "en", "q": "How do we format SQL files?", "gold": null, "stale": null, "neighbor": "Engineering/Python formatting.md", "absent": "SQL"}
+{"id": "D3-36", "kind": "refuse", "lang": "en", "q": "How often do we run chaos experiments in production?", "gold": null, "stale": null, "neighbor": "Engineering/Load testing.md", "absent": "chaos"}
+{"id": "D3-37", "kind": "refuse", "lang": "en", "q": "What is the per-diem for meals on business trips?", "gold": null, "stale": null, "neighbor": "Engineering/Expense approval.md", "absent": "per-diem"}
+{"id": "D3-38", "kind": "refuse", "lang": "en", "q": "How should a pull request description be written?", "gold": null, "stale": null, "neighbor": "Engineering/Commit messages.md", "absent": "pull request"}
+{"id": "D3-39", "kind": "refuse", "lang": "en", "q": "Who gets paged when Sentry reports a spike in errors?", "gold": null, "stale": null, "neighbor": "Engineering/Error tracking.md", "absent": "paged"}
+{"id": "D3-40", "kind": "refuse", "lang": "en", "q": "Which screen reader do we test new screens with?", "gold": null, "stale": null, "neighbor": "Engineering/Accessibility.md", "absent": "screen reader"}
+{"id": "D3-41", "kind": "refuse", "lang": "zh", "q": "多久做一次容灾切换演练？", "gold": null, "stale": null, "neighbor": "工程规范/恢复演练.md", "absent": "容灾"}
+{"id": "D3-42", "kind": "refuse", "lang": "zh", "q": "GraphQL 接口怎么命名？", "gold": null, "stale": null, "neighbor": "工程规范/接口路径命名.md", "absent": "GraphQL"}
+{"id": "D3-43", "kind": "refuse", "lang": "zh", "q": "操作系统补丁多久打一次？", "gold": null, "stale": null, "neighbor": "工程规范/依赖升级.md", "absent": "系统补丁"}
+{"id": "D3-44", "kind": "refuse", "lang": "zh", "q": "数据库变更怎么灰度？", "gold": null, "stale": null, "neighbor": "工程规范/上线方式.md", "absent": "数据库变更"}
+{"id": "D3-45", "kind": "refuse", "lang": "zh", "q": "集成测试要覆盖哪些场景？", "gold": null, "stale": null, "neighbor": "工程规范/测试覆盖率.md", "absent": "集成测试"}
+{"id": "D3-46", "kind": "refuse", "lang": "zh", "q": "会议室怎么预订？", "gold": null, "stale": null, "neighbor": "工程规范/会议纪要.md", "absent": "会议室"}
+{"id": "D3-47", "kind": "refuse", "lang": "zh", "q": "汇率换算用什么精度？", "gold": null, "stale": null, "neighbor": "工程规范/金额存储.md", "absent": "汇率"}
+{"id": "D3-48", "kind": "refuse", "lang": "zh", "q": "月报什么时候交？", "gold": null, "stale": null, "neighbor": "工程规范/周报.md", "absent": "月报"}
+{"id": "D3-49", "kind": "refuse", "lang": "zh", "q": "实习生入职要签什么协议？", "gold": null, "stale": null, "neighbor": "工程规范/新人入职.md", "absent": "实习"}
+{"id": "D3-50", "kind": "refuse", "lang": "zh", "q": "用户头像图片存在哪里？", "gold": null, "stale": null, "neighbor": "工程规范/文件上传大小.md", "absent": "头像"}
