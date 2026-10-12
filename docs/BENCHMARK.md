@@ -167,6 +167,26 @@ than the careful BM25 baseline (24 vs 17 of 30) but cites a wrong page more ofte
 neighbour questions (9 vs 15 of 20). It sits at a different point on the same trade-off, not above it. basic-memory and
 claude-mem have not been run on vault2 yet; their adapters take the vault1 sets only.
 
+### Dense prototype on vault2 (2026-10-12, bench only, not in the product)
+
+`bench/memory_honesty/dense.py` adds a local embedding model (`paraphrase-multilingual-MiniLM-L12-v2` through
+fastembed; questions never leave the machine) and combines it with lexical search. Tuned on dev3 only; the candidate
+was fixed on dev3 before one heldout2 run: **`agree`**, which answers only when BM25 (Chinese by character pairs) and
+the dense model put the same page first, both with superseded pages left out and each above a floor picked on dev3.
+
+| heldout2, 50 questions | Wrong citations | Neighbours refused | Answerable right |
+|---|---|---|---|
+| KRouter 1.0.3 (shipped) | 33% (12 / 36) | 9 / 20 | 24 / 30 |
+| BM25 + skip superseded + dev3 floor | 19% (4 / 21) | 16 / 20 | 17 / 30 |
+| **`agree`: BM25 and dense must agree** | **18% (5 / 28)** | **15 / 20** | **23 / 30** |
+| dense + skip superseded + dev3 floor | 23% (7 / 30) | 13 / 20 | 23 / 30 |
+
+Read plainly: on questions written by someone else, on a vault nobody tuned for, the agreement of two different
+retrievers keeps the careful baseline's precision and refusals while answering six more questions, and against what
+KRouter ships it cites fewer than half as many wrong pages for one fewer right answer. It is a prototype on a 60-page
+bench, not yet a feature: it needs an embedding model on the user's machine and floors that do not depend on a dev
+set of their own vault.
+
 ## Run it
 
 ```bash
