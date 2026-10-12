@@ -1,0 +1,50 @@
+{"id": "D2-C01", "kind": "correction", "q": "Can I cut a release from my feature branch?", "gold": "Engineering/Release process.md", "stale": "Engineering/Release process (old).md"}
+{"id": "D2-C02", "kind": "correction", "q": "Is it fine to upload the build by hand when shipping?", "gold": "Engineering/Release process.md", "stale": "Engineering/Release process (old).md"}
+{"id": "D2-C03", "kind": "correction", "q": "How far back can we restore the database from backups?", "gold": "Engineering/Database backups.md", "stale": "Engineering/Database backups (old).md"}
+{"id": "D2-C04", "kind": "correction", "q": "Who has to sign off before I can merge?", "gold": "Engineering/Code review rule.md", "stale": "Engineering/Code review rule (old).md"}
+{"id": "D2-C05", "kind": "correction", "q": "If the payments service is slow, how long until the client gives up?", "gold": "Engineering/API timeout.md", "stale": "Engineering/API timeout (old).md"}
+{"id": "D2-C06", "kind": "correction", "q": "Are we still on Node 18?", "gold": "Engineering/Node version.md", "stale": "Engineering/Node version (old).md"}
+{"id": "D2-C07", "kind": "correction", "q": "Should prod emit debug logs?", "gold": "Engineering/Logging level.md", "stale": "Engineering/Logging level (old).md"}
+{"id": "D2-C08", "kind": "correction", "q": "What goes in a branch name, my name or the ticket?", "gold": "Engineering/Branch naming.md", "stale": "Engineering/Branch naming (old).md"}
+{"id": "D2-C09", "kind": "correction", "q": "Can I put secrets in a .env file?", "gold": "Engineering/Where secrets live.md", "stale": "Engineering/Where secrets live (old).md"}
+{"id": "D2-C10", "kind": "correction", "q": "When does the on-call handover happen?", "gold": "Engineering/On-call rotation.md", "stale": "Engineering/On-call rotation (old).md"}
+{"id": "D2-C11", "kind": "correction", "q": "Should new components use Sass?", "gold": "Engineering/CSS approach.md", "stale": "Engineering/CSS approach (old).md"}
+{"id": "D2-C12", "kind": "correction", "q": "What time does the nightly database backup run?", "gold": "Engineering/Database backups.md", "stale": "Engineering/Database backups (old).md"}
+{"id": "D2-A01", "kind": "current", "q": "What port is the web app on in dev?", "gold": "Engineering/Local ports.md", "stale": null}
+{"id": "D2-A02", "kind": "current", "q": "Do integration tests need Docker?", "gold": "Engineering/Running tests.md", "stale": null}
+{"id": "D2-A03", "kind": "current", "q": "What timezone do we save timestamps in?", "gold": "Engineering/Date format.md", "stale": null}
+{"id": "D2-A04", "kind": "current", "q": "How do I format a date for storage?", "gold": "Engineering/Date format.md", "stale": null}
+{"id": "D2-A05", "kind": "current", "q": "What prefix do feature toggles get?", "gold": "Engineering/Feature flags.md", "stale": null}
+{"id": "D2-A06", "kind": "current", "q": "How long can a feature flag stay before removal?", "gold": "Engineering/Feature flags.md", "stale": null}
+{"id": "D2-A07", "kind": "current", "q": "Can I show a stack trace to users when something fails?", "gold": "Engineering/Error messages.md", "stale": null}
+{"id": "D2-A08", "kind": "current", "q": "What should a dependency PR explain?", "gold": "Engineering/Adding dependencies.md", "stale": null}
+{"id": "D2-A09", "kind": "current", "q": "Do postmortems assign blame?", "gold": "Engineering/Incident reports.md", "stale": null}
+{"id": "D2-A10", "kind": "current", "q": "How fast must the homepage load on a phone?", "gold": "Engineering/Performance budget.md", "stale": null}
+{"id": "D2-A11", "kind": "current", "q": "Where do I put text that users see so it can be translated?", "gold": "Engineering/Translations.md", "stale": null}
+{"id": "D2-A12", "kind": "current", "q": "Should developer documentation go in the wiki?", "gold": "Engineering/Where docs live.md", "stale": null}
+{"id": "D2-A13", "kind": "current", "q": "What command runs the unit tests?", "gold": "Engineering/Running tests.md", "stale": null}
+{"id": "D2-R01", "kind": "refuse", "q": "Which port does the database use in local development?", "gold": null, "stale": null}
+{"id": "D2-R02", "kind": "refuse", "q": "How long do we keep application logs before deleting them?", "gold": null, "stale": null}
+{"id": "D2-R03", "kind": "refuse", "q": "Which Java version do our services run on?", "gold": null, "stale": null}
+{"id": "D2-R04", "kind": "refuse", "q": "How many reviewers does a design proposal need?", "gold": null, "stale": null}
+{"id": "D2-R05", "kind": "refuse", "q": "What is the retry policy for the email API?", "gold": null, "stale": null}
+{"id": "D2-R06", "kind": "refuse", "q": "How often do we back up the search index?", "gold": null, "stale": null}
+{"id": "D2-R07", "kind": "refuse", "q": "Where do we keep the SSH keys for production servers?", "gold": null, "stale": null}
+{"id": "D2-R08", "kind": "refuse", "q": "How do we name Docker images?", "gold": null, "stale": null}
+{"id": "D2-R09", "kind": "refuse", "q": "What is the performance budget for the admin dashboard?", "gold": null, "stale": null}
+{"id": "D2-R10", "kind": "refuse", "q": "When is a security review due for a new service?", "gold": null, "stale": null}
+{"id": "D2-R11", "kind": "refuse", "q": "How do we format phone numbers?", "gold": null, "stale": null}
+{"id": "D2-R12", "kind": "refuse", "q": "What naming convention do database tables use?", "gold": null, "stale": null}
+{"id": "D2-R13", "kind": "refuse", "q": "Which CSS framework does the marketing site use?", "gold": null, "stale": null}
+{"id": "D2-R14", "kind": "refuse", "q": "Who approves a new on-call engineer?", "gold": null, "stale": null}
+{"id": "D2-R15", "kind": "refuse", "q": "How do we roll back a failed database migration?", "gold": null, "stale": null}
+{"id": "D2-R16", "kind": "refuse", "q": "What is the timeout for webhook deliveries?", "gold": null, "stale": null}
+{"id": "D2-R17", "kind": "refuse", "q": "Where do we store design files?", "gold": null, "stale": null}
+{"id": "D2-R18", "kind": "refuse", "q": "How long can a pull request stay open before it is closed?", "gold": null, "stale": null}
+{"id": "D2-R19", "kind": "refuse", "q": "What log format do we use?", "gold": null, "stale": null}
+{"id": "D2-R20", "kind": "refuse", "q": "How do we translate emails sent to customers?", "gold": null, "stale": null}
+{"id": "D2-R21", "kind": "refuse", "q": "Which branch do hotfixes for mobile go to?", "gold": null, "stale": null}
+{"id": "D2-R22", "kind": "refuse", "q": "How many retries do background jobs get?", "gold": null, "stale": null}
+{"id": "D2-R23", "kind": "refuse", "q": "What is our SLA for incident response?", "gold": null, "stale": null}
+{"id": "D2-R24", "kind": "refuse", "q": "Which tests run before a deploy to staging?", "gold": null, "stale": null}
+{"id": "D2-R25", "kind": "refuse", "q": "How do we name environment variables?", "gold": null, "stale": null}

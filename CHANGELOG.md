@@ -5,6 +5,12 @@ Minor releases (new features) at most once a week; patch releases (fixes, docs, 
 semantic versioning; what counts as the stable surface is listed in [`docs/DETAILS.md`](docs/DETAILS.md#stability-and-versions). Each entry starts with what you will
 notice, then the details.
 
+## Unreleased
+
+- Benchmark: a negative result recorded. Recall changes that were better on both dev sets were worse on held-out
+  (38% / 31% wrong citations vs 25%), so they were not shipped (`docs/BENCHMARK.md`, "Tried and not shipped"). A
+  second dev set, `questions_dev2.jsonl` (50 questions, written by the maintainer), is added for tuning.
+
 ## 1.0.3 — 2026-10-12
 
 **What you will notice**

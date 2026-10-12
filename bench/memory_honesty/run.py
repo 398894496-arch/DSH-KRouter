@@ -47,7 +47,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 
 
-SETS = {"dev": "questions.jsonl", "heldout": "heldout.jsonl"}
+SETS = {"dev": "questions.jsonl", "dev2": "questions_dev2.jsonl", "heldout": "heldout.jsonl"}
 
 
 def questions(name: str = "dev") -> list[dict]:
