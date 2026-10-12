@@ -82,6 +82,19 @@ What the default-settings table still shows, because it is how people run these 
 - **Corrections are hard at defaults.** All four put the replaced page first on some correction questions; with
   replaced pages left out, BM25 and basic-memory get 8 and 9 of 9.
 
+### Tried and not shipped (2026-10-12)
+
+After the matched baselines showed no ranking advantage, a round of changes aimed at beating BM25: English stemming
+(`locally` = `local`), following `superseded_by` from a replaced page to its replacement, refusing on unknown words
+only when they outnumber the matched ones, refusing when the question names another page's topic that the top page
+never mentions, and answer cards that work on English pages (they had been written in Chinese and filtered out). On
+the two dev sets (the bench's 30 and 50 more written by the maintainer, `questions_dev2.jsonl`) the change matched
+BM25+rules on coverage and beat it on refusals and wrong citations. **On held-out it was worse than what is
+shipped:** 38% wrong citations (31% with cards) against 1.0.3's 25%, and 5 of 10 neighbour questions refused instead
+of 8. The maintainer's own neighbour questions were easier than an independent writer's. It is not shipped, and the
+held-out set was used once for this go / no-go (see `HELDOUT.md`). Generated questions also hurt BM25 on held-out
+(19% → 29%): expanding pages with paraphrases lets neighbour questions match too.
+
 How each system was run (adapters in [`bench/memory_honesty/adapters/`](../bench/memory_honesty/adapters/), each
 system's defaults, isolated HOME):
 - **basic-memory 0.22.1** indexes the vault folder as a project (`basic-memory reindex`, 30 notes embedded) and
