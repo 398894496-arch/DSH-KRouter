@@ -4,6 +4,22 @@ Releases are weekly milestones from 0.13.0 on; fixes in between land on `main`. 
 semantic versioning; what counts as the stable surface is listed in [`docs/DETAILS.md`](docs/DETAILS.md#stability-and-versions). Each entry starts with what you will
 notice, then the details.
 
+## Unreleased
+
+**What you will notice**
+- **The memory honesty bench has a held-out set.** The 25 questions the 1.0.1 headline number comes from are now in
+  `bench/memory_honesty/heldout.jsonl`: 9 corrections, 6 current, 10 neighbour questions on the same vault, written
+  by the outside reviewer and never used for tuning. `run.py --set heldout` prints aggregates only; `--reveal` prints
+  the misses and, followed by a ranking change, burns the set. Rules, the baseline at freeze and a log of who has
+  seen what: `bench/memory_honesty/HELDOUT.md`.
+
+**Details**
+- `tests/test_memory_honesty_heldout.py` pins a SHA-256 of the questions and of the bench vault (line endings
+  normalized), checks the set does not overlap the development questions, and checks only a sanity guard: fewer
+  wrong citations and at least as many refusals as plain full-text search. No floor on the held-out score.
+- No ranking, refusal or card change. Held-out at freeze (1.0.1): 25% wrong citations (3 / 12), 8 / 10 refused,
+  5 / 9 corrections, 4 / 6 current; BM25 61% (14 / 23), 1 / 10.
+
 ## 1.0.1 — 2026-10-12
 
 Fixes from an outside review of 1.0.0.

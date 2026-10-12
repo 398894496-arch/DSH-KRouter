@@ -31,7 +31,7 @@ questions, a runner, and a scorer that grades any system's output.
 | KRouter 0.12.1 (first run, before any change) | 22% (4 / 18) | 7 / 10 | 5 / 10 | 9 / 10 |
 | KRouter 0.13.0 and 1.0.0 | 0% (0 / 17) | 10 / 10 | 8 / 10 | 9 / 10 |
 
-**Held-out, on questions KRouter was never tuned on.** An outside reviewer wrote 25 new questions for the same 30-page vault: 15 answerable ones phrased differently, and 10 neighbour questions. They were written independently of any tuning. KRouter 1.0: 25% wrong citations (3 / 12), 8 / 10 neighbours refused, 9 / 15 answerable right. Plain BM25 that always answers: 61%, 1 / 10. These are the reviewer's numbers; the questions will be added to this bench as a held-out set, and no scoring change will be made to fit them. Quote this figure, or the 0.12.1 row (22%), as KRouter's wrong-citation rate, not the 0% above. The three wrong citations: a git branch-name format question cited the date-format page (both say "format"); a release-tag naming question and a checkout-page load-budget question each cited a neighbouring page.
+**Held-out, on questions KRouter was never tuned on.** An outside reviewer wrote 25 new questions for the same 30-page vault: 15 answerable ones phrased differently, and 10 neighbour questions. They were written independently of any tuning. KRouter 1.0: 25% wrong citations (3 / 12), 8 / 10 neighbours refused, 9 / 15 answerable right. Plain BM25 that always answers: 61%, 1 / 10. The questions are in [`bench/memory_honesty/heldout.jsonl`](../bench/memory_honesty/heldout.jsonl), frozen at 1.0.1; the rules for using them (aggregates only, no tuning toward them, what burns the set) and a log of who has seen what are in [`bench/memory_honesty/HELDOUT.md`](../bench/memory_honesty/HELDOUT.md). CI pins the questions and the vault and checks only a sanity guard against plain full-text search, never a floor. Quote this figure, or the 0.12.1 row (22%), as KRouter's wrong-citation rate, not the 0% above. The three wrong citations: a git branch-name format question cited the date-format page (both say "format"); a release-tag naming question and a checkout-page load-budget question each cited a neighbouring page.
 
 **Read the 0.13.0 row as a development-set number.** The bench was written for 0.13.0, and its first run found a bug:
 English function words (`what`, `which`, `does`, `should`) were counted as words "the vault has never seen", so a
@@ -55,6 +55,7 @@ comparison will be published only with every system's raw output alongside it.
 python3 bench/memory_honesty/run.py                  # KRouter, in-process
 python3 bench/memory_honesty/run.py --adapter bm25   # the plain full-text baseline
 python3 bench/memory_honesty/run.py --answers mine.jsonl
+python3 bench/memory_honesty/run.py --set heldout     # held-out set: aggregates only (HELDOUT.md)
 ```
 
 To grade another system, index `bench/memory_honesty/vault/` with it, ask each question in
