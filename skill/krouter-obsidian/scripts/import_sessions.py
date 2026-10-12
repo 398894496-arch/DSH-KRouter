@@ -33,7 +33,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import zones  # noqa: E402
-from krouter_home import vault_path  # noqa: E402
+from krouter_home import project_root, vault_path  # noqa: E402
 from krouter_redact import redact  # noqa: E402
 
 FOLDER = "05 时间日志/会话摘录"
@@ -216,7 +216,7 @@ def collect(since: date, until: date, files: list[Path] | None = None) -> list[d
                 by_day[day].append(t)
         for day, turns in by_day.items():
             out.append({"agent": agent, "id": s["id"], "day": day, "turns": turns,
-                        "project": Path(s["cwd"]).name if s["cwd"] else "",
+                        "project": Path(s["cwd"]).name if s["cwd"] else "", "root": project_root(s["cwd"]),
                         "title": s["title"] or clean(turns[0]["ask"], 60).split("\n")[0]})
     out.sort(key=lambda e: (e["day"], e["turns"][0]["ts"]))
     return out
@@ -268,7 +268,8 @@ def old_digest(path: Path | None, turns: int) -> str:
 def render(e: dict, digest: str = "") -> str:
     turns = e["turns"]
     meta = ["---", "type: session-excerpt", f"source: {MARK}", "status: imported", f"date: {e['day'].isoformat()}",
-            f"agent: {e['agent']}", f"session: {e['id']}", f"project: {e['project'] or '-'}", f"turns: {len(turns)}"]
+            f"agent: {e['agent']}", f"session: {e['id']}", f"project: {e['project'] or '-'}",
+            *([f"project_root: {e['root']}"] if e.get("root") else []), f"turns: {len(turns)}"]
     title = clean(e["title"], 80).replace("\n", " ")
     meta.append(f"title: {title}")
     if digest:

@@ -24,9 +24,10 @@ a receipt. When nothing in the vault covers the question, the answer is `recall:
 
 ## Coming from claude-mem
 
-claude-mem can stay. KRouter imports its memory read-only (session summaries as log pages, each project's
+claude-mem can stay. KRouter imports its memory read-only (beta: tested against claude-mem's schema, not yet a live install) (session summaries as log pages, each project's
 decisions as one page to confirm) and can sort decisions into in force and replaced. The Claude Code plugin records
-each session when it ends and puts this project's recent decisions, with their pages, into the next session.
+each session when it ends and puts this repository's confirmed decisions and corrections, with their pages, into
+the next session. Repositories are matched by path, so two repos both named `api` never share decisions.
 
 ## What to know before installing
 

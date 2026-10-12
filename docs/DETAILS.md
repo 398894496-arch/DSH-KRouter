@@ -9,13 +9,15 @@ Everything the front page leaves out: install options, what leaves the machine, 
   thinking, injected context, subagents and headless runs are left out. `--distill` adds "what was decided, what
   changed" from the model lane. `--consent` lets the nightly job import yesterday; `--file PATH` imports one
   transcript (the plugin's session-end hook).
-- **claude-mem** (`import_claude_mem.py`): `~/.claude-mem/claude-mem.db`, opened read-only. Session summaries and
+- **claude-mem** (`import_claude_mem.py`, beta: tested against claude-mem's schema, not yet a live install): `~/.claude-mem/claude-mem.db`, opened read-only. Projects are split by the session's repository path (claude-mem's `cwd`); sessions from versions without it are imported but never injected. Session summaries and
   observations become pages under `05 时间日志/claude-mem/`, and each project's `decision` observations become one
   page under `02 经验与方法/从 claude-mem 导入/` (`status: candidate`). `--distill` sorts them into still in force
   and replaced.
 - **Session hooks** (Claude Code plugin, `session_hook.py`): `SessionEnd` imports the session that ended, in the
-  background; `SessionStart` adds up to 8 recent decisions for this project, each naming its page. Neither does
-  anything before consent; `KROUTER_INJECT=0` turns the second off.
+  background; `SessionStart` adds up to 8 recent decisions for this repository (matched by its git top level, never by folder
+  name), each naming its page: every line of pages you confirmed (`status: active` or `confirmed: true`) and only the
+  corrections from the rest, marked unconfirmed. Neither does anything before consent; `KROUTER_INJECT=all` brings
+  every line, `KROUTER_INJECT=0` nothing.
 
 ## Install — one line, nothing to know
 
@@ -29,7 +31,7 @@ Windows (PowerShell, no admin):
 irm https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.ps1 | iex
 ```
 
-It fetches the latest release (a tag, never `main`) and checks its SHA-256 against the release's `SHA256SUMS`, makes a vault in `Documents/Second Brain` (`Documents/第二大脑` with the Chinese template when the system language is Chinese), installs the router and the agent rules, and opens the vault in Obsidian. Then it **asks** before installing the nightly job, saying in one sentence which CLI will run, with what permissions, and how many pages (and tokens) it will send — the numbers come from a dry run on your new vault. No terminal to ask on means no nightly job; `--timer` says yes up front, `--no-timer` says no. `KROUTER_TAG=v1.0.0` (before `sh`, or `$env:KROUTER_TAG` on Windows) stays on one release. An existing vault (`… | sh -s -- --vault ~/MyVault`) keeps every file; only missing skeleton files are added. Run the same line again to upgrade. Python 3 is the only requirement (the Windows script installs it with winget when missing). The last thing it prints is the one step left, if any: log in to an AI coding CLI, or paste an API key. After that nothing needs maintaining — a lock noun is an optional shortcut, not a prerequisite; recall answers from page titles and text on its own, and refuses rather than guesses. If a night's work did not happen, a desktop notification says why. Where data goes and what a CLI writer can see: [`SECURITY.md`](../SECURITY.md).
+It fetches the latest release (a tag, never `main`) and checks its SHA-256 against the release's `SHA256SUMS`, makes a vault in `Documents/Second Brain` (`Documents/第二大脑` with the Chinese template when the system language is Chinese), installs the router and the agent rules, and opens the vault in Obsidian. Then it **asks** before installing the nightly job, saying in one sentence which CLI will run, with what permissions, and how many pages (and tokens) it will send — the numbers come from a dry run on your new vault. No terminal to ask on means no nightly job; `--timer` says yes up front, `--no-timer` says no. `KROUTER_TAG=v1.0.1` (before `sh`, or `$env:KROUTER_TAG` on Windows) stays on one release. An existing vault (`… | sh -s -- --vault ~/MyVault`) keeps every file; only missing skeleton files are added. Run the same line again to upgrade. Python 3 is the only requirement (the Windows script installs it with winget when missing). The last thing it prints is the one step left, if any: log in to an AI coding CLI, or paste an API key. After that nothing needs maintaining — a lock noun is an optional shortcut, not a prerequisite; recall answers from page titles and text on its own, and refuses rather than guesses. If a night's work did not happen, a desktop notification says why. Where data goes and what a CLI writer can see: [`SECURITY.md`](../SECURITY.md).
 
 ## What leaves your machine, and what it costs
 
@@ -53,7 +55,7 @@ Details, methods and what still fails: [`docs/VERIFY.md`](VERIFY.md).
 
 ## Stability and versions
 
-1.x follows semantic versioning. Stable — changed only in a major release, with a migration: the vault layout and zone file, the alias table format, the receipt fields agents read (`retrieval_status`, `canonical_match`, `canonical_source`, `recall:`, `how`, `host_action`), the routes, the MCP tools `krouter_ask` / `krouter_status`, the `KROUTER_*` variables, and the page markers the importers write (`source: krouter-import`, `source: krouter-claude-mem`). Minor releases may add steps and options, and may retune scoring; every scoring change ships with before / after numbers on the public benches ([`CONTRIBUTING.md`](../CONTRIBUTING.md)). Releases are weekly milestones. The one-line install fetches the latest **release**, never `main`; to stay on one, run `curl … | KROUTER_TAG=v1.0.0 sh` (Windows: `$env:KROUTER_TAG="v1.0.0"` first). [`CHANGELOG.md`](../CHANGELOG.md) says what changed and why, including what an outside review found.
+1.x follows semantic versioning. Stable — changed only in a major release, with a migration: the vault layout and zone file, the alias table format, the receipt fields agents read (`retrieval_status`, `canonical_match`, `canonical_source`, `recall:`, `how`, `host_action`), the routes, the MCP tools `krouter_ask` / `krouter_status`, the `KROUTER_*` variables, and the page markers the importers write (`source: krouter-import`, `source: krouter-claude-mem`). Minor releases may add steps and options, and may retune scoring; every scoring change ships with before / after numbers on the public benches ([`CONTRIBUTING.md`](../CONTRIBUTING.md)). Releases are weekly milestones. The one-line install fetches the latest **release**, never `main`; to stay on one, run `curl … | KROUTER_TAG=v1.0.1 sh` (Windows: `$env:KROUTER_TAG="v1.0.1"` first). [`CHANGELOG.md`](../CHANGELOG.md) says what changed and why, including what an outside review found.
 
 ## Your agent forgets. This writes it down.
 

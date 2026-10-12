@@ -9,9 +9,11 @@ background so Claude Code is not held up; it also distills that session when you
 happens before you said yes to importing (`import_sessions.py --consent`, or the install's question).
 
 `session_hook.py start` (SessionStart): prints, as context for the new session, up to 8 decisions recorded for this
-project in the last 30 days: the "what was decided" lines of distilled session pages, and decision pages imported from
-claude-mem. Each line names its page. Corrections come first. Nothing is printed when the vault has none, when the
-import was never turned on, or with `KROUTER_INJECT=0`. Reads only the vault; sends nothing; well under a second.
+repository (matched by its git top level, never by folder name) in the last 30 days, each naming its page,
+corrections first. By default that is every line of pages you confirmed and only the corrections from the rest, marked
+unconfirmed; `KROUTER_INJECT=all` brings every line, `KROUTER_INJECT=0` nothing. Nothing is printed when the vault
+has none or the import was never turned on. In English unless the lines are Chinese. Reads only the vault; sends
+nothing; well under a second.
 
 Both read the hook's JSON on stdin (`session_id`, `transcript_path`, `cwd`) and never fail the session.
 """
@@ -29,7 +31,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import zones  # noqa: E402
-from krouter_home import vault_path  # noqa: E402
+from krouter_home import project_root, vault_path  # noqa: E402
 from krouter_redact import redact  # noqa: E402
 
 DAYS = 30
@@ -70,12 +72,21 @@ def digest_lines(text: str) -> list[str]:
     return []
 
 
-def project_lines(vault: Path, project: str) -> list[tuple[str, str]]:
-    """[(line, page)] for this project, newest first; corrections ("→") before the rest."""
-    if not project:
+CONFIRMED = {"active", "confirmed", "adopted"}
+CJK = re.compile(r"[\u3400-\u9fff]")
+
+
+def project_lines(vault: Path, root: str, everything: bool = False) -> list[tuple[str, str, bool]]:
+    """[(line, page, confirmed)] for the project at `root`, corrections first, then newest first.
+
+    A page counts only when its `project_root` is this repo: two repos that are both called `api` never share
+    decisions. Pages from before 1.0.1 have no `project_root` and are left out until re-imported. From a page you
+    confirmed (`status: active`, or `confirmed: true`) every line comes; from an unconfirmed one only corrections
+    ("A → B"), unless `KROUTER_INJECT=all`."""
+    if not root:
         return []
     cut = (date.today() - timedelta(days=DAYS)).isoformat()
-    found: list[tuple[str, str, str]] = []
+    found: list[tuple[str, str, str, bool]] = []
     for folder in ("05 时间日志/会话摘录", "02 经验与方法/从 claude-mem 导入"):
         d = zones.path(vault, folder)
         if not d.is_dir():
@@ -86,34 +97,51 @@ def project_lines(vault: Path, project: str) -> list[tuple[str, str]]:
             except OSError:
                 continue
             meta = meta_of(text)
-            if meta.get("project") != project or (meta.get("date") and meta["date"] < cut):
+            if meta.get("project_root") != root or (meta.get("date") and meta["date"] < cut):
                 continue
+            ok = meta.get("status", "").lower() in CONFIRMED or meta.get("confirmed", "").lower() == "true"
             rel = zones.canon(vault, str(page.relative_to(vault)).replace(os.sep, "/"))
             for ln in digest_lines(text):
-                found.append((meta.get("date") or "9999", re.sub(r"^[-*]\s*", "", ln), rel))
+                line = re.sub(r"^[-*]\s*", "", ln)
+                if ok or everything or "→" in line:
+                    found.append((meta.get("date") or "9999", line, rel, ok))
     found.sort(key=lambda x: x[0], reverse=True)
     seen, out = set(), []
-    for _, line, rel in sorted(found, key=lambda x: "→" not in x[1]):  # 稳定排序：纠错在前，其余仍按新到旧
+    for _, line, rel, ok in sorted(found, key=lambda x: "→" not in x[1]):  # 稳定排序：纠错在前，其余仍按新到旧
         if line not in seen:
             seen.add(line)
-            out.append((line, rel))
+            out.append((line, rel, ok))
     return out[:MAX_LINES]
 
 
+HEAD = {
+    "zh": ("KRouter：这个仓库（{name}）最近 {days} 天在你的库里记下的决定。「→」是改过的；"
+           "标「待确认」的是模型提炼、用户还没确认的，只当线索："),
+    "en": ("KRouter: decisions recorded in your vault for this repository ({name}) in the last {days} days. "
+           "\"→\" marks a change of mind; lines marked (unconfirmed) were extracted by a model and not yet confirmed "
+           "by the user, so treat them as clues:"),
+}
+TAIL = {"zh": "其他问题先用 krouter_ask 查库；库里没有（recall: none）就直说，不要猜。",
+        "en": "For anything else, ask the vault with krouter_ask first; if it says recall: none, say so instead of guessing."}
+MARK_UNCONFIRMED = {"zh": "（待确认）", "en": " (unconfirmed)"}
+
+
 def start(payload: dict) -> int:
-    if os.environ.get("KROUTER_INJECT") == "0" or not consented():
+    mode = os.environ.get("KROUTER_INJECT", "")
+    if mode == "0" or not consented():
         return 0
     raw = vault_path()
     if not raw or not Path(raw).is_dir():
         return 0
-    project = Path(payload.get("cwd") or os.getcwd()).name
-    lines = project_lines(Path(raw), project)
+    root = project_root(payload.get("cwd") or os.getcwd())
+    lines = project_lines(Path(raw), root, everything=mode == "all")
     if not lines:
         return 0
-    body = [f"KRouter：项目 {project} 最近 {DAYS} 天在你的库里记下的决定（模型提炼，用户还没逐条确认；「→」是改过的）："]
-    for line, rel in lines:
-        body.append(f"- {line} 〔{rel}〕")
-    body.append("其他问题先用 krouter_ask 查库；库里没有（recall: none）就直说，不要猜。")
+    lang = "zh" if any(CJK.search(line) for line, _, _ in lines) else "en"
+    body = [HEAD[lang].format(name=Path(root).name, days=DAYS)]
+    for line, rel, ok in lines:
+        body.append(f"- {line}{'' if ok else MARK_UNCONFIRMED[lang]} 〔{rel}〕")
+    body.append(TAIL[lang])
     text = redact("\n".join(body))[:MAX_CHARS]
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": text}},
                      ensure_ascii=False))

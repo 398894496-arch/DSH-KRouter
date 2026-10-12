@@ -61,7 +61,7 @@ MSG = {
         "distilling": "正在提炼（每个会话一次模型调用）…",
         "try": "现在就可以问你的 agent，比如：「{q}」——它会先查这个库，答案带出处页；库里没有的会直说没有。",
         "mcp": "已把 KRouter 注册成 {cli} 的 MCP 工具（krouter_ask）。",
-        "cmem_ask": "发现 claude-mem 的记忆库：{sessions} 个会话、{decisions} 条决定（{projects} 个项目）。要导进知识库吗？"
+        "cmem_ask": "发现 claude-mem 的记忆库（导入器是 beta）：{sessions} 个会话、{decisions} 条决定（{projects} 个项目）。要导进知识库吗？"
         "只读它的库、不改 claude-mem，脱敏后写在本机{distill}；以后每晚同步一次。导入？[y/N] ",
         "cmem_distill": "，并让模型把每个项目的决定理一遍：哪些还有效、哪些被后来的取代了（约 {chars} 字）",
         "cmem_done": "从 claude-mem 导入了 {sessions} 个会话、{decisions} 条决定{distilled}。",
@@ -100,7 +100,7 @@ MSG = {
         "try": "Ask your agent now, for example: \"{q}\" — it checks this vault first and cites the page; what the vault "
         "does not hold, it says so.",
         "mcp": "Registered KRouter as an MCP tool for {cli} (krouter_ask).",
-        "cmem_ask": "Found a claude-mem memory: {sessions} sessions, {decisions} decisions ({projects} projects). Import it? "
+        "cmem_ask": "Found a claude-mem memory (the importer is beta): {sessions} sessions, {decisions} decisions ({projects} projects). Import it? "
         "It is read only (claude-mem is not changed), redacted, written on this machine{distill}, then synced nightly. "
         "Import? [y/N] ",
         "cmem_distill": ", and the model sorts each project's decisions into still in force and replaced (about {chars} characters)",

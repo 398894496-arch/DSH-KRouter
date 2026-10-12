@@ -4,6 +4,17 @@ Releases are weekly milestones from 0.13.0 on; fixes in between land on `main`. 
 semantic versioning; what counts as the stable surface is listed in [`docs/DETAILS.md`](docs/DETAILS.md#stability-and-versions). Each entry starts with what you will
 notice, then the details.
 
+## 1.0.1 — 2026-10-12
+
+Fixes from an outside review of 1.0.0.
+
+**What you will notice**
+- **Fixed: decisions brought into a new session leaked across repositories that share a folder name.** The session-start hook matched by folder name, so a session in `beta-corp/api` was given `alpha/api`'s decisions. Reproduced, then fixed. A repository is now its git top level (or its directory, outside git). The path is written into each imported page (`project_root:`), and only pages for this exact repository are brought in. claude-mem's memory is split the same way, using the `cwd` it records. Pages imported by 1.0.0 have no path and are no longer brought in; re-run `import_sessions.py --days 30` to backfill (existing digests are kept).
+- **Only what you confirmed, plus corrections, is brought in by default.** That means every line of a page you confirmed (`status: active` or `confirmed: true`), and from unconfirmed pages only the "A → B" corrections, marked unconfirmed. `KROUTER_INJECT=all` restores the previous behaviour. The text is in English unless the decisions are in Chinese.
+- **Honest headline number.** On 25 questions written by the reviewer and never used for tuning, KRouter cites the wrong page 25% of the time (3 of 12 answered), against 61% for plain full-text search. The README and `docs/BENCHMARK.md` now lead with this, not with the 0% on the bench's own questions, which is a development-set number.
+- **The claude-mem importer is marked beta** until it has run against a live claude-mem install.
+- README: the plugin needs Claude Code 2.1.275 (2.1.292 for the shell form), and third-party marketplaces do not auto-update (`claude plugin update krouter@krouter`, or Enable auto-update in `/plugin` → Marketplaces).
+
 ## 1.0.0 — 2026-10-12
 
 **1.0 means the surface agents and vaults depend on is now stable**: the vault layout, the alias table, the receipt
