@@ -1,9 +1,16 @@
 # Changelog
 
-Releases are weekly milestones from 0.13.0 on; fixes in between land on `main`. Each entry starts with what you will
+Releases are weekly milestones from 0.13.0 on; fixes in between land on `main`. From 1.0.0 the version follows
+semantic versioning; what counts as the stable surface is listed in [`docs/DETAILS.md`](docs/DETAILS.md#stability-and-versions). Each entry starts with what you will
 notice, then the details.
 
-## Unreleased (next weekly release)
+## 1.0.0 — 2026-10-12
+
+**1.0 means the surface agents and vaults depend on is now stable**: the vault layout, the alias table, the receipt
+fields, the routes, the MCP tools, the `KROUTER_*` variables and the importers' page markers change only in a major
+release, with a migration. Scoring may still be retuned in minor releases, always with before / after numbers on
+the public benches. Nothing breaks from 0.13.0: same vault, same table, same receipts; re-run the install line to
+upgrade.
 
 **What you will notice**
 - **Coming from claude-mem.** The install finds claude-mem's memory and offers to import it. Its session summaries
