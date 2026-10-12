@@ -45,8 +45,10 @@ def questions() -> list[dict]:
 
 def krouter_answers(rows: list[dict]) -> list[dict]:
     sys.path.insert(0, str(REPO / "skill/krouter-obsidian/scripts"))
-    os.environ.setdefault("KROUTER_NO_QUERY_LOG", "1")
-    with tempfile.TemporaryDirectory(prefix="krouter-bench-") as tmp:
+    saved = {k: os.environ.get(k) for k in ("KROUTER_NO_QUERY_LOG", "KROUTER_CACHE_DIR", "KROUTER_MAP")}
+    # Windows 上召回缓存的 SQLite 连接在进程里一直开着，临时目录删不掉也不算失败
+    with tempfile.TemporaryDirectory(prefix="krouter-bench-", ignore_cleanup_errors=True) as tmp:
+        os.environ["KROUTER_NO_QUERY_LOG"] = "1"
         os.environ["KROUTER_CACHE_DIR"] = str(Path(tmp) / "cache")
         os.environ.pop("KROUTER_MAP", None)
         vault = Path(tmp) / "vault"
@@ -58,7 +60,12 @@ def krouter_answers(rows: list[dict]) -> list[dict]:
             res = ri.recall(vault, it["q"], limit=3)
             refused = res["confidence"] == "none" or not res["hits"]
             out.append({"id": it["id"], "refused": refused, "cited": [] if refused else [h["rel"] for h in res["hits"]]})
-        return out
+    for k, v in saved.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+    return out
 
 
 def bm25_answers(rows: list[dict]) -> list[dict]:
