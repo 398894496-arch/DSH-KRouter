@@ -47,7 +47,7 @@ Queries never do: lookup is a local SQLite full-text index, about 110 ms. Sessio
 | Measured | Result |
 |---|---|
 | Refuses instead of guessing (public benches, CI) | Off-topic questions refused 12/12 (English) and 6/6 (Chinese) |
-| Wrong citations on questions it was never tuned on ([memory honesty bench](docs/BENCHMARK.md), 25 held-out questions) | KRouter 25%; basic-memory 60%, claude-mem 60%, plain full-text search 61%. Neighbour questions refused: 8 / 10 vs 0, 0 and 1. The cost: of 15 answerable questions KRouter got 9 right, basic-memory and claude-mem 10, full-text search 9 |
+| Wrong citations on questions it was never tuned on ([memory honesty bench](docs/BENCHMARK.md), 25 held-out questions) | At their defaults: KRouter 25%; basic-memory 60%, claude-mem 60%, plain full-text search 61%; neighbour questions refused 8 / 10 vs 0, 0 and 1. **But the gap comes from two rules, not the ranker:** give plain search or basic-memory the same rules (leave replaced pages out, refuse below a floor picked on the dev set) and they reach 19% and 30%, and at the same coverage they cite slightly fewer wrong pages than KRouter. KRouter has both rules on by default |
 | Exact match vs embeddings on a supersede / neighbor set (CI) | Exact match refuses where TF-IDF, MiniLM and BGE-M3 cite a neighbor |
 | Real traffic, author's vault | 0.62 → 1.47 of 2, blind-judged. **This is a development set**: on held-out questions the gain is flat. A blind test on fresh traffic runs 2026-10-16 |
 

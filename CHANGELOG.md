@@ -1,8 +1,29 @@
 # Changelog
 
-Releases are weekly milestones from 0.13.0 on; fixes in between land on `main`. From 1.0.0 the version follows
+Minor releases (new features) at most once a week; patch releases (fixes, docs, benchmark updates) when ready. 1.0.0 to
+1.0.2 went out on one day: 1.0.0 at the maintainer's call, 1.0.1 and 1.0.2 as fixes from outside reviews. From 1.0.0 the version follows
 semantic versioning; what counts as the stable surface is listed in [`docs/DETAILS.md`](docs/DETAILS.md#stability-and-versions). Each entry starts with what you will
 notice, then the details.
+
+## 1.0.3 — 2026-10-12
+
+**What you will notice**
+- **The comparison no longer flatters KRouter.** An outside review showed that the "25% vs 60%" gap was mostly
+  structural: at their defaults the other systems cannot refuse and do not know a page was replaced. With the same two
+  rules given to them (superseded pages left out, a refusal floor picked on the dev set only), plain BM25 reaches 19%
+  wrong citations on held-out and basic-memory 30%. At the same coverage as KRouter they cite slightly fewer wrong
+  pages (2 vs 3 of 12). The README and `docs/BENCHMARK.md` now say so plainly: KRouter's advantage on this bench is
+  those two rules on by default, plus receipts, not a better ranker. Reproduced, not taken on trust; KRouter was
+  not changed in response, because the held-out set is not a tuning target.
+- Release cadence written down as practised: minor releases at most weekly, patch releases when ready.
+
+**Details**
+- `run.py --adapter bm25-floor`; `bench/memory_honesty/floor.py` applies "skip superseded + dev-picked floor" to any
+  adapter output that carries scores; the basic-memory adapter now records scores.
+- Third-party systems run in a Linux container (`bench/memory_honesty/adapters/Dockerfile`): basic-memory was re-run
+  there, with identical answers to the host run. A container does not share the host's keychain or launchd.
+- HELDOUT.md log: the reviewer's and the maintainer's baseline runs (aggregates only; no `--reveal`; no KRouter
+  change).
 
 ## 1.0.2 — 2026-10-12
 

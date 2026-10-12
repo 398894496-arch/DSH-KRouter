@@ -22,6 +22,7 @@ PUBLISHED_DEV = {  # docs/BENCHMARK.md, dev columns
     "basic-memory-0.22.1": (11, 28, "2/10", "7/10", "10/10"),
     "claude-mem-13.35.0": (13, 30, "0/10", "7/10", "10/10"),
     "krouter-1.0.1": (0, 17, "10/10", "8/10", "9/10"),
+    "bm25-floor": (3, 22, "7/10", "9/10", "10/10"),
 }
 
 
@@ -41,3 +42,21 @@ def test_live_krouter_and_bm25_still_match_the_published_rows():
     rows = bench.questions("dev")
     assert _row(bench.score(rows, bench.krouter_answers(rows))) == PUBLISHED_DEV["krouter-1.0.1"]
     assert _row(bench.score(rows, bench.bm25_answers(rows))) == PUBLISHED_DEV["bm25"]
+
+
+def test_bm25_floor_baseline_picks_its_floor_on_dev_and_matches_the_published_row():
+    rows = bench.questions("dev")
+    assert _row(bench.score(rows, bench.bm25_floor_answers(rows))) == PUBLISHED_DEV["bm25-floor"]
+    assert round(bench.pick_floor(rows, bench.bm25_scored(rows)), 3) == 4.407
+
+
+def test_floor_tool_on_stored_basic_memory_scores():
+    """docs/BENCHMARK.md matched-baseline row for basic-memory, dev side: skip superseded + dev floor."""
+    import subprocess
+    import sys
+
+    path = RESULTS / "basic-memory-0.22.1.dev.jsonl"
+    out = subprocess.run([sys.executable, str(REPO / "bench/memory_honesty/floor.py"), "--dev", str(path), "--target",
+                          str(path), "--set", "dev"], capture_output=True, text=True, timeout=120)
+    res = json.loads(out.stdout)
+    assert (res["wrong_citations"], res["answered"], res["refused"], res["correction_hit"]) == (4, 24, "6/10", "10/10")

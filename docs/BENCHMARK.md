@@ -37,17 +37,50 @@ answers on correction and current questions.
 | claude-mem 13.35.0, its search over what it observed | 60% (15 / 25) | 0 / 10 | 5 / 9 | 5 / 6 | 43% (13 / 30) | 0 / 10 | 7 / 10 | 10 / 10 |
 | **KRouter 1.0.1** | **25% (3 / 12)** | **8 / 10** | 5 / 9 | 4 / 6 | 0% (0 / 17) | 10 / 10 | 8 / 10 | 9 / 10 |
 
-What the table says, plainly:
-- **Neighbour questions are where the systems differ.** The other three answer nearly every question that sounds like
-  something in the vault, so a question about the search API timeout gets the payments API timeout page. KRouter
-  refuses 8 of 10 on held-out.
-- **KRouter pays for that in answerable questions.** On held-out it answered 9 of 15 answerable questions right;
-  basic-memory answered 10 of 15, and claude-mem 10 of 15. Five of KRouter's six misses there are refusals of questions
-  the vault does answer, when the question uses a word the page does not (lexical recall cannot bridge that); one is a
-  wrong citation. Embedding
-  search bridges it, and the same property is what makes it answer the neighbour questions.
-- **Corrections are hard for everyone.** All four put the replaced page first on some correction questions. KRouter
-  and claude-mem got 5 of 9 on held-out, basic-memory 4 of 9.
+That table compares systems at their defaults, and at their defaults the other three have no way to refuse and no
+notion of a replaced page, so "neighbours refused 0 / 10" is settled before the first question. An outside review
+(2026-10-12) pointed this out. The fair question is what an ordinary search does once it gets the same two things
+KRouter has: replaced pages left out (`status: superseded`), and a score floor below which it refuses.
+
+### Matched baselines: the same two things, for everyone
+
+Each system that reports a score gets superseded pages removed from its results and a floor picked **on the dev set
+only**, by one fixed rule (most right answers minus wrong citations; on a tie, the lower floor), then applied
+unchanged to held-out. `run.py --adapter bm25-floor` is the BM25 version; `floor.py` does it for any scored adapter
+output. claude-mem's search returns no score, so it has no row here.
+
+| Held-out, 25 questions | Wrong citations | Neighbours refused | Answerable right (of 15) |
+|---|---|---|---|
+| BM25 + skip superseded + dev floor | 19% (3 / 16) | 7 / 10 | 13 |
+| basic-memory 0.22.1 + skip superseded + dev floor | 30% (6 / 20) | 4 / 10 | 14 |
+| KRouter 1.0.1 (as shipped) | 25% (3 / 12) | 8 / 10 | 9 |
+
+Systems that answer more questions also cite more wrong pages, so the fair comparison is at the **same coverage**:
+each baseline's floor set so that it answers as many questions as KRouter does (12 on held-out, 17 on dev). Choosing
+an operating point on held-out is done here for baselines only, never for KRouter.
+
+| Same coverage | Held-out: wrong / right | Dev: wrong / right |
+|---|---|---|
+| BM25 + skip superseded | 2 / 10 | 1 / 16 |
+| basic-memory + skip superseded | 2 / 10 | 1 / 16 |
+| KRouter 1.0.1 | 3 / 9 | 0 / 17 (tuned on dev) |
+
+**What this says.** On this bench, KRouter's retrieval is not better than plain full-text search or basic-memory's
+embedding search once they are given the same two rules; at the same coverage it is slightly worse on held-out. Almost
+all of the gap in the first table, 61% → 25% wrong citations, comes from those two rules: a replaced page that is
+marked and left out, and an answer withheld when the match is weak. KRouter's real difference is that it does both
+by default and says so with a receipt, in plain Markdown that several agents share. That is a design choice
+anyone can copy, not a better ranker. The bench is small (30 pages, English, 55 questions): a fair reading is "no
+measurable ranking advantage", not "worse".
+
+What the default-settings table still shows, because it is how people run these tools:
+- **Neighbour questions are where the defaults differ.** basic-memory, claude-mem and plain search answer nearly every
+  question that sounds like something in the vault, so a question about the search API timeout gets the payments API
+  timeout page. KRouter refuses 8 of 10 on held-out.
+- **KRouter pays for that in answerable questions:** 9 of 15 on held-out against 10 for basic-memory and claude-mem.
+  Five of its six misses there are refusals of a question phrased in words the page does not use.
+- **Corrections are hard at defaults.** All four put the replaced page first on some correction questions; with
+  replaced pages left out, BM25 and basic-memory get 8 and 9 of 9.
 
 How each system was run (adapters in [`bench/memory_honesty/adapters/`](../bench/memory_honesty/adapters/), each
 system's defaults, isolated HOME):
@@ -62,7 +95,10 @@ system's defaults, isolated HOME):
   setting: even with its own HOME, claude-mem looks for Claude Code's login in the macOS keychain, which is shared
   across HOMEs; `CLAUDE_MEM_CLAUDE_CONFIG_DIR` set to a fresh folder keeps it off your real login, and the worker then
   needs `CLAUDE_CODE_OAUTH_TOKEN` in its own environment.
-- **KRouter** runs in-process (`run.py`); BM25 is `run.py --adapter bm25`.
+- **KRouter** runs in-process (`run.py`); BM25 is `run.py --adapter bm25`, and `--adapter bm25-floor` is BM25 with
+  superseded pages removed before indexing and the dev-picked floor.
+- **basic-memory was re-run in a Linux container** (`bench/memory_honesty/adapters/Dockerfile`) for the matched
+  baseline, recording its scores; its answers were identical to the first run on the host.
 
 Raw per-question output on the dev set, for every system, is in
 [`bench/memory_honesty/results/2026-10-12/`](../bench/memory_honesty/results/2026-10-12/); grade any of them with

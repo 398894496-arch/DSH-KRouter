@@ -1,30 +1,30 @@
-{"id": "C-release", "cited": ["Engineering/Release process (old).md", "Engineering/Release process.md"], "refused": false}
-{"id": "C-db-backup", "cited": ["Engineering/Database backups.md", "Engineering/Database backups (old).md", "Engineering/Performance budget.md"], "refused": false}
-{"id": "C-code-review", "cited": ["Engineering/Code review rule.md", "Engineering/Code review rule (old).md", "Engineering/API timeout.md"], "refused": false}
-{"id": "C-api-timeout", "cited": ["Engineering/API timeout.md", "Engineering/API timeout (old).md", "Engineering/Performance budget.md"], "refused": false}
-{"id": "C-node-version", "cited": ["Engineering/Node version (old).md", "Engineering/Node version.md", "Engineering/Where secrets live.md"], "refused": false}
-{"id": "C-logging", "cited": ["Engineering/Logging level.md", "Engineering/Logging level (old).md", "Engineering/Incident reports.md"], "refused": false}
-{"id": "C-branch-names", "cited": ["Engineering/Branch naming.md", "Engineering/Branch naming (old).md", "Engineering/Code review rule (old).md"], "refused": false}
-{"id": "C-secrets", "cited": ["Engineering/Where secrets live.md", "Engineering/Where secrets live (old).md"], "refused": false}
-{"id": "C-on-call", "cited": ["Engineering/On-call rotation.md", "Engineering/On-call rotation (old).md", "Engineering/Performance budget.md"], "refused": false}
-{"id": "C-css", "cited": ["Engineering/CSS approach (old).md", "Engineering/CSS approach.md", "Engineering/Translations.md"], "refused": false}
-{"id": "S-ports", "cited": ["Engineering/Local ports.md", "Engineering/Where docs live.md", "Engineering/API timeout (old).md"], "refused": false}
-{"id": "S-tests", "cited": ["Engineering/Running tests.md", "Engineering/Node version (old).md", "Engineering/Local ports.md"], "refused": false}
-{"id": "S-dates", "cited": ["Engineering/Date format.md", "Engineering/Database backups.md", "Engineering/Database backups (old).md"], "refused": false}
-{"id": "S-feature-flags", "cited": ["Engineering/Feature flags.md", "Engineering/Branch naming.md", "Engineering/Branch naming (old).md"], "refused": false}
-{"id": "S-errors", "cited": ["Engineering/Error messages.md", "Engineering/Translations.md", "Engineering/Performance budget.md"], "refused": false}
-{"id": "S-deps", "cited": ["Engineering/Adding dependencies.md", "Engineering/Node version (old).md", "Engineering/Code review rule.md"], "refused": false}
-{"id": "S-incidents", "cited": ["Engineering/Incident reports.md", "Engineering/Logging level.md", "Engineering/Error messages.md"], "refused": false}
-{"id": "S-docs", "cited": ["Engineering/Where docs live.md", "Engineering/Where secrets live (old).md", "Engineering/Where secrets live.md"], "refused": false}
-{"id": "S-translations", "cited": ["Engineering/Translations.md", "Engineering/CSS approach (old).md", "Engineering/Error messages.md"], "refused": false}
-{"id": "S-perf", "cited": ["Engineering/Performance budget.md", "Engineering/Node version (old).md"], "refused": false}
-{"id": "R-01", "cited": ["Engineering/Node version (old).md", "Engineering/Node version.md", "Engineering/Where secrets live.md"], "refused": false}
-{"id": "R-02", "cited": ["Engineering/On-call rotation (old).md", "Engineering/On-call rotation.md", "Engineering/CSS approach (old).md"], "refused": false}
-{"id": "R-03", "cited": [], "refused": true}
-{"id": "R-04", "cited": [], "refused": true}
-{"id": "R-05", "cited": ["Engineering/Incident reports.md", "Engineering/Logging level.md", "Engineering/Code review rule (old).md"], "refused": false}
-{"id": "R-06", "cited": ["Engineering/API timeout.md", "Engineering/API timeout (old).md", "Engineering/Performance budget.md"], "refused": false}
-{"id": "R-07", "cited": ["Engineering/Database backups (old).md", "Engineering/Database backups.md", "Engineering/Performance budget.md"], "refused": false}
-{"id": "R-08", "cited": ["Engineering/Node version (old).md", "Engineering/Node version.md", "Engineering/Running tests.md"], "refused": false}
-{"id": "R-09", "cited": ["Engineering/Code review rule.md", "Engineering/Code review rule (old).md", "Engineering/Adding dependencies.md"], "refused": false}
-{"id": "R-10", "cited": ["Engineering/Where secrets live.md", "Engineering/Where secrets live (old).md"], "refused": false}
+{"id": "C-release", "cited": ["Engineering/Release process (old).md", "Engineering/Release process.md"], "scores": [0.6553970298962337, 0.646096164088716], "refused": false}
+{"id": "C-db-backup", "cited": ["Engineering/Database backups.md", "Engineering/Database backups (old).md", "Engineering/Performance budget.md"], "scores": [0.8406963011948374, 0.8252828974097621, 0.6221801990252231], "refused": false}
+{"id": "C-code-review", "cited": ["Engineering/Code review rule.md", "Engineering/Code review rule (old).md", "Engineering/API timeout.md"], "scores": [0.6836919204683465, 0.6687078621347506, 0.584085489399838], "refused": false}
+{"id": "C-api-timeout", "cited": ["Engineering/API timeout.md", "Engineering/API timeout (old).md", "Engineering/Performance budget.md"], "scores": [0.8556086238780765, 0.8367046712192447, 0.6043580599107088], "refused": false}
+{"id": "C-node-version", "cited": ["Engineering/Node version (old).md", "Engineering/Node version.md", "Engineering/Where secrets live.md"], "scores": [0.825246674908696, 0.8077853995888358, 0.6161753559431347], "refused": false}
+{"id": "C-logging", "cited": ["Engineering/Logging level.md", "Engineering/Logging level (old).md", "Engineering/Incident reports.md"], "scores": [0.828475465258462, 0.7952751517958632, 0.6261448766514217], "refused": false}
+{"id": "C-branch-names", "cited": ["Engineering/Branch naming.md", "Engineering/Branch naming (old).md", "Engineering/Code review rule (old).md"], "scores": [0.7973473657060524, 0.7766375788418998, 0.6038587646876223], "refused": false}
+{"id": "C-secrets", "cited": ["Engineering/Where secrets live.md", "Engineering/Where secrets live (old).md"], "scores": [0.7461400822281075, 0.7223234384364332], "refused": false}
+{"id": "C-on-call", "cited": ["Engineering/On-call rotation.md", "Engineering/On-call rotation (old).md", "Engineering/Performance budget.md"], "scores": [0.748043616827216, 0.7070474824656383, 0.6206379214890774], "refused": false}
+{"id": "C-css", "cited": ["Engineering/CSS approach (old).md", "Engineering/CSS approach.md", "Engineering/Translations.md"], "scores": [0.7583244691945481, 0.7478052624638973, 0.6760225679445284], "refused": false}
+{"id": "S-ports", "cited": ["Engineering/Local ports.md", "Engineering/Where docs live.md", "Engineering/API timeout (old).md"], "scores": [0.8179185813360288, 0.6009938205272061, 0.5997535101721336], "refused": false}
+{"id": "S-tests", "cited": ["Engineering/Running tests.md", "Engineering/Node version (old).md", "Engineering/Local ports.md"], "scores": [0.8226614472566194, 0.6092427005787595, 0.5694848512611781], "refused": false}
+{"id": "S-dates", "cited": ["Engineering/Date format.md", "Engineering/Database backups.md", "Engineering/Database backups (old).md"], "scores": [0.695059239302168, 0.6373458852633558, 0.6313665126945107], "refused": false}
+{"id": "S-feature-flags", "cited": ["Engineering/Feature flags.md", "Engineering/Branch naming.md", "Engineering/Branch naming (old).md"], "scores": [0.7621292413782612, 0.6517090069399885, 0.6265041291342452], "refused": false}
+{"id": "S-errors", "cited": ["Engineering/Error messages.md", "Engineering/Translations.md", "Engineering/Performance budget.md"], "scores": [0.7999507293000576, 0.6114850172865811, 0.572740031776874], "refused": false}
+{"id": "S-deps", "cited": ["Engineering/Adding dependencies.md", "Engineering/Node version (old).md", "Engineering/Code review rule.md"], "scores": [0.7743557823447684, 0.6081257186574405, 0.5865682464808515], "refused": false}
+{"id": "S-incidents", "cited": ["Engineering/Incident reports.md", "Engineering/Logging level.md", "Engineering/Error messages.md"], "scores": [0.779443244444435, 0.5797676574216251, 0.5749904314692298], "refused": false}
+{"id": "S-docs", "cited": ["Engineering/Where docs live.md", "Engineering/Where secrets live (old).md", "Engineering/Where secrets live.md"], "scores": [0.7923826543512131, 0.6146560471564086, 0.6108924959621618], "refused": false}
+{"id": "S-translations", "cited": ["Engineering/Translations.md", "Engineering/CSS approach (old).md", "Engineering/Error messages.md"], "scores": [0.800188444715145, 0.6073550366645293, 0.5568473962733762], "refused": false}
+{"id": "S-perf", "cited": ["Engineering/Performance budget.md", "Engineering/Node version (old).md"], "scores": [0.8171530422486057, 0.5560364579091566], "refused": false}
+{"id": "R-01", "cited": ["Engineering/Node version (old).md", "Engineering/Node version.md", "Engineering/Where secrets live.md"], "scores": [0.653259381761579, 0.6134720431914218, 0.5736767463723638], "refused": false}
+{"id": "R-02", "cited": ["Engineering/On-call rotation (old).md", "Engineering/On-call rotation.md", "Engineering/CSS approach (old).md"], "scores": [0.5952614409866044, 0.5782658575921857, 0.5599592190177969], "refused": false}
+{"id": "R-03", "cited": [], "scores": [], "refused": true}
+{"id": "R-04", "cited": [], "scores": [], "refused": true}
+{"id": "R-05", "cited": ["Engineering/Incident reports.md", "Engineering/Logging level.md", "Engineering/Code review rule (old).md"], "scores": [0.6325074338638199, 0.6312167474914485, 0.6123253247723834], "refused": false}
+{"id": "R-06", "cited": ["Engineering/API timeout.md", "Engineering/API timeout (old).md", "Engineering/Performance budget.md"], "scores": [0.7331112978519556, 0.7274997924909883, 0.6568798175973409], "refused": false}
+{"id": "R-07", "cited": ["Engineering/Database backups (old).md", "Engineering/Database backups.md", "Engineering/Performance budget.md"], "scores": [0.7621351203176783, 0.753037646889986, 0.6146042947857762], "refused": false}
+{"id": "R-08", "cited": ["Engineering/Node version (old).md", "Engineering/Node version.md", "Engineering/Running tests.md"], "scores": [0.6683127613894086, 0.6470696331730021, 0.6103632447991387], "refused": false}
+{"id": "R-09", "cited": ["Engineering/Code review rule.md", "Engineering/Code review rule (old).md", "Engineering/Adding dependencies.md"], "scores": [0.6872096087563886, 0.6734345589020148, 0.6214684219033568], "refused": false}
+{"id": "R-10", "cited": ["Engineering/Where secrets live.md", "Engineering/Where secrets live (old).md"], "scores": [0.5951626006445263, 0.5850191251499677], "refused": false}
