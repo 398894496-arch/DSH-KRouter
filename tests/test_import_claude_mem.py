@@ -150,3 +150,32 @@ def test_router_answers_from_the_imported_decisions(env):
     assert res.returncode == 0, res.stderr
     top = res.stdout.split("recall:", 1)[1].splitlines()[1]
     assert "claude-mem" in top, res.stdout[-800:]
+
+
+def test_same_project_name_in_two_repos_stays_two_pages(env):
+    """claude-mem names a project by its folder; with its cwd column the import splits alpha/api from beta/api."""
+    db = env["tmp"] / "two.db"
+    con = sqlite3.connect(db)
+    con.executescript("""
+    CREATE TABLE sdk_sessions (id INTEGER PRIMARY KEY, content_session_id TEXT, memory_session_id TEXT UNIQUE,
+      project TEXT, cwd TEXT, started_at TEXT, started_at_epoch INTEGER);
+    CREATE TABLE observations (id INTEGER PRIMARY KEY, memory_session_id TEXT, project TEXT, type TEXT, title TEXT,
+      facts TEXT, created_at TEXT, created_at_epoch INTEGER);
+    """)
+    now = int(time.time() * 1000)
+    for i, who in enumerate(("alpha", "beta")):
+        d = env["tmp"] / who / "api"
+        d.mkdir(parents=True)
+        con.execute("INSERT INTO sdk_sessions VALUES (?, ?, ?, 'api', ?, '', ?)", (i, f"c{i}", f"m{i}", str(d), now))
+        con.execute("INSERT INTO observations VALUES (?, ?, 'api', 'decision', ?, '[]', '', ?)",
+                    (i, f"m{i}", f"{who} decision", now))
+    con.commit()
+    con.close()
+    out = _run(env, extra={"KROUTER_CLAUDE_MEM_DB": str(db)})
+    assert out["projects"] == 2
+    pages = _pages(env["vault"], "02 经验与方法/从 claude-mem 导入")
+    assert len(pages) == 2
+    for who in ("alpha", "beta"):
+        page = next(v for v in pages.values() if f"{who} decision" in v)
+        other = "beta" if who == "alpha" else "alpha"
+        assert f"project_root: " in page and f"/{who}/api" in page and f"{other} decision" not in page

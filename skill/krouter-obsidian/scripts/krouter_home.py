@@ -34,3 +34,37 @@ def remember(vault: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(str(vault) + "\n", encoding="utf-8")
     return path
+
+
+_ROOTS: dict[str, str] = {}
+
+
+def project_root(cwd: str) -> str:
+    """Which project a working directory belongs to: its git top level when it is in a repo, else the directory
+    itself, as an absolute path. A folder name alone (`api`, `web`, `app`) is shared by unrelated repos and customers,
+    so it never identifies a project. Empty when there is no cwd."""
+    if not cwd:
+        return ""
+    if cwd in _ROOTS:
+        return _ROOTS[cwd]
+    import subprocess
+
+    path = Path(cwd).expanduser()
+    try:
+        path = path.resolve()
+    except OSError:
+        pass
+    root = str(path)
+    if path.is_dir():
+        try:
+            out = subprocess.run(["git", "-C", str(path), "rev-parse", "--show-toplevel"], capture_output=True,
+                                 text=True, timeout=5)
+            if out.returncode == 0 and out.stdout.strip():
+                root = str(Path(out.stdout.strip()).resolve())
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    root = root.replace("\\", "/").rstrip("/") or "/"
+    if os.name == "nt":
+        root = root.lower()  # Windows 路径不区分大小写
+    _ROOTS[cwd] = root
+    return root

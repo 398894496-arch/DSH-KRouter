@@ -34,7 +34,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import zones  # noqa: E402
-from krouter_home import vault_path  # noqa: E402
+from krouter_home import project_root, vault_path  # noqa: E402
+import hashlib  # noqa: E402
 from krouter_redact import redact  # noqa: E402
 
 MARK = "krouter-claude-mem"
@@ -128,7 +129,7 @@ def read(con: sqlite3.Connection, since: datetime | None) -> dict[str, dict]:
     sid = "memory_session_id" if "memory_session_id" in ocols else "sdk_session_id"
     want = [c for c in ("id", sid, "project", "type", "title", "subtitle", "narrative", "text", "facts", "concepts",
                         "files_modified", "created_at", "created_at_epoch") if c in ocols]
-    sessions: dict[str, dict] = defaultdict(lambda: {"project": "", "start": None, "summary": None, "obs": []})
+    sessions: dict[str, dict] = defaultdict(lambda: {"project": "", "root": "", "start": None, "summary": None, "obs": []})
     for row in con.execute(f"SELECT {', '.join(want)} FROM observations ORDER BY created_at_epoch"):
         r = dict(row)
         at = when(r.get("created_at_epoch"), r.get("created_at"))
@@ -153,6 +154,15 @@ def read(con: sqlite3.Connection, since: datetime | None) -> dict[str, dict]:
             s["project"] = s["project"] or str(r.get("project") or "")
             s["start"] = s["start"] or at
             s["summary"] = r  # 一个会话可能有多份总结：留最后一份
+    # 新版 claude-mem 在 sdk_sessions 里记了 cwd：用它的仓库根路径区分同名项目（两个仓库都叫 `api`）。
+    # 老版本没有 cwd，这些会话就不知道属于哪个仓库：照样导入、能查到，但不会被自动带进新会话
+    if "sdk_sessions" in tables:
+        kcols = columns(con, "sdk_sessions")
+        ksid = next((c for c in ("memory_session_id", "sdk_session_id") if c in kcols), "")
+        if ksid and "cwd" in kcols:
+            for sid_val, cwd in con.execute(f"SELECT {ksid}, cwd FROM sdk_sessions WHERE cwd IS NOT NULL AND cwd != ''"):
+                if str(sid_val) in sessions:
+                    sessions[str(sid_val)]["root"] = project_root(str(cwd))
     return {k: v for k, v in sessions.items() if v["start"]}
 
 
@@ -199,7 +209,8 @@ def session_page(key: str, s: dict) -> tuple[str, str]:
     decisions = [o for o in s["obs"] if o.get("type") == "decision" and o.get("title")]
     how = clean(decisions[0]["title"], 120) if decisions else f"claude-mem 会话：{title}"
     out = ["---", "type: session-excerpt", f"source: {MARK}", "status: imported", f"date: {day}",
-           f"session: {key}", f"project: {s['project'] or '-'}", f"title: {title}", f"how: {how}", "---", "",
+           f"session: {key}", f"project: {s['project'] or '-'}", *([f"project_root: {s['root']}"] if s["root"] else []),
+           f"title: {title}", f"how: {how}", "---", "",
            f"# {title}", "", f"由 claude-mem 记录（项目 {s['project'] or '?'}，{day}），KRouter 导入，已脱敏。这是线索，不是结论。", ""]
     summ = s["summary"] or {}
     parts = [(lbl, summ.get(k)) for k, lbl in (("request", "要做的事"), ("learned", "学到了"), ("completed", "完成了"),
@@ -221,12 +232,13 @@ def session_page(key: str, s: dict) -> tuple[str, str]:
     return name, "\n".join(out).rstrip() + "\n"
 
 
-def project_decisions(sessions: dict[str, dict]) -> dict[str, list[dict]]:
-    by: dict[str, list[dict]] = defaultdict(list)
+def project_decisions(sessions: dict[str, dict]) -> dict[tuple[str, str], list[dict]]:
+    """{(project name, repo root or ""): decisions}. Two repos both named `api` stay two pages."""
+    by: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for key, s in sessions.items():
         for o in s["obs"]:
             if o.get("type") == "decision" and o.get("title"):
-                by[s["project"] or "?"].append({**o, "session": key, "session_title": session_title(s)})
+                by[(s["project"] or "?", s["root"])].append({**o, "session": key, "session_title": session_title(s)})
     for rows in by.values():
         rows.sort(key=lambda o: o.get("at") or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     return by
@@ -246,15 +258,16 @@ DISTILL_PROMPT = """下面是项目「{project}」里 claude-mem 记下的决定
 """
 
 
-def project_page(project: str, rows: list[dict], digest: str = "") -> tuple[str, str]:
-    name = f"{UNSAFE.sub(' ', project)[:60].strip() or '未命名项目'} 的决定（claude-mem）.md"
+def project_page(project: str, rows: list[dict], digest: str = "", root: str = "") -> tuple[str, str]:
+    tag = f"，{hashlib.sha1(root.encode('utf-8')).hexdigest()[:6]}" if root else ""
+    name = f"{UNSAFE.sub(' ', project)[:60].strip() or '未命名项目'} 的决定（claude-mem{tag}）.md"
     rows = rows[:DECISIONS_MAX]
     first = re.sub(r"^[-*]\s*", "", digest.strip().splitlines()[0]) if digest else clean(rows[0]["title"], 120)
     out = ["---", f"title: {project} 的决定（claude-mem）", "type: method", f"source: {MARK}", "status: candidate",
-           f"project: {project}", f"decisions: {len(rows)}", f"how: {first}"]
+           f"project: {project}", *([f"project_root: {root}"] if root else []), f"decisions: {len(rows)}", f"how: {first}"]
     if digest:
         out.append(f"digest_decisions: {len(rows)}")
-    out += ["---", "", f"# {project} 的决定（来自 claude-mem）", "",
+    out += ["---", "", f"# {project} 的决定（来自 claude-mem）", "", *([f"仓库：`{root}`", ""] if root else []),
             "claude-mem 自动记下的决定，KRouter 导入。**待你确认**：确认过、要长期遵守的，挪进你自己的规则页，"
             "或把这页的 `status` 改成 `active`。", ""]
     if digest:
@@ -343,8 +356,8 @@ def main() -> int:
         if res == "written":
             writes.append(f"{LOG_FOLDER}/{name}")
     decisions = project_decisions(sessions)
-    for project, rows in sorted(decisions.items()):
-        name, _ = project_page(project, rows)
+    for (project, root), rows in sorted(decisions.items()):
+        name, _ = project_page(project, rows, root=root)
         target = rule_dir / name
         digest = old_digest(target, len(rows[:DECISIONS_MAX]))
         if not digest and distill_on:
@@ -355,11 +368,17 @@ def main() -> int:
             except Exception as exc:  # noqa: BLE001  模型失败不影响本地导入
                 failed += 1
                 print(f"distill {project}: {str(exc)[:200]}", file=sys.stderr)
-        _, page = project_page(project, rows, digest)
+        _, page = project_page(project, rows, digest, root)
         res = write(target, page, args.dry_run)
         counts[res] += 1
         if res == "written":
             writes.append(f"{RULE_FOLDER}/{name}")
+    if not args.days and not args.dry_run and rule_dir.is_dir():
+        # 全量导入时，名字已经不再产生的决定页（比如以前没分仓库、现在分了）是旧版本留下的：删掉，免得两份
+        made = {f"{RULE_FOLDER}/{project_page(pr, rw, root=rt)[0]}" for (pr, rt), rw in decisions.items()}
+        for page in rule_dir.glob("*.md"):
+            if frontmatter(page).get("source") == MARK and f"{RULE_FOLDER}/{page.name}" not in made:
+                page.unlink()
     if args.consent and not args.dry_run:
         save_state({**st, "consent": True, "distill": bool(args.distill),
                     "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})

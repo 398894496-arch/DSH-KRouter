@@ -1,5 +1,5 @@
-"""Claude Code hooks: a new session gets this project's recorded decisions; an ended one is imported. Both only after
-the host said yes to importing."""
+"""Claude Code hooks: a new session gets this repository's recorded decisions; an ended one is imported. Both only
+after the host said yes to importing. A repository is its git top level (else its directory), never its folder name."""
 
 from __future__ import annotations
 
@@ -14,6 +14,22 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 HOOK = REPO / "skill/krouter-obsidian/scripts/session_hook.py"
+DIGEST = "## 定了什么、改了什么（模型提炼，待你确认）"
+
+
+def _root(path: Path) -> str:
+    sys.path.insert(0, str(REPO / "skill/krouter-obsidian/scripts"))
+    from krouter_home import project_root
+
+    return project_root(str(path))
+
+
+def _page(folder: Path, name: str, root: str, lines: list[str], day: str | None = None, extra: str = "") -> None:
+    day = day or date.today().isoformat()
+    body = "\n".join(f"- {ln}" for ln in lines)
+    (folder / f"{day}｜{name}.md").write_text(
+        f"---\nsource: krouter-import\nstatus: imported\ndate: {day}\nproject: {Path(root).name}\n"
+        f"project_root: {root}\n{extra}---\n\n# {name}\n\n{DIGEST}\n\n{body}\n\n## 摘录\n\n- **问**：…\n", encoding="utf-8")
 
 
 def _setup(tmp_path: Path, consent: bool = True) -> dict:
@@ -21,24 +37,19 @@ def _setup(tmp_path: Path, consent: bool = True) -> dict:
     shutil.copytree(REPO / "template", vault)
     folder = vault / "05 时间日志/会话摘录"
     folder.mkdir(parents=True)
-    today = date.today().isoformat()
-    (folder / f"{today}｜发版（aaaa1111）.md").write_text(
-        f"---\nsource: krouter-import\nstatus: imported\ndate: {today}\nproject: shop\ndigest_turns: 4\n---\n\n# 发版\n\n"
-        "## 定了什么、改了什么（模型提炼，待你确认）\n\n- 发版只从 main 打 tag（10:05）\n- 原来手动上传 → 改成 CI 发布（10:20）\n\n"
-        "## 摘录\n\n- **问**：…\n", encoding="utf-8")
-    (folder / "2020-01-01｜旧事（bbbb2222）.md").write_text(
-        "---\nsource: krouter-import\ndate: 2020-01-01\nproject: shop\n---\n\n## 定了什么、改了什么（模型提炼，待你确认）\n\n"
-        "- 很久以前的决定\n\n## 摘录\n", encoding="utf-8")
-    (folder / f"{today}｜别的项目（cccc3333）.md").write_text(
-        f"---\nsource: krouter-import\ndate: {today}\nproject: other\n---\n\n## 定了什么、改了什么（模型提炼，待你确认）\n\n"
-        "- 别的项目的决定\n\n## 摘录\n", encoding="utf-8")
+    shop = tmp_path / "work/shop"
+    shop.mkdir(parents=True)
+    root = _root(shop)
+    _page(folder, "发版", root, ["发版只从 main 打 tag（10:05）", "原来手动上传 → 改成 CI 发布（10:20）"])
+    _page(folder, "已确认", root, ["数据库每晚 02:00 备份"], extra="confirmed: true\n")
+    _page(folder, "旧事", root, ["原来 A → 改成 B（很久以前）"], day="2020-01-01")
     state = tmp_path / "state"
     state.mkdir()
     if consent:
         (state / "import.json").write_text(json.dumps({"consent": True}), encoding="utf-8")
     env = {**os.environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_STATE_DIR": str(state), "KROUTER_NO_QUERY_LOG": "1"}
     env.pop("KROUTER_INJECT", None)
-    return {"vault": vault, "env": env, "state": state}
+    return {"vault": vault, "env": env, "state": state, "folder": folder, "shop": shop, "tmp": tmp_path}
 
 
 def _hook(env: dict, which: str, payload: dict) -> subprocess.CompletedProcess:
@@ -46,26 +57,72 @@ def _hook(env: dict, which: str, payload: dict) -> subprocess.CompletedProcess:
                           capture_output=True, text=True, timeout=60)
 
 
-def test_start_brings_this_projects_recent_decisions_with_their_page(tmp_path):
-    s = _setup(tmp_path)
-    res = _hook(s["env"], "start", {"cwd": "/work/shop", "session_id": "x"})
+def _ctx(res: subprocess.CompletedProcess) -> str:
     assert res.returncode == 0, res.stderr
-    ctx = json.loads(res.stdout)["hookSpecificOutput"]["additionalContext"]
+    return json.loads(res.stdout)["hookSpecificOutput"]["additionalContext"] if res.stdout.strip() else ""
+
+
+def test_start_brings_confirmed_decisions_and_corrections_with_their_page(tmp_path):
+    s = _setup(tmp_path)
+    ctx = _ctx(_hook(s["env"], "start", {"cwd": str(s["shop"])}))
     lines = ctx.splitlines()
-    assert "项目 shop" in lines[0]
-    assert lines[1].startswith("- 原来手动上传 → 改成 CI 发布") and "05 时间日志/会话摘录/" in lines[1]  # 纠错在前
-    assert "发版只从 main 打 tag" in ctx
-    assert "很久以前的决定" not in ctx and "别的项目的决定" not in ctx  # 30 天外、别的项目：不带
+    assert "shop" in lines[0]
+    assert lines[1].startswith("- 原来手动上传 → 改成 CI 发布") and "（待确认）" in lines[1] and "05 时间日志/会话摘录/" in lines[1]
+    assert "- 数据库每晚 02:00 备份 〔" in ctx  # 确认过的页：整条带上，不标待确认
+    assert "发版只从 main 打 tag" not in ctx  # 没确认、也不是纠错：默认不带
+    assert "很久以前" not in ctx  # 30 天外
     assert "krouter_ask" in lines[-1]
+    everything = _ctx(_hook({**s["env"], "KROUTER_INJECT": "all"}, "start", {"cwd": str(s["shop"])}))
+    assert "发版只从 main 打 tag（10:05）（待确认）" in everything
+
+
+def test_same_folder_name_in_two_repos_never_shares_decisions(tmp_path):
+    """The outside review's repro: alpha/api and beta/api. A session in beta must not see alpha's decisions."""
+    s = _setup(tmp_path)
+    alpha, beta = tmp_path / "alpha/api", tmp_path / "beta-corp/api"
+    for d in (alpha, beta):
+        d.mkdir(parents=True)
+    _page(s["folder"], "alpha 的约定", _root(alpha), ["原来 alpha 用 X → 改成 alpha 用 Y"])
+    _page(s["folder"], "beta 的约定", _root(beta), ["原来 beta 用 P → 改成 beta 用 Q"])
+    ctx = _ctx(_hook(s["env"], "start", {"cwd": str(beta)}))
+    assert "beta 用 Q" in ctx and "alpha" not in ctx
+    (beta / "src").mkdir()
+    sub = _ctx(_hook(s["env"], "start", {"cwd": str(beta / "src")}))
+    assert "alpha" not in sub  # 子目录不是 git 仓库时就是它自己，不会去匹配别人
+    # 1.0.0 导入的旧页只有 project（文件夹名），没有 project_root：一律不带
+    (s["folder"] / "2026-10-12｜旧版本页.md").write_text(
+        f"---\nsource: krouter-import\ndate: {date.today().isoformat()}\nproject: api\n---\n\n{DIGEST}\n\n"
+        "- 原来 旧 → 改成 新\n\n## 摘录\n", encoding="utf-8")
+    assert "旧 → 改成 新" not in _ctx(_hook(s["env"], "start", {"cwd": str(beta)}))
+
+
+def test_git_repo_is_matched_from_any_subdirectory(tmp_path):
+    if not shutil.which("git"):
+        return
+    s = _setup(tmp_path)
+    repo = tmp_path / "gitrepo"
+    (repo / "pkg/deep").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    _page(s["folder"], "仓库约定", _root(repo), ["原来 tabs → 改成 spaces"])
+    assert "改成 spaces" in _ctx(_hook(s["env"], "start", {"cwd": str(repo / "pkg/deep")}))
+
+
+def test_header_follows_the_language_of_the_lines(tmp_path):
+    s = _setup(tmp_path)
+    en = tmp_path / "en-repo"
+    en.mkdir()
+    _page(s["folder"], "english", _root(en), ["Was: manual uploads → now: CI uploads (10:20)"])
+    ctx = _ctx(_hook(s["env"], "start", {"cwd": str(en)}))
+    assert ctx.startswith("KRouter: decisions recorded") and "(unconfirmed)" in ctx and "krouter_ask" in ctx
+    assert not any("一" <= ch <= "鿿" for ch in ctx.replace("05 时间日志/会话摘录", ""))
 
 
 def test_start_is_silent_without_consent_without_decisions_or_when_turned_off(tmp_path):
     s = _setup(tmp_path, consent=False)
-    assert _hook(s["env"], "start", {"cwd": "/work/shop"}).stdout == ""
+    assert _hook(s["env"], "start", {"cwd": str(s["shop"])}).stdout == ""
     s = _setup(tmp_path / "b")
-    assert _hook(s["env"], "start", {"cwd": "/work/no-such-project"}).stdout == ""
-    assert _hook({**s["env"], "KROUTER_INJECT": "0"}, "start", {"cwd": "/work/shop"}).stdout == ""
-    assert _hook(s["env"], "start", {}).returncode == 0
+    assert _hook(s["env"], "start", {"cwd": str(tmp_path / "nowhere")}).stdout == ""
+    assert _hook({**s["env"], "KROUTER_INJECT": "0"}, "start", {"cwd": str(s["shop"])}).stdout == ""
     bad = subprocess.run([sys.executable, str(HOOK), "start"], input="not json", env=s["env"], capture_output=True,
                          text=True, timeout=60)
     assert bad.returncode == 0  # hook 永远不让会话失败
@@ -73,24 +130,25 @@ def test_start_is_silent_without_consent_without_decisions_or_when_turned_off(tm
 
 def test_end_imports_the_session_that_just_ended(tmp_path):
     s = _setup(tmp_path)
+    work = tmp_path / "work/api"
+    work.mkdir(parents=True)
     projects = tmp_path / "projects/-work-api"
     projects.mkdir(parents=True)
     ts = datetime.now(timezone.utc).isoformat()
     transcript = projects / "dddd4444-s.jsonl"
     transcript.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in [
-        {"type": "user", "timestamp": ts, "cwd": "/work/api", "message": {"role": "user", "content": "超时改成多少"}},
+        {"type": "user", "timestamp": ts, "cwd": str(work), "message": {"role": "user", "content": "超时改成多少"}},
         {"type": "assistant", "timestamp": ts, "message": {"content": [{"type": "text", "text": "改成 10 秒。"}]}},
         {"type": "custom-title", "customTitle": "超时设置"}]) + "\n", encoding="utf-8")
     env = {**s["env"], "KROUTER_CLAUDE_PROJECTS": str(tmp_path / "projects")}
-    res = _hook(env, "end", {"session_id": "dddd4444-s", "transcript_path": str(transcript), "cwd": "/work/api"})
+    res = _hook(env, "end", {"session_id": "dddd4444-s", "transcript_path": str(transcript), "cwd": str(work)})
     assert res.returncode == 0 and res.stdout == ""
-    folder = s["vault"] / "05 时间日志/会话摘录"
     for _ in range(100):  # 导入在后台跑，不拖住 Claude Code
-        if list(folder.glob("*超时设置*")):
+        if list(s["folder"].glob("*超时设置*")):
             break
         time.sleep(0.1)
-    page = next(folder.glob("*超时设置*")).read_text(encoding="utf-8")
-    assert "project: api" in page and "改成 10 秒。" in page
+    page = next(s["folder"].glob("*超时设置*")).read_text(encoding="utf-8")
+    assert "project: api" in page and f"project_root: {_root(work)}" in page and "改成 10 秒。" in page
 
 
 def test_end_does_nothing_without_consent(tmp_path):

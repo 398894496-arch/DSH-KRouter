@@ -14,7 +14,7 @@ Claude Code、Codex、Cursor、DeepSeek Harness 共用同一份记忆：一个 [
 curl -fsSL https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.sh | sh
 ```
 
-Windows（PowerShell）：`irm https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.ps1 | iex` · Claude Code 插件：`/plugin install krouter --marketplace 398894496-arch/KRouter`
+Windows（PowerShell）：`irm https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.ps1 | iex` · Claude Code 插件：`/plugin install krouter --marketplace 398894496-arch/KRouter`（需要 Claude Code 2.1.275 或更高；在 shell 里用 `claude plugin install krouter --marketplace 398894496-arch/KRouter` 需要 2.1.292）。第三方插件市场不会自动更新：运行 `claude plugin update krouter@krouter`，或在 `/plugin` → Marketplaces → krouter 里选 Enable auto-update。
 
 唯一的前提是 Python 3。安装脚本会建一个库（已有的库用 `--vault` 指定，一个文件都不覆盖），通过 MCP 把 Claude Code 和 Codex 接上，然后问你两个问题。
 
@@ -36,7 +36,7 @@ Windows（PowerShell）：`irm https://raw.githubusercontent.com/398894496-arch/
 | 每条答案 | 带出处页和回执 | 通常没有出处 |
 | 谁在用 | 本机所有 agent 共用一个库（MCP、skill、规则） | 通常只服务一个工具 |
 
-**在用 [claude-mem](https://github.com/thedotmack/claude-mem)？** 不用卸掉。安装时会发现它的记忆库并问你要不要导入：会话总结变成页面，每个项目的决定汇成一页，等你确认。你的模型还能把这些决定理一遍，分出哪些还有效、哪些被后来的决定取代了，这一步是 claude-mem 自己不做的。Claude Code 插件也能做到 claude-mem 让人觉得「有记忆」的那两件事，只是存成纯 Markdown：会话结束时自动记下；开新会话时，自动带上这个项目最近定下的事，每条都注明出处页。这两件事都要你先同意导入才会做。
+**在用 [claude-mem](https://github.com/thedotmack/claude-mem)？** 不用卸掉。导入器目前是 beta：按 claude-mem 公开的表结构测过，还没在真实安装上跑过。安装时会发现它的记忆库并问你要不要导入：会话总结变成页面，每个项目的决定汇成一页，等你确认。你的模型还能把这些决定理一遍，分出哪些还有效、哪些被后来的决定取代了，这一步是 claude-mem 自己不做的。Claude Code 插件也能做到 claude-mem 让人觉得「有记忆」的那两件事，只是存成纯 Markdown：会话结束时自动记下；开新会话时，自动带上这个仓库里你确认过的决定和最近的纠错，每条都注明出处页。仓库按路径区分，不按文件夹名。这两件事都要你先同意导入才会做。
 
 ## 什么会离开本机
 
@@ -47,6 +47,7 @@ Windows（PowerShell）：`irm https://raw.githubusercontent.com/398894496-arch/
 | 测了什么 | 结果 |
 |---|---|
 | 该拒答时拒答（公开测试集，CI 跑） | 离题问题英文 12/12、中文 6/6 拒答 |
+| 没见过的题上的错误引用率（[记忆诚实度测试集](docs/BENCHMARK.md)） | 约 22–25%，纯全文检索约 60%。在测试集自己的题上是 0%，但那套题上发现并修过 bug，只能算开发集数字 |
 | 精确命中和向量检索比（「已取代」和「近邻」题，CI 跑） | 精确命中会拒答；TF-IDF、MiniLM、BGE-M3 会引一个近邻 |
 | 作者库里的真实查询 | 盲评从 0.62 到 1.47（满分 2）。**这是开发集**，在留出题上没有提升。2026-10-16 会对新流量再做一次盲评 |
 
