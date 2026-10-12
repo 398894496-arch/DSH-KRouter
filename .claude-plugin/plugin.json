@@ -1,0 +1,18 @@
+{
+  "name": "krouter",
+  "displayName": "KRouter",
+  "version": "0.13.0",
+  "description": "Your agents remember what you decided and what you changed — from your own Obsidian vault, with the source of every answer, and \"not in the vault\" instead of a guess.",
+  "author": { "name": "398894496-arch", "url": "https://github.com/398894496-arch" },
+  "homepage": "https://github.com/398894496-arch/KRouter",
+  "repository": "https://github.com/398894496-arch/KRouter",
+  "license": "MIT",
+  "keywords": ["memory", "second-brain", "obsidian", "decisions", "corrections", "mcp"],
+  "skills": ["./plugin/skills/"],
+  "mcpServers": {
+    "krouter": {
+      "command": "python3",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/skill/krouter-obsidian/scripts/mcp_server.py"]
+    }
+  }
+}

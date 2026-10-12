@@ -160,3 +160,26 @@ def test_powershell_scripts_are_ascii_and_never_exit_the_users_session():
         assert all(b < 128 for b in data), name
     lines = (REPO / "scripts/bootstrap.ps1").read_text(encoding="ascii").splitlines()
     assert not [ln for ln in lines if ln.strip().startswith("exit")]
+
+
+def test_install_imports_sessions_only_on_a_yes_and_records_the_vault(tmp_path):
+    """No terminal → no import; `--import` → this machine's sessions land in the vault, and the vault path is
+    recorded so agents and the MCP server find it without OBSIDIAN_VAULT."""
+    projects = tmp_path / "projects/-work"
+    projects.mkdir(parents=True)
+    from datetime import datetime, timezone
+
+    ts = datetime.now(timezone.utc).isoformat()
+    (projects / "s1.jsonl").write_text(json.dumps({"type": "user", "timestamp": ts, "cwd": "/work", "message": {
+        "role": "user", "content": "缓存过期改成多少"}}, ensure_ascii=False) + "\n", encoding="utf-8")
+    vf = tmp_path / "vault-file"
+    env = {**_env(tmp_path), "KROUTER_NO_PROMPT": "1", "KROUTER_CLAUDE_PROJECTS": str(tmp_path / "projects"),
+           "KROUTER_VAULT_FILE": str(vf)}
+    res, out = _boot(env, "--lang", "zh", "--vault", str(tmp_path / "v1"), "--no-timer")
+    assert res.returncode == 0 and out["imported"] == 0 and "import_sessions.py" in res.stdout
+    assert not (tmp_path / "v1/05 时间日志/会话摘录").exists()
+    assert vf.read_text(encoding="utf-8").strip() == str((tmp_path / "v1").resolve())
+    res, out = _boot(env, "--lang", "zh", "--vault", str(tmp_path / "v2"), "--no-timer", "--import")
+    assert res.returncode == 0 and out["imported"] == 1, res.stdout[-1500:]
+    assert len(list((tmp_path / "v2/05 时间日志/会话摘录").glob("*.md"))) == 1
+    assert "现在就可以问你的 agent" in res.stdout

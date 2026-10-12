@@ -12,7 +12,7 @@ for arg in "$@"; do
     --dry-run) DRY=1 ;;
     -h|--help)
       printf '%s\n' "usage: uninstall.sh [--dry-run] [--purge]"
-      printf '%s\n' "removes the timer (launchd / systemd user / crontab line), Cursor rules, the hook script, and the skill"
+      printf '%s\n' "removes the timer (launchd / systemd user / crontab line), Cursor rules, the hook script, the skill, the MCP registrations and the recorded vault path"
       printf '%s\n' "never touches the vault, except to save an alias table that is not in it yet"
       printf '%s\n' "--purge also removes the rebuildable cache and the query log; the keys file is never removed"
       exit 0
@@ -85,6 +85,20 @@ if [ -e "$SKILL_DST" ] || [ -L "$SKILL_DST" ]; then
   run rm -rf "$SKILL_DST"
   printf '%s\n' "removed: $SKILL_DST"
 fi
+
+# 3b. MCP registrations and the recorded vault path (only ours: the server must be KRouter's mcp_server.py)
+if [ "${KROUTER_NO_MCP:-0}" != 1 ]; then
+  if command -v claude >/dev/null 2>&1 && claude mcp get krouter 2>/dev/null | grep -q 'mcp_server.py'; then
+    run claude mcp remove --scope user krouter >/dev/null 2>&1 || true
+    printf '%s\n' "removed: MCP server krouter (claude)"
+  fi
+  if command -v codex >/dev/null 2>&1 && codex mcp get krouter 2>/dev/null | grep -q 'mcp_server.py'; then
+    run codex mcp remove krouter >/dev/null 2>&1 || true
+    printf '%s\n' "removed: MCP server krouter (codex)"
+  fi
+fi
+VAULT_FILE="${KROUTER_VAULT_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/krouter/vault}"
+if [ -f "$VAULT_FILE" ]; then run rm -f "$VAULT_FILE"; printf '%s\n' "removed: $VAULT_FILE"; fi
 
 # 4. rebuildable state
 CACHE="${KROUTER_CACHE_DIR:-$HOME/.cache/krouter}"

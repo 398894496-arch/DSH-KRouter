@@ -223,3 +223,22 @@ def test_keys_inside_urls_are_still_masked():
 
     assert BARE not in redact(f"https://api.x.com/v1?key={BARE}")
     assert "sk-abcdefghijklmnop1234" not in redact("https://hooks.example.com/sk-abcdefghijklmnop1234")
+
+
+def test_rewiring_keys_keeps_lines_it_does_not_manage(tmp_path):
+    """A re-install probes the API keys again; it must not delete the claude long-lived token, pending keys,
+    a key that failed today's probe, or the host's comments."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "extras/host-daily-evolution"))
+    import wire_keys
+
+    path = tmp_path / "keys.env"
+    path.write_text("# mine\nKROUTER_CLI_LOGIN=/old/claude\nDEEPSEEK_API_KEY=old\nCLAUDE_CODE_OAUTH_TOKEN=tok\n"
+                    "KROUTER_PENDING_KEY_1=p\nGROQ_API_KEY=dead\n", encoding="utf-8")
+    wire_keys.write_keys(path, {"DEEPSEEK_API_KEY": "new", "OPENAI_API_KEY": "o"}, "/opt/claude")
+    lines = path.read_text(encoding="utf-8").splitlines()
+    assert lines == ["# mine", "KROUTER_CLI_LOGIN=/opt/claude", "DEEPSEEK_API_KEY=new", "CLAUDE_CODE_OAUTH_TOKEN=tok",
+                     "KROUTER_PENDING_KEY_1=p", "GROQ_API_KEY=dead", "OPENAI_API_KEY=o"]
+    assert oct(path.stat().st_mode & 0o777) == "0o600" or os.name == "nt"
+    wire_keys.write_keys(path, {}, "")
+    assert "KROUTER_CLI_LOGIN" not in path.read_text(encoding="utf-8")
+    assert "CLAUDE_CODE_OAUTH_TOKEN=tok" in path.read_text(encoding="utf-8")

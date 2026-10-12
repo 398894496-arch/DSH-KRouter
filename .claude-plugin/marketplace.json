@@ -1,0 +1,13 @@
+{
+  "name": "krouter",
+  "owner": { "name": "398894496-arch", "url": "https://github.com/398894496-arch" },
+  "description": "KRouter: a shared, plain-Markdown memory for coding agents.",
+  "plugins": [
+    {
+      "name": "krouter",
+      "source": "./",
+      "description": "Your agents remember what you decided and what you changed, with the source of every answer.",
+      "category": "productivity"
+    }
+  ]
+}

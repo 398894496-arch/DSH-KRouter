@@ -72,13 +72,32 @@ def candidate_keys() -> dict[str, str]:
 
 
 def write_keys(path: Path, live: dict[str, str], cli: str) -> None:
-    lines = [HEADER]
+    """Update the names this probe manages and keep every other line as it was: the long-lived
+    `CLAUDE_CODE_OAUTH_TOKEN`, `KROUTER_PENDING_KEY_n`, a key that failed today's probe, the host's comments.
+    Rewriting the file from the probe alone deleted those (a re-install wiped the claude token)."""
+    managed = dict(live)
     if cli:
-        lines.append(f"KROUTER_CLI_LOGIN={cli}\n")
-    for name in sorted(live):
-        lines.append(f"{name}={live[name]}\n")
+        managed["KROUTER_CLI_LOGIN"] = cli
+    old = path.read_text(encoding="utf-8", errors="replace").splitlines() if path.is_file() else []
+    out: list[str] = [] if old else HEADER.splitlines()
+    done: set[str] = set()
+    for line in old:
+        name = line.split("=", 1)[0].strip() if "=" in line and not line.lstrip().startswith("#") else ""
+        if name == "KROUTER_CLI_LOGIN" and not cli:
+            continue  # 这次没探到登录的 CLI：标记作废
+        if name in managed:
+            if name not in done:
+                out.append(f"{name}={managed[name]}")
+                done.add(name)
+            continue
+        out.append(line)
+    out += [f"{n}={managed[n]}" for n in sorted(managed) if n not in done]
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(lines), encoding="utf-8")
+    tmp = path.with_name(path.name + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(out) + "\n")
+    os.replace(tmp, path)
     path.chmod(stat.S_IRUSR | stat.S_IWUSR)
 
 

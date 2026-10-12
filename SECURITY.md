@@ -9,6 +9,8 @@ where data goes and how to report a problem.
 |---|---|---|
 | Router queries and answers | Nowhere: a local SQLite cache under `~/.cache/krouter/` and a local query log under `~/.local/state/krouter/` | Every query |
 | Yesterday's logs and sessions | The model lane you chose (a logged-in AI coding CLI, or an API key) | The nightly job, only if you turned it on |
+| Your past Claude Code / Codex sessions (questions and closing answers, redacted) | Pages in your vault, on this machine | At install and nightly, only after you said yes to the import (`import_sessions.py --consent`; `--revoke` stops it) |
+| The same session excerpts | The model lane, to write "what was decided" | Only if you also said yes to distilling; the install says how many characters first |
 | Rule and topic pages, topic excerpts, unanswered queries | The same model lane | The nightly job, only if you turned it on |
 | API keys | `~/.dsh-krouter-keys.env` (mode 600). Never the vault, never a prompt, never printed | — |
 | Pages named or marked as secret (凭据 / 密钥 / 钥匙 / credential / secret / password, or `secret: true`) | Nowhere: never sent, never quoted | — |
@@ -43,6 +45,16 @@ on a page whose name says what it is.
 `~/.dsh-krouter-keys.env` as `CLAUDE_CODE_OAUTH_TOKEN=…` (the file is mode 600, never in the vault). KRouter passes it
 only to the `claude` process. It avoids the logout that happens when another program (a proxy, another machine) holds
 the same keychain login and spends its single-use refresh token.
+
+## What the install changes outside the vault
+
+- `~/.agents/skills/krouter-obsidian/` (the router), Cursor rules under `~/.cursor/rules/`.
+- `~/.config/krouter/vault`: one line, the vault path, so agents and the MCP server find it.
+- An MCP server named `krouter` registered with `claude` (user scope) and `codex` when they are installed:
+  read-only, it runs the router and nothing else (`KROUTER_NO_MCP=1` skips it; `claude mcp remove krouter` and
+  `codex mcp remove krouter` undo it).
+- `~/.dsh-krouter-keys.env`: names the probe manages are updated in place; every other line is kept.
+- The nightly job (launchd / systemd / cron / Windows task), only on your yes.
 
 ## Integrity of what you install
 

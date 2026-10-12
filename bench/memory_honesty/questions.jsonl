@@ -1,0 +1,30 @@
+{"id": "C-release", "kind": "correction", "q": "How do we ship a release?", "gold": "Engineering/Release process.md", "stale": "Engineering/Release process (old).md"}
+{"id": "C-db-backup", "kind": "correction", "q": "How often do we back up the database?", "gold": "Engineering/Database backups.md", "stale": "Engineering/Database backups (old).md"}
+{"id": "C-code-review", "kind": "correction", "q": "How many approvals does a pull request need?", "gold": "Engineering/Code review rule.md", "stale": "Engineering/Code review rule (old).md"}
+{"id": "C-api-timeout", "kind": "correction", "q": "What is the timeout for the payments API?", "gold": "Engineering/API timeout.md", "stale": "Engineering/API timeout (old).md"}
+{"id": "C-node-version", "kind": "correction", "q": "Which Node version do our services use?", "gold": "Engineering/Node version.md", "stale": "Engineering/Node version (old).md"}
+{"id": "C-logging", "kind": "correction", "q": "What log level does production use?", "gold": "Engineering/Logging level.md", "stale": "Engineering/Logging level (old).md"}
+{"id": "C-branch-names", "kind": "correction", "q": "How should I name a branch?", "gold": "Engineering/Branch naming.md", "stale": "Engineering/Branch naming (old).md"}
+{"id": "C-secrets", "kind": "correction", "q": "Where do we keep service secrets?", "gold": "Engineering/Where secrets live.md", "stale": "Engineering/Where secrets live (old).md"}
+{"id": "C-on-call", "kind": "correction", "q": "How long is an on-call shift?", "gold": "Engineering/On-call rotation.md", "stale": "Engineering/On-call rotation (old).md"}
+{"id": "C-css", "kind": "correction", "q": "How do we write component styles?", "gold": "Engineering/CSS approach.md", "stale": "Engineering/CSS approach (old).md"}
+{"id": "S-ports", "kind": "current", "q": "Which port does the API use locally?", "gold": "Engineering/Local ports.md", "stale": null}
+{"id": "S-tests", "kind": "current", "q": "How do I run the integration tests?", "gold": "Engineering/Running tests.md", "stale": null}
+{"id": "S-dates", "kind": "current", "q": "How do we store dates?", "gold": "Engineering/Date format.md", "stale": null}
+{"id": "S-feature-flags", "kind": "current", "q": "How are feature flags named?", "gold": "Engineering/Feature flags.md", "stale": null}
+{"id": "S-errors", "kind": "current", "q": "What should a user-facing error message say?", "gold": "Engineering/Error messages.md", "stale": null}
+{"id": "S-deps", "kind": "current", "q": "What do I need to add a new dependency?", "gold": "Engineering/Adding dependencies.md", "stale": null}
+{"id": "S-incidents", "kind": "current", "q": "When is an incident report due?", "gold": "Engineering/Incident reports.md", "stale": null}
+{"id": "S-docs", "kind": "current", "q": "Where do developer docs go?", "gold": "Engineering/Where docs live.md", "stale": null}
+{"id": "S-translations", "kind": "current", "q": "Can I hard-code UI text in a component?", "gold": "Engineering/Translations.md", "stale": null}
+{"id": "S-perf", "kind": "current", "q": "What is the performance budget for the home page?", "gold": "Engineering/Performance budget.md", "stale": null}
+{"id": "R-01", "kind": "refuse", "q": "What is our Kubernetes autoscaling policy?", "gold": null, "stale": null}
+{"id": "R-02", "kind": "refuse", "q": "How do we rotate the TLS certificates?", "gold": null, "stale": null}
+{"id": "R-03", "kind": "refuse", "q": "What is the refund policy for enterprise customers?", "gold": null, "stale": null}
+{"id": "R-04", "kind": "refuse", "q": "Which analytics tool do we use for the marketing site?", "gold": null, "stale": null}
+{"id": "R-05", "kind": "refuse", "q": "How long do we keep audit logs for compliance?", "gold": null, "stale": null}
+{"id": "R-06", "kind": "refuse", "q": "What is the timeout for the search API?", "gold": null, "stale": null}
+{"id": "R-07", "kind": "refuse", "q": "How often do we back up the file storage bucket?", "gold": null, "stale": null}
+{"id": "R-08", "kind": "refuse", "q": "Which Python version do our data jobs use?", "gold": null, "stale": null}
+{"id": "R-09", "kind": "refuse", "q": "How many approvals does a design document need?", "gold": null, "stale": null}
+{"id": "R-10", "kind": "refuse", "q": "Where do we keep the mobile app signing keys?", "gold": null, "stale": null}
