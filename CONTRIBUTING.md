@@ -16,6 +16,7 @@ A change to a scoring constant (`SCORE_MIN`, `TITLE_HIT`, `TOPIC_*`, `CARD_MIN`,
 
 - `tests/test_recall_bench.py` on the template (in CI): every off-topic and half-off-topic question refused; the gold-page count may rise, never fall. Raise `POS_TOP1_MIN` when it rises; never lower it to make a change pass.
 - If you have a vault of your own: your held-out questions — written before you tuned, never used to tune — not the questions you tuned on.
+- The memory honesty bench's held-out set (`bench/memory_honesty/heldout.jsonl`) is not a tuning target. You may report its aggregates (`run.py --set heldout`); do not look at which questions it misses while developing, and do not cite it as the reason for a change. Rules and log: [`bench/memory_honesty/HELDOUT.md`](bench/memory_honesty/HELDOUT.md).
 
 Tests and evaluation runs must not write the host's query log (`~/.local/state/krouter/queries.jsonl`): it is what the nightly learning reads, so test questions in it become learned triggers, and held-out questions in it stop being held out. `tests/conftest.py` points `KROUTER_STATE_DIR` and `KROUTER_CACHE_DIR` at a temp dir; evaluation scripts set `KROUTER_NO_QUERY_LOG=1`.
 
