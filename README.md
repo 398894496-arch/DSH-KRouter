@@ -36,7 +36,7 @@ From then on a nightly job, which also asks first, imports yesterday, distills i
 | Every answer | Carries its source page and a receipt | Usually unsourced |
 | Who shares it | One vault for every agent on the machine (MCP, skill, rules) | Usually one tool |
 
-If you use [claude-mem](https://github.com/thedotmack/claude-mem), keep it. It records what happened in each session and injects it back. KRouter keeps what you decided and corrected, in pages you own, and both can run side by side.
+**Coming from [claude-mem](https://github.com/thedotmack/claude-mem)?** Keep it. The installer finds its memory and offers to import it: session summaries become pages, and each project's decisions become one page you confirm. Your model can then sort those decisions into the ones still in force and the ones a later decision replaced, which claude-mem itself does not do. The Claude Code plugin also does what makes claude-mem feel like memory, in plain Markdown: when a session ends it is recorded, and when a new one starts, this project's recent decisions come with it, each naming its page. Both happen only after you said yes to importing.
 
 ## What leaves your machine
 

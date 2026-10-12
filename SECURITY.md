@@ -11,6 +11,9 @@ where data goes and how to report a problem.
 | Yesterday's logs and sessions | The model lane you chose (a logged-in AI coding CLI, or an API key) | The nightly job, only if you turned it on |
 | Your past Claude Code / Codex sessions (questions and closing answers, redacted) | Pages in your vault, on this machine | At install and nightly, only after you said yes to the import (`import_sessions.py --consent`; `--revoke` stops it) |
 | The same session excerpts | The model lane, to write "what was decided" | Only if you also said yes to distilling; the install says how many characters first |
+| claude-mem's memory (`~/.claude-mem/claude-mem.db`, opened read-only) | Pages in your vault, on this machine | Only after you said yes (`import_claude_mem.py --consent`); nightly after that |
+| One project's claude-mem decisions | The model lane, to sort what is still in force | Only with distilling on |
+| This project's recent decisions | The new Claude Code session's context (plugin `SessionStart` hook): up to 8 lines, each with its page | Only with the plugin, and after you said yes to importing; `KROUTER_INJECT=0` turns it off |
 | Rule and topic pages, topic excerpts, unanswered queries | The same model lane | The nightly job, only if you turned it on |
 | API keys | `~/.dsh-krouter-keys.env` (mode 600). Never the vault, never a prompt, never printed | — |
 | Pages named or marked as secret (凭据 / 密钥 / 钥匙 / credential / secret / password, or `secret: true`) | Nowhere: never sent, never quoted | — |

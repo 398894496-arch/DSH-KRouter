@@ -36,7 +36,7 @@ Windows（PowerShell）：`irm https://raw.githubusercontent.com/398894496-arch/
 | 每条答案 | 带出处页和回执 | 通常没有出处 |
 | 谁在用 | 本机所有 agent 共用一个库（MCP、skill、规则） | 通常只服务一个工具 |
 
-在用 [claude-mem](https://github.com/thedotmack/claude-mem) 的话，不用卸掉。它记录每个会话里发生了什么，再注入回去；KRouter 记的是你定下和纠正过的事，存在你自己的页面里。两个可以同时用。
+**在用 [claude-mem](https://github.com/thedotmack/claude-mem)？** 不用卸掉。安装时会发现它的记忆库并问你要不要导入：会话总结变成页面，每个项目的决定汇成一页，等你确认。你的模型还能把这些决定理一遍，分出哪些还有效、哪些被后来的决定取代了，这一步是 claude-mem 自己不做的。Claude Code 插件也能做到 claude-mem 让人觉得「有记忆」的那两件事，只是存成纯 Markdown：会话结束时自动记下；开新会话时，自动带上这个项目最近定下的事，每条都注明出处页。这两件事都要你先同意导入才会做。
 
 ## 什么会离开本机
 

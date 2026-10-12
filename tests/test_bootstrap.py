@@ -183,3 +183,17 @@ def test_install_imports_sessions_only_on_a_yes_and_records_the_vault(tmp_path):
     assert res.returncode == 0 and out["imported"] == 1, res.stdout[-1500:]
     assert len(list((tmp_path / "v2/05 时间日志/会话摘录").glob("*.md"))) == 1
     assert "现在就可以问你的 agent" in res.stdout
+
+
+def test_install_offers_claude_mem_and_imports_it_on_a_yes(tmp_path):
+    from test_import_claude_mem import _db
+
+    db = _db(tmp_path / "claude-mem.db")
+    env = {**_env(tmp_path), "KROUTER_NO_PROMPT": "1", "KROUTER_CLAUDE_MEM_DB": str(db),
+           "KROUTER_VAULT_FILE": str(tmp_path / "vf")}
+    res, out = _boot(env, "--lang", "zh", "--vault", str(tmp_path / "v1"), "--no-timer")
+    assert res.returncode == 0 and out["claude_mem"] == 0  # 没有终端可问：不导
+    res, out = _boot(env, "--lang", "zh", "--vault", str(tmp_path / "v2"), "--no-timer", "--import")
+    assert res.returncode == 0 and out["claude_mem"] == 3, res.stdout[-1500:]
+    assert "从 claude-mem 导入了 3 个会话、3 条决定" in res.stdout
+    assert (tmp_path / "v2/02 经验与方法/从 claude-mem 导入/shop 的决定（claude-mem）.md").is_file()
