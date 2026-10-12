@@ -47,7 +47,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 
 
-SETS = {"dev": "questions.jsonl", "heldout": "heldout.jsonl"}
+SETS = {"dev": "questions.jsonl", "dev2": "questions_dev2.jsonl", "heldout": "heldout.jsonl"}
 
 
 def questions(name: str = "dev") -> list[dict]:
@@ -60,7 +60,18 @@ def aggregate(result: dict) -> dict:
     return {k: v for k, v in result.items() if k != "misses"}
 
 
-def krouter_answers(rows: list[dict]) -> list[dict]:
+NIGHTLY = HERE / "krouter-nightly"  # zones file + the answer cards KRouter's nightly job wrote for this vault
+
+
+def krouter_nightly_answers(rows: list[dict]) -> list[dict]:
+    """KRouter as deployed: the zones file maps the vault's `Engineering/` folder onto KRouter's rule zone, and the
+    nightly job has written its answer cards (generated questions per page, checked against the page). The cards are
+    generated once and stored, so this run calls no model."""
+    return krouter_answers(rows, extra={"krouter-zones.psv": NIGHTLY / "krouter-zones.psv",
+                                        "90 系统文件/自动化/下意识问答.jsonl": NIGHTLY / "下意识问答.jsonl"})
+
+
+def krouter_answers(rows: list[dict], extra: dict | None = None) -> list[dict]:
     sys.path.insert(0, str(REPO / "skill/krouter-obsidian/scripts"))
     saved = {k: os.environ.get(k) for k in ("KROUTER_NO_QUERY_LOG", "KROUTER_CACHE_DIR", "KROUTER_MAP")}
     # Windows 上召回缓存的 SQLite 连接在进程里一直开着，临时目录删不掉也不算失败
@@ -70,6 +81,9 @@ def krouter_answers(rows: list[dict]) -> list[dict]:
         os.environ.pop("KROUTER_MAP", None)
         vault = Path(tmp) / "vault"
         shutil.copytree(HERE / "vault", vault)
+        for rel, src in (extra or {}).items():
+            (vault / rel).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, vault / rel)
         import recall_index as ri
 
         out = []
@@ -104,7 +118,19 @@ def bm25_answers(rows: list[dict]) -> list[dict]:
     return out
 
 
-def _bm25_index(skip_superseded: bool):
+def card_questions() -> dict[str, list[str]]:
+    """{page: [generated question, …]} from the stored nightly cards, for giving BM25 the same expansion."""
+    out: dict[str, list[str]] = {}
+    path = NIGHTLY / "下意识问答.jsonl"
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                c = json.loads(line)
+                out.setdefault(c.get("rel", ""), []).append(c.get("q", ""))
+    return out
+
+
+def _bm25_index(skip_superseded: bool, cards: bool = False):
     import re
     import sqlite3
 
@@ -114,15 +140,18 @@ def _bm25_index(skip_superseded: bool):
         text = path.read_text(encoding="utf-8")
         if skip_superseded and re.search(r"(?m)^status:\s*superseded\s*$", text.split("\n---", 1)[0]):
             continue
-        con.execute("INSERT INTO d VALUES (?, ?)", (path.relative_to(HERE / "vault").as_posix(), text))
+        rel = path.relative_to(HERE / "vault").as_posix()
+        if cards:
+            text = text + "\n" + "\n".join(card_questions().get(rel, []))
+        con.execute("INSERT INTO d VALUES (?, ?)", (rel, text))
     return con
 
 
-def bm25_scored(rows: list[dict], skip_superseded: bool = True) -> list[tuple[str, list[tuple[str, float]]]]:
+def bm25_scored(rows: list[dict], skip_superseded: bool = True, cards: bool = False) -> list[tuple[str, list[tuple[str, float]]]]:
     """[(id, [(page, score)])] — BM25 over the pages, superseded pages left out, score = -bm25 (higher is better)."""
     import re
 
-    con = _bm25_index(skip_superseded)
+    con = _bm25_index(skip_superseded, cards)
     out = []
     for it in rows:
         words = [w for w in re.findall(r"[a-z0-9]+", it["q"].lower()) if len(w) > 2]
@@ -152,6 +181,13 @@ def pick_floor(rows: list[dict], scored) -> float:
         if best is None or util > best:
             best, best_floor = util, f
     return best_floor
+
+
+def bm25_floor_cards_answers(rows: list[dict]) -> list[dict]:
+    """bm25-floor given the same generated questions KRouter's cards hold (doc2query), floor picked on dev again."""
+    dev = questions("dev")
+    floor = pick_floor(dev, bm25_scored(dev, cards=True))
+    return floor_answers(bm25_scored(rows, cards=True), floor)
 
 
 def bm25_floor_answers(rows: list[dict]) -> list[dict]:
@@ -190,7 +226,7 @@ def score(rows: list[dict], answers: list[dict]) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--answers", help="grade this JSONL instead of running KRouter")
-    ap.add_argument("--adapter", choices=["krouter", "bm25", "bm25-floor"], default="krouter")
+    ap.add_argument("--adapter", choices=["krouter", "krouter-nightly", "bm25", "bm25-floor", "bm25-floor-cards"], default="krouter")
     ap.add_argument("--set", choices=sorted(SETS), default="dev", dest="qset",
                     help="dev: the 30 bench questions (tune on these); heldout: never tune on these (HELDOUT.md)")
     ap.add_argument("--reveal", action="store_true",
@@ -201,7 +237,8 @@ def main() -> int:
     if args.answers:
         answers = [json.loads(x) for x in Path(args.answers).read_text(encoding="utf-8").splitlines() if x.strip()]
     else:
-        answers = {"krouter": krouter_answers, "bm25": bm25_answers, "bm25-floor": bm25_floor_answers}[args.adapter](rows)
+        answers = {"krouter": krouter_answers, "krouter-nightly": krouter_nightly_answers, "bm25": bm25_answers,
+                   "bm25-floor": bm25_floor_answers, "bm25-floor-cards": bm25_floor_cards_answers}[args.adapter](rows)
     result = score(rows, answers)
     if args.qset == "heldout" and not args.reveal:
         result = aggregate(result)

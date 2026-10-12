@@ -26,7 +26,7 @@ import krouter_redact  # noqa: E402
 redact = krouter_redact.redact
 is_secret_page = krouter_redact.is_secret_page  # 其他夜间脚本经 ri.is_secret_page 用它
 
-SCHEMA_VERSION = "recall-v13"  # v13：机密页不存 how、脱敏规则扩大，旧缓存必须重建
+SCHEMA_VERSION = "recall-v14"  # v14：英文词干（locally→local、rotates→rotat），旧缓存必须重建
 STRONG_W = 0.5  # 软权重 ≥ 此值才算"有效匹配词"
 MIN_STRONG_MATCH = 2
 SCORE_MIN = 8.5  # bm25×分层权重的绝对下限
@@ -71,6 +71,30 @@ def cache_path(vault: Path) -> Path:
     return base / f"recall-{digest}.sqlite"
 
 
+_DOUBLE = re.compile(r"([b-df-hj-kmnp-rtv-y])\1$")
+
+
+def stem(w: str) -> str:
+    """A small English stemmer, the same on the page and on the question: `locally` → `local`, `rotates` /
+    `rotated` / `rotating` → `rotat`, `services` → `servic`, `policies` → `polic`. Conservative: words of four letters
+    or fewer, digits and identifiers with digits are left alone. It only has to be consistent, not pretty."""
+    if len(w) <= 4 or not w.isalpha():
+        return w
+    for suf, rep, keep in (("ies", "y", 3), ("sses", "ss", 3), ("ations", "at", 3), ("ation", "at", 3), ("ings", "", 4),
+                           ("ing", "", 4), ("edly", "", 4), ("ed", "", 4), ("ly", "", 4), ("es", "", 4), ("s", "", 4)):
+        if w.endswith(suf) and len(w) - len(suf) >= keep and not (suf == "s" and w.endswith(("ss", "us", "is"))):
+            w = w[: len(w) - len(suf)] + rep
+            if suf in ("ing", "ed", "ings") and _DOUBLE.search(w):
+                w = w[:-1]
+            break
+    if len(w) > 5 and w.endswith("e"):
+        w = w[:-1]
+    return w
+
+
+EN_FUNCTION_STEMS = EN_FUNCTION | {stem(w) for w in EN_FUNCTION}  # tokens() 给的是词干
+
+
 def tokens(text: str) -> list[str]:
     text = unicodedata.normalize("NFKC", text or "").lower()
     out: list[str] = []
@@ -79,7 +103,7 @@ def tokens(text: str) -> list[str]:
             out.append(run)
         else:
             out.extend(run[i : i + 2] for i in range(len(run) - 1))
-    out.extend(w for w in LATIN_RE.findall(text) if len(w) >= 2)
+    out.extend(stem(w) for w in LATIN_RE.findall(text) if len(w) >= 2)
     return out
 
 
@@ -339,7 +363,7 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
             raw.append(t)
     # 英文功能词（what / is / the / do）不参与排序和拒答判断：小库里它们只会把「Error messages」这种
     # 恰好写了 what 和 do 的页顶上来。全是功能词的问句照旧用原词
-    raw = [t for t in raw if t not in EN_FUNCTION] or raw
+    raw = [t for t in raw if t not in EN_FUNCTION_STEMS] or raw
     if not raw:
         return {"hits": [], "stats": stats, "query_tokens": [], "confidence": "none", "margin": 0.0}
     df = term_df(con, raw + [c for t in raw if is_cjk_bigram(t) for c in t]
@@ -393,13 +417,19 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     alien = alien_chars(raw, df)
     # 问题里的真词有两个以上整库都没有，而且比首条页对上的真词还多：问的主要是库外的事（`纠错之后的房贷利率`）
     absent_words, top_words = outside_words(con, hits[0]["rid"], raw, df)
+    # 近邻题：问题里有一个库认识的英文实词（别的页写过），首条页却一次都没提（`database` 之于 Local ports、
+    # `log` 之于 Date format）。问的是库里两件事拼起来的第三件事，不是这一页
+    missing = missing_known(con, hits[0]["rid"], raw, df)
     off_vault = absent_words >= 2 and absent_words > top_words
     if single:
         # 一个概念的短查询：只有一个词可比，不按"至少两个实词"拦；但仍要过（减半的）分数下限
         refuse = top < SCORE_MIN * scale * 0.5 or (unknown and strong == 0)
     else:
         refuse = (top < SCORE_MIN * scale or (strong < need and top < SINGLE_TERM_SCORE * scale) or strong == 0
-                  or (unknown and strong <= 2) or (strong < need and alien >= ALIEN_MIN) or off_vault)
+                  or (unknown and unknown >= strong if UNKNOWN_RATIO else unknown and strong <= 2)
+                  or (strong < need and alien >= ALIEN_MIN) or off_vault or missing > MISSING_MAX)
+    if not refuse:
+        follow_superseded(vault, con, hits)
     if gate and refuse:
         conf = "none"
     elif margin >= 1.5 and hits[0]["tier"] in ("rule", "topic"):
@@ -414,6 +444,51 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
         attach_answers(vault, hits, raw, df)
     return {"hits": hits, "stats": stats, "query_tokens": qtok, "margin": round(margin, 2),
             "strong": strong, "confidence": conf}
+
+
+LINK_RE = re.compile(r"\[\[([^\]|#]+)")
+
+
+def follow_superseded(vault: Path, con: sqlite3.Connection, hits: list[dict]) -> None:
+    """The best match is a page that a newer one replaced: answer with the newer page, first.
+
+    The question matched the old wording, but the old page is out of force and says which page replaced it
+    (`superseded_by: [[…]]`). Plain search and embeddings return the old page here; following the link is what makes
+    a correction win. The chain is followed to its end (A → B → C), at most 5 steps; the replaced page stays in the
+    list, marked `replaced_by`."""
+    if not hits or hits[0]["status"] not in DEAD_STATUS:
+        return
+    seen = {hits[0]["rel"]}
+    cur = hits[0]
+    for _ in range(5):
+        try:
+            meta, _ = split_frontmatter((vault / zones.real(vault, cur["rel"])).read_text(encoding="utf-8"))
+        except OSError:
+            return
+        m = LINK_RE.search(meta.get("superseded_by") or meta.get("replaced_by") or "")
+        if not m:
+            break
+        target = m.group(1).strip()
+        # [[名字]] 指向文件名（Obsidian 的约定）；同名时取路径最短的那个
+        rels = [r for (r,) in con.execute("SELECT rel FROM files WHERE rel = ? OR rel LIKE ?",
+                                           (target + ".md", "%/" + target.replace("%", "") + ".md"))]
+        row = None
+        if rels:
+            row = con.execute("SELECT rowid, rel, tier, status, how FROM docs WHERE rel = ?",
+                              (min(rels, key=len),)).fetchone()
+        if not row or row[1] in seen:
+            break
+        seen.add(row[1])
+        cur = {"rid": row[0], "rel": row[1], "tier": row[2], "status": row[3], "how": row[4], "score": hits[0]["score"]}
+        if cur["status"] not in DEAD_STATUS:
+            break
+    if cur["rel"] == hits[0]["rel"] or cur["status"] in DEAD_STATUS:
+        return
+    old = hits[0]
+    old["replaced_by"] = cur["rel"]
+    cur["replaces"] = old["rel"]
+    rest = [h for h in hits if h["rel"] != cur["rel"]]
+    hits[:] = [cur] + rest
 
 
 def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict[str, int],
@@ -513,10 +588,36 @@ def _known_latin(t: str, df: dict[str, int]) -> bool:
     return any(df.get(f, 0) for f in [t, *latin_forms(t)])
 
 
+# 库外词：问题里库里没有的拉丁实词不少于对上的实词，才判库外（以前只要有一个就拒，换个说法的问题也被拒了）
+UNKNOWN_RATIO = True
+MISSING_TITLE_ONLY = True
+MISSING_MAX = 0  # 首条页缺了几个"库里别处有"的英文实词还能答；0 = 一个都不能缺
+
+
+def missing_known(con: sqlite3.Connection, rid: int, raw: list[str], df: dict[str, int]) -> int:
+    """Latin content words of the question that the vault has elsewhere but the top page (with its cards) never says."""
+    words = [t for t in raw if not is_cjk_bigram(t) and len(t) >= 3 and not t.isdigit() and t not in EN_FUNCTION_STEMS
+             and df.get(t, 0)]
+    if not words:
+        return 0
+    if MISSING_TITLE_ONLY:  # 只看别的页的主题词（标题里的词）：问到了另一页的主题、首条页却没提
+        marks = ",".join("?" * len(words))
+        titled_elsewhere = {t for (t,) in con.execute(
+            f"SELECT DISTINCT term FROM vinst WHERE term IN ({marks}) AND col = 'title' AND doc != ?", words + [rid])}
+        words = [t for t in words if t in titled_elsewhere]
+        if not words:
+            return 0
+    marks = ",".join("?" * len(words))
+    on_top = {t for (t,) in con.execute(
+        f"SELECT DISTINCT term FROM vinst WHERE term IN ({marks}) AND doc = ? AND col IN ('title','triggers','body')",
+        words + [rid])}
+    return sum(1 for t in words if t not in on_top)
+
+
 def unknown_content_terms(raw: list[str], df: dict[str, int]) -> int:
     n = 0
     for t in raw:
-        if df.get(t, 0) or t in EN_FUNCTION or (not is_cjk_bigram(t) and _known_latin(t, df)):
+        if df.get(t, 0) or t in EN_FUNCTION_STEMS or (not is_cjk_bigram(t) and _known_latin(t, df)):
             continue
         # 只看拉丁专名（`Kubernetes`）。中文词库里没有多半只是换了说法（`讲究`），不代表问的是库外
         if not is_cjk_bigram(t):
@@ -592,13 +693,31 @@ SPECIFIC_BACKTICK = re.compile(r"`([^`]+)`")
 SPECIFIC_TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_./:~+#-]*[A-Za-z0-9]|\d")
 
 
+# 英文里写成词的数和否定，跟阿拉伯数字一样是要逐字核对的说法：two 改成 three、always 改成 never 都是改了意思
+NUMBER_WORDS = frozenset("""zero one two three four five six seven eight nine ten eleven twelve fifteen twenty thirty
+forty fifty sixty hundred thousand once twice first second third half double never always no not only every""".split())
+
+
 def card_specifics(answer: str) -> list[str]:
     """What a card claims verbatim: backticked spans, numbers, paths / versions / commands, latin words ≥ 3."""
     # 全角冒号是中文标点，不是标识符的一部分（`Opus 5.5：/opt/…` 是两个片段）
     text = unicodedata.normalize("NFKC", (answer or "").replace("：", " "))
     found = [m.strip() for m in SPECIFIC_BACKTICK.findall(text) if m.strip()]
-    for tok in SPECIFIC_TOKEN.findall(SPECIFIC_BACKTICK.sub(" ", text)):
-        if any(c.isdigit() for c in tok) or any(c in tok for c in "./_:~#") or len(tok) >= 3:
+    rest = SPECIFIC_BACKTICK.sub(" ", text)
+    # 英文答案：普通英文词是措辞，不是要逐字核对的说法（换个说法本来就是问答卡的用处）；数字、路径、命令、
+    # 全大写或带内部大写的标识符照样逐字核对。中文答案里夹的拉丁词多半是标识符，仍然整词核对
+    # 一句英文（至少 4 个普通单词），不是「Opus：/opt/…」这种标识符片段
+    english = not CJK_RE.search(rest) and sum(1 for t in SPECIFIC_TOKEN.findall(rest) if t.isalpha()) >= 4
+    for m in SPECIFIC_TOKEN.finditer(rest):
+        tok = m.group(0)
+        ident = any(c.isdigit() for c in tok) or any(c in tok for c in "./_:~#")
+        if english:
+            before = rest[: m.start()].rstrip()
+            sentence_start = not before or before[-1] in ".!?:;"
+            proper = tok[:1].isupper() and not sentence_start  # 句中大写开头：专有名词（Docker、Opus）
+            if ident or proper or tok.lower() in NUMBER_WORDS or (len(tok) >= 2 and (tok.isupper() or any(c.isupper() for c in tok[1:]))):
+                found.append(tok)
+        elif ident or len(tok) >= 3:
             found.append(tok)
     return found
 

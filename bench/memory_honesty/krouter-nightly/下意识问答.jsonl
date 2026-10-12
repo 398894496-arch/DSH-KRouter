@@ -1,0 +1,44 @@
+{"rel": "Engineering/API timeout.md", "sha": "b5ee95d6153d2826", "q": "How long before payments API calls time out?", "a": "Client requests to the payments API time out after 10 seconds.", "v": 1}
+{"rel": "Engineering/Adding dependencies.md", "sha": "fb4be2ed7e73b4ee", "q": "What do I need to add a new package?", "a": "Put a short note in the PR covering why it's needed, its licence, and its size.", "v": 1}
+{"rel": "Engineering/Adding dependencies.md", "sha": "fb4be2ed7e73b4ee", "q": "Where do I justify a new npm dependency?", "a": "In the PR itself: a short note giving why, licence, and size.", "v": 1}
+{"rel": "Engineering/Branch naming.md", "sha": "afcebd8eafaf805e", "q": "Why put the ticket ID in branch names?", "a": "So the tracker links branches automatically.", "v": 1}
+{"rel": "Engineering/CSS approach.md", "sha": "80676bd300acdc15", "q": "How should I style new components?", "a": "Write component styles with CSS modules.", "v": 1}
+{"rel": "Engineering/CSS approach.md", "sha": "80676bd300acdc15", "q": "Can I add a new SCSS file?", "a": "No, no new Sass files; use CSS modules instead.", "v": 1}
+{"rel": "Engineering/CSS approach.md", "sha": "80676bd300acdc15", "q": "Why did we move away from Sass?", "a": "To drop the Sass build step; component styles now use CSS modules.", "v": 1}
+{"rel": "Engineering/CSS approach.md", "sha": "80676bd300acdc15", "q": "Does the old CSS approach still apply?", "a": "No. This replaces CSS approach (old): CSS modules, no new Sass files.", "v": 1}
+{"rel": "Engineering/Code review rule.md", "sha": "511d5ed3a9c5f538", "q": "How many approvals does a PR need?", "a": "Two approvals are required to merge.", "v": 1}
+{"rel": "Engineering/Code review rule.md", "sha": "511d5ed3a9c5f538", "q": "Does the module owner have to sign off?", "a": "Yes, one of the two required approvals must come from the module owner.", "v": 1}
+{"rel": "Engineering/Code review rule.md", "sha": "511d5ed3a9c5f538", "q": "Why did review requirements get stricter?", "a": "A bad migration slipped through, so merges now need two approvals, one from the module owner.", "v": 1}
+{"rel": "Engineering/Database backups.md", "sha": "197b1d2fcde4ec10", "q": "When does the DB backup run?", "a": "Every night at 02:00.", "v": 1}
+{"rel": "Engineering/Database backups.md", "sha": "197b1d2fcde4ec10", "q": "How long do we retain backups?", "a": "Backups are kept for 30 days.", "v": 1}
+{"rel": "Engineering/Database backups.md", "sha": "197b1d2fcde4ec10", "q": "Why did we change the backup schedule?", "a": "After we lost four days of orders; now nightly at 02:00, kept 30 days.", "v": 1}
+{"rel": "Engineering/Date format.md", "sha": "e10c8e7c50d864cb", "q": "What time zone do we store dates in?", "a": "Store dates in UTC as ISO 8601.", "v": 1}
+{"rel": "Engineering/Date format.md", "sha": "e10c8e7c50d864cb", "q": "How should timestamps be shown to users?", "a": "Show dates in the user's time zone; storage stays UTC in ISO 8601.", "v": 1}
+{"rel": "Engineering/Date format.md", "sha": "e10c8e7c50d864cb", "q": "Which date string format do we save?", "a": "ISO 8601, stored in UTC.", "v": 1}
+{"rel": "Engineering/Error messages.md", "sha": "c9b305f71c4994e3", "q": "What should a user-facing error say?", "a": "It says what happened and what to do next.", "v": 1}
+{"rel": "Engineering/Error messages.md", "sha": "c9b305f71c4994e3", "q": "How do I write a good error popup?", "a": "Explain what happened and what the user should do next, never a stack trace.", "v": 1}
+{"rel": "Engineering/Feature flags.md", "sha": "862873f57dc1f8a1", "q": "How should I name a feature flag?", "a": "Use ff_<team>_<feature>.", "v": 1}
+{"rel": "Engineering/Feature flags.md", "sha": "862873f57dc1f8a1", "q": "Do new features need to ship behind a flag?", "a": "Yes, every new feature ships behind a flag named ff_<team>_<feature>.", "v": 1}
+{"rel": "Engineering/Incident reports.md", "sha": "9d4c1379ca42e9ed", "q": "What goes into an outage writeup?", "a": "A timeline and follow-ups, written blameless within two working days.", "v": 1}
+{"rel": "Engineering/Local ports.md", "sha": "5ca7e87aa63d3fae", "q": "What port does the web app use locally?", "a": "The web app runs on port 3000 in local development.", "v": 1}
+{"rel": "Engineering/Local ports.md", "sha": "5ca7e87aa63d3fae", "q": "Which port is the backend on in dev?", "a": "The API runs on port 8080 in local development.", "v": 1}
+{"rel": "Engineering/Local ports.md", "sha": "5ca7e87aa63d3fae", "q": "What's localhost for frontend vs API?", "a": "Web app on port 3000, API on port 8080 locally.", "v": 1}
+{"rel": "Engineering/Logging level.md", "sha": "76e517b8136af0a2", "q": "What log level does prod use?", "a": "Production logs at info level.", "v": 1}
+{"rel": "Engineering/Logging level.md", "sha": "76e517b8136af0a2", "q": "Can I turn on debug logs in production?", "a": "Only behind a feature flag, and for one hour at most.", "v": 1}
+{"rel": "Engineering/Logging level.md", "sha": "76e517b8136af0a2", "q": "Why did we change the logging rules?", "a": "Logs filled the disk, so production moved to info level with time-limited debug.", "v": 1}
+{"rel": "Engineering/Node version.md", "sha": "bb35782582e5fc30", "q": "Which Node version should services use?", "a": "Build and run every service on Node 22.", "v": 1}
+{"rel": "Engineering/Node version.md", "sha": "bb35782582e5fc30", "q": "When did we bump the Node runtime?", "a": "The switch to Node 22 happened in the October upgrade.", "v": 1}
+{"rel": "Engineering/On-call rotation.md", "sha": "eb7b75a7be3515f9", "q": "How long is an on-call shift?", "a": "On-call rotates every week.", "v": 1}
+{"rel": "Engineering/On-call rotation.md", "sha": "eb7b75a7be3515f9", "q": "When does on-call handover happen?", "a": "Handover is on Monday at 10:00.", "v": 1}
+{"rel": "Engineering/On-call rotation.md", "sha": "eb7b75a7be3515f9", "q": "Why did we stop monthly on-call?", "a": "It changed to weekly because a month was too tiring.", "v": 1}
+{"rel": "Engineering/Performance budget.md", "sha": "f871244c4e18aec6", "q": "How fast must the home page load?", "a": "The home page must load in under 2 seconds on a mid-range phone.", "v": 1}
+{"rel": "Engineering/Performance budget.md", "sha": "f871244c4e18aec6", "q": "What device is the perf target measured on?", "a": "A mid-range phone; the home page must load in under 2 seconds.", "v": 1}
+{"rel": "Engineering/Release process.md", "sha": "beb3ba760abec48c", "q": "How do we cut a release?", "a": "Ship only from a tag on main; CI builds and publishes the release.", "v": 1}
+{"rel": "Engineering/Release process.md", "sha": "beb3ba760abec48c", "q": "Who publishes the release build?", "a": "CI builds and publishes the release from a tag on main.", "v": 1}
+{"rel": "Engineering/Release process.md", "sha": "beb3ba760abec48c", "q": "Why must releases come from main tags?", "a": "Because a hotfix shipped from a feature branch skipped the tests.", "v": 1}
+{"rel": "Engineering/Running tests.md", "sha": "aa3ddf24023b2109", "q": "How do I run unit tests?", "a": "Run the unit tests with make test.", "v": 1}
+{"rel": "Engineering/Running tests.md", "sha": "aa3ddf24023b2109", "q": "How do I run integration tests?", "a": "Run make test-int, with Docker running.", "v": 1}
+{"rel": "Engineering/Running tests.md", "sha": "aa3ddf24023b2109", "q": "Do integration tests need Docker?", "a": "Yes, make test-int needs Docker running.", "v": 1}
+{"rel": "Engineering/Translations.md", "sha": "f349d9425b3d5ad4", "empty": true}
+{"rel": "Engineering/Where docs live.md", "sha": "5cc2adbb22cd9946", "q": "Where do developer docs live?", "a": "Developer docs live in the docs/ folder of each repo, not in the wiki.", "v": 1}
+{"rel": "Engineering/Where docs live.md", "sha": "5cc2adbb22cd9946", "q": "Which folder holds a repo's engineering docs?", "a": "The docs/ folder inside each repo holds its developer docs.", "v": 1}
