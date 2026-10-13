@@ -79,6 +79,14 @@ def config() -> dict:
     return cfg
 
 
+def tier() -> str:
+    """`balanced` (default): lexical-sure answers stand, the rest need both retrievers in their top 5.
+    `strict`: both retrievers must put the very same page first. Set with `"tier": "strict"` in dense.json or
+    `KROUTER_DENSE_TIER=strict`."""
+    t = os.environ.get("KROUTER_DENSE_TIER") or config().get("tier") or "balanced"
+    return "strict" if t == "strict" else "balanced"
+
+
 def venv_python() -> Path:
     return home_dir() / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 

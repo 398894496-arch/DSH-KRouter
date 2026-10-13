@@ -121,3 +121,20 @@ def test_chunks_carry_the_title_and_cap_long_pages():
     body = "\n\n".join(f"Paragraph {i} " + "word " * 120 for i in range(30))
     parts = dense.chunks("Release process", body)
     assert len(parts) == dense.MAX_CHUNKS and all(p.startswith("Release process\n") for p in parts)
+
+
+def test_strict_tier_needs_the_same_first_page(vault, tmp_path, monkeypatch):
+    _on(tmp_path)
+    con = ri.connect(ri.cache_path(vault))
+    ri.refresh(vault, con)
+    dense.build(vault, con, dense.DEFAULT_MODEL)
+    monkeypatch.setitem(dense.FLOORS, dense.DEFAULT_MODEL, 0.0)
+    # 向量把正确页排第二：平衡档前 5 名有交集仍可作答，严格档要首选相同 → 拒答
+    monkeypatch.setattr(dense, "top_pages", lambda *a, **k: {"state": "on", "floor": 0.0, "hits": [
+        ("Engineering/Date format.md", 0.9), ("Engineering/Release process.md", 0.8)]})
+    q = "Can I cut a release from my feature branch to ship it?"
+    monkeypatch.setenv("KROUTER_DENSE_TIER", "strict")
+    assert ri.recall(vault, q, limit=3)["confidence"] == "none"
+    assert dense.tier() == "strict"
+    monkeypatch.delenv("KROUTER_DENSE_TIER")
+    assert dense.tier() == "balanced"

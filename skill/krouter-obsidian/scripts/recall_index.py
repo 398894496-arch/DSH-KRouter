@@ -524,27 +524,30 @@ def dense_decision(vault: Path, con: sqlite3.Connection, query: str, scope: str,
         import dense
     except ImportError:
         return conf, "off"
-    if DENSE_MODE == "tiered" and hits and conf != "none" and (
+    mode, top_k = DENSE_MODE, DENSE_TOP_K
+    if dense.tier() == "strict":  # 严格档：字面和向量的首选必须是同一页（更少答，几乎不答错）
+        mode, top_k = "gate", 1
+    if mode == "tiered" and hits and conf != "none" and (
             conf == "high" or (DENSE_SURE_MEDIUM and conf == "medium" and strong >= DENSE_SURE_STRONG)
             or trigger_matches(con, hits[0]["rid"], raw) >= DENSE_SURE_TRIGGERS):
         # 字面很有把握：规则页、领先明显、命中多个实词，或者问题对上了这页的触发词（别名、夜间学到的问法、
         # 核对过的问答卡——都是专门为这个库学出来的证据）。不需要向量同意
         return conf, "lexical-sure"
-    info = dense.top_pages(vault, con, query, scope, limit=max(8, DENSE_TOP_K))
+    info = dense.top_pages(vault, con, query, scope, limit=max(8, top_k))
     if info["state"] != "on":
         return conf, info["state"]
     dead = {r for (r,) in con.execute(
         f"SELECT rel FROM docs WHERE status IN ({','.join('?' * len(DEAD_STATUS))})", tuple(DEAD_STATUS))}
     floor = info.get("floor", 0.0)
-    d_top = [(r, s) for r, s in info["hits"] if r not in dead][:DENSE_TOP_K]
+    d_top = [(r, s) for r, s in info["hits"] if r not in dead][:top_k]
     d_ok = {r: s for r, s in d_top if s >= floor}
-    lex = [h for h in ranked if h["status"] not in DEAD_STATUS][:DENSE_TOP_K]
+    lex = [h for h in ranked if h["status"] not in DEAD_STATUS][:top_k]
     pick = next((h for h in lex if h["rel"] in d_ok), None)
-    if pick is None and DENSE_MODE == "tiered" and conf == "none":
+    if pick is None and mode == "tiered" and conf == "none":
         return "none", "disagree"
     if pick is None:
         return "none", "disagree"
-    if DENSE_MODE == "tiered" and conf == "none" and d_ok.get(pick["rel"], 0.0) < floor + DENSE_RESCUE_MARGIN:
+    if mode == "tiered" and conf == "none" and d_ok.get(pick["rel"], 0.0) < floor + DENSE_RESCUE_MARGIN:
         return "none", "disagree"  # 字面拒了的题，向量要更有把握才救回来
     if strong_matches(con, pick["rid"], raw, df, titled, small=n_docs < SMALL_VAULT, known=named) < DENSE_MIN_STRONG:
         return "none", "disagree"
