@@ -306,6 +306,9 @@ def print_recall(res: dict, vault: Path, lines: int) -> None:
     from recall_index import best_lines
 
     print(f"recall_confidence: {res.get('confidence', 'none')}")
+    if res.get("dense", "off") != "off":
+        # agree：字面和本地向量首选同一页；disagree：两边不一致，所以拒答；building / error：退回纯字面
+        print(f"dense: {res['dense']}")
     print(f"recall_margin: {res.get('margin', 0)}")
     print(f"recall_strong_terms: {res.get('strong', 0)}")
     print("recall:")
@@ -360,6 +363,12 @@ def bounded_search(scope: Path, vault: Path, map_path: Path, route: str, query: 
 
 
 def main() -> int:
+    try:  # 开了本地向量（dense.py）、而当前解释器装不了 fastembed：换到向量专用的 venv 里重跑一次
+        import dense
+
+        dense.reexec_if_needed(__file__, sys.argv[1:])
+    except ImportError:
+        pass
     if len(sys.argv) < 2:
         print(
             "usage: route_knowledge.py {status|preference|correction|memory|project|search|suggest} [literal query]",

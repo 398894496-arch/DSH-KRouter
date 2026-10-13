@@ -3,7 +3,8 @@
 
 import_sessions → import_claude_mem → compile_subconscious → reconsolidate → consolidate_topics → answer_cards → checkup. The first one
 imports yesterday's agent sessions only after the host said yes (`import_sessions.py --consent`), the second
-re-imports claude-mem's memory the same way; until then they are `off`, which is not a problem to report. Each step is a
+re-imports claude-mem's memory the same way; until then they are `off`, which is not a problem to report. The last step, `dense`, embeds changed pages for optional local
+embeddings (`dense.py`); it is `off` unless the host turned them on, and sends nothing. Each step is a
 separate process; one failing does not stop the others. Outcomes (ran / skipped / partial / failed,
 the reason, the model lane, how many model calls and how many characters left the machine) go to
 `90 系统文件/自动化/夜间维护.md` and onto the health page (`nightly`, `nightly_at`), where `status`
@@ -31,7 +32,7 @@ import llm  # noqa: E402
 import notify  # noqa: E402
 import zones  # noqa: E402
 
-STEPS = ("import_sessions", "import_claude_mem", "compile_subconscious", "reconsolidate", "consolidate_topics", "answer_cards", "checkup")
+STEPS = ("import_sessions", "import_claude_mem", "compile_subconscious", "reconsolidate", "consolidate_topics", "answer_cards", "checkup", "dense")
 MODEL_STEPS = {"import_sessions", "import_claude_mem", "reconsolidate", "consolidate_topics", "answer_cards"}
 REPORT = "90 系统文件/自动化/夜间维护.md"
 HEALTH = "90 系统文件/自动化/日更健康.md"
@@ -44,6 +45,8 @@ def classify(rc: int, out: str) -> tuple[str, str]:
         return "failed", (out.strip().splitlines() or [f"rc={rc}"])[-1][:200]
     if '"import": "off"' in out:
         return "off", "会话导入没开（import_sessions.py --consent 开启）"
+    if '"dense": "off"' in out:
+        return "off", "本地向量没开（bootstrap.py --dense 或 dense.py --enable 开启）"
     if '"claude_mem": "off"' in out or '"claude_mem": "absent"' in out:
         return "off", "claude-mem 导入没开，或本机没有 claude-mem（import_claude_mem.py --consent 开启）"
     for line in out.splitlines():
@@ -99,13 +102,15 @@ def run_step(step: str, vault: Path, extra: list[str], dry: bool) -> dict:
     argv = [sys.executable, str(path), "--vault", str(vault)]
     if step in ("import_sessions", "import_claude_mem"):
         argv.append("--nightly")
+    if step == "dense":
+        argv.append("--build")
     if step in MODEL_STEPS:
         argv += extra
     if dry:
         if step not in MODEL_STEPS:
-            return {"step": step, "state": "dry-run", "sends": "nothing (no model)",
-                    "writes": ["90 系统文件/自动化/下意识.md" if step == "compile_subconscious"
-                               else "90 系统文件/自动化/下意识体检.md"]}
+            writes = {"compile_subconscious": "90 系统文件/自动化/下意识.md", "dense": "~/.cache/krouter (page vectors)"}
+            return {"step": step, "state": "dry-run", "sends": "nothing (no model)" if step != "dense"
+                    else "nothing (local model)", "writes": [writes.get(step, "90 系统文件/自动化/下意识体检.md")]}
         argv.append("--dry-run")
     with tempfile.NamedTemporaryFile("r", suffix=".jsonl", delete=False) as fh:
         usage_log = fh.name

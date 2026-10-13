@@ -66,6 +66,11 @@ MSG = {
         "cmem_distill": "，并让模型把每个项目的决定理一遍：哪些还有效、哪些被后来的取代了（约 {chars} 字）",
         "cmem_done": "从 claude-mem 导入了 {sessions} 个会话、{decisions} 条决定和改动{distilled}。",
         "cmem_distilled": "，{n} 个项目已理出现在有效的决定",
+        "dense_ask": "要开启本地向量检索吗？它让「换了说法」的问题也能答上，同时更少引错页（实测见 docs/BENCHMARK.md）。"
+        "需要下载一个约 640MB 的模型（jina-embeddings-v2-base-zh，中英文），装在本机，问题不会发出去；第一次给库建向量要几分钟。开启？[y/N] ",
+        "dense_on": "本地向量检索已开启（{model}），向量已建好：{embedded}/{pages} 页。",
+        "dense_off": "没有开启本地向量检索。想开的时候运行：{cmd}",
+        "dense_fail": "本地向量检索没能开启（{err}），照旧用纯字面检索。",
         "plugin_hint": "用 Claude Code 的话，装上插件还能在会话结束时自动记下、开会话时自动带上本项目的决定："
         "/plugin install krouter --marketplace 398894496-arch/KRouter",
     },
@@ -106,6 +111,13 @@ MSG = {
         "cmem_distill": ", and the model sorts each project's decisions into still in force and replaced (about {chars} characters)",
         "cmem_done": "Imported {sessions} sessions and {decisions} decisions and changes from claude-mem{distilled}.",
         "cmem_distilled": "; {n} projects sorted into the decisions in force",
+        "dense_ask": "Turn on local embeddings? They let questions phrased differently find their page, with fewer wrong pages "
+        "cited (measured in docs/BENCHMARK.md). It downloads a model of about 640 MB (jina-embeddings-v2-base-zh, English "
+        "and Chinese) that runs on this machine; questions are not sent anywhere. The first index takes a few minutes. "
+        "Turn on? [y/N] ",
+        "dense_on": "Local embeddings are on ({model}); vectors built for {embedded} of {pages} pages.",
+        "dense_off": "Local embeddings are off. To turn them on later: {cmd}",
+        "dense_fail": "Local embeddings could not be turned on ({err}); lexical recall as before.",
         "plugin_hint": "On Claude Code, the plugin also records each session when it ends and brings this project's "
         "decisions when one starts: /plugin install krouter --marketplace 398894496-arch/KRouter",
     },
@@ -372,6 +384,35 @@ def offer_claude_mem(args: argparse.Namespace, vault: Path, t: dict, distill: bo
     return out
 
 
+def offer_dense(args: argparse.Namespace, vault: Path, t: dict) -> dict:
+    """Optional local embeddings: a 640 MB download, so only on `--dense` or a yes at the prompt."""
+    skill = Path(os.environ.get("KROUTER_SKILL_HOME") or Path.home() / ".agents/skills/krouter-obsidian")
+    script = skill / "scripts" / "dense.py"
+    if not script.is_file():
+        script = ROOT / "skill/krouter-obsidian/scripts/dense.py"
+    cmd = f"{'python' if WINDOWS else 'python3'} \"{script}\" --enable && {'python' if WINDOWS else 'python3'} \"{script}\" --build --vault \"{vault}\""
+    if args.no_dense:
+        return {}
+    if not args.dense:
+        answer = ask_tty(t["dense_ask"])
+        if not answer or answer.strip().lower() not in {"y", "yes", "是", "好", "开"}:
+            print(t["dense_off"].format(cmd=cmd))
+            return {}
+    env = {**os.environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_NO_QUERY_LOG": "1"}
+    try:
+        on = subprocess.run([sys.executable, str(script), "--enable"], env=env, capture_output=True, text=True, timeout=7200)
+        if on.returncode != 0:
+            raise RuntimeError((on.stderr or on.stdout).strip()[-200:])
+        built = subprocess.run([sys.executable, str(script), "--build", "--vault", str(vault)], env=env,
+                               capture_output=True, text=True, timeout=7200)
+        res = json.loads(built.stdout.strip().splitlines()[-1])
+    except (OSError, RuntimeError, ValueError, IndexError, subprocess.TimeoutExpired) as exc:
+        print(t["dense_fail"].format(err=str(exc)[:160]))
+        return {}
+    print(t["dense_on"].format(model=res.get("model"), embedded=res.get("embedded", 0), pages=res.get("pages", 0)))
+    return res
+
+
 def try_question(vault: Path, lang: str) -> str:
     """A question this vault can answer now: the latest distilled session's first decision, else its title."""
     folder = vault / "05 时间日志" / "会话摘录"
@@ -450,6 +491,8 @@ def main() -> int:
                     help="import the last 7 days of agent sessions, and claude-mem's memory if present, without asking (local only)")
     ap.add_argument("--import-distill", action="store_true", help="import, and have the model lane distill the latest sessions")
     ap.add_argument("--no-import", action="store_true", help="do not import agent sessions, and do not ask")
+    ap.add_argument("--dense", action="store_true", help="turn on local embeddings without asking (downloads ~640 MB)")
+    ap.add_argument("--no-dense", action="store_true", help="do not turn on local embeddings, and do not ask")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     lang = system_lang() if args.lang == "auto" else args.lang
@@ -473,6 +516,8 @@ def main() -> int:
         print("  nightly job: " + ("yes (--timer)" if args.timer else "no (--no-timer)" if args.no_timer else "asks first"))
         print("  session import: " + ("no (--no-import)" if args.no_import else "yes (--import)" if args.import_sessions
                                       else "asks first"))
+        print("  local embeddings: " + ("no (--no-dense)" if args.no_dense else "yes (--dense, ~640 MB)" if args.dense
+                                        else "asks first"))
         return 0
     sys.path.insert(0, str(ROOT / "skill/krouter-obsidian/scripts"))
     from krouter_home import remember
@@ -506,6 +551,7 @@ def main() -> int:
         cmd = f"{'python' if WINDOWS else 'python3'} \"{IMPORT}\" --consent --vault \"{vault}\""
         print(t["import_off"].format(cmd=cmd))
     cmem = offer_claude_mem(args, vault, t, do_distill)
+    dense_res = offer_dense(args, vault, t)
     if "claude" in mcp:
         print(t["plugin_hint"])
     skill = Path(os.environ.get("KROUTER_SKILL_HOME") or Path.home() / ".agents/skills/krouter-obsidian")
@@ -516,7 +562,7 @@ def main() -> int:
         print(t["obsidian"] if open_in_obsidian(vault) else t["obsidian_none"].format(vault=vault))
     print(json.dumps({"vault": str(vault), "lang": lang, "state": state, "added": len(added), "model": lane or None,
                       "timer": timer, "imported": imported.get("pages", 0), "distilled": imported.get("distilled", 0),
-                      "claude_mem": cmem.get("sessions", 0),
+                      "claude_mem": cmem.get("sessions", 0), "dense": bool(dense_res),
                       "mcp": mcp},
                      ensure_ascii=False))
     return 0

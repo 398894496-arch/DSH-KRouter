@@ -374,6 +374,7 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
         hits.append({"rid": rid, "rel": rel, "tier": tier, "status": status, "how": how,
                      "score": round(-s * boost, 3)})
     hits.sort(key=lambda h: -h["score"])
+    ranked = hits[:max(limit, DENSE_TOP_K)]  # 向量开着时，在字面前 K 名里找两边都认可的页
     hits = hits[:limit]
     if not hits:
         return {"hits": [], "stats": stats, "query_tokens": qtok, "confidence": "none", "margin": 0.0}
@@ -408,12 +409,63 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
         conf = "medium"
     else:
         conf = "low"
+    dense_state = "off"
+    if gate:
+        conf, dense_state = dense_decision(vault, con, query, scope, hits, ranked, raw, df, titled, n_docs, named, conf,
+                                           strong)
     for h in hits:
         h.pop("rid", None)
     if hits and conf != "none":
         attach_answers(vault, hits, raw, df)
     return {"hits": hits, "stats": stats, "query_tokens": qtok, "margin": round(margin, 2),
-            "strong": strong, "confidence": conf}
+            "strong": strong, "confidence": conf, "dense": dense_state}
+
+
+DENSE_MIN_STRONG = 1  # 向量开着时，选中的那页至少要对上几个实词才算"字面也认可"
+DENSE_TOP_K = 5  # 字面前 K 名和向量前 K 名里都有的页，才算两边一致
+DENSE_MODE = "tiered"  # gate：每题都要两边一致；tiered：字面很有把握的直接答，其余要一致，字面拒了的向量很有把握才救
+DENSE_RESCUE_MARGIN = 0.1
+DENSE_SURE_MEDIUM = True  # 字面 medium 且命中实词 ≥ DENSE_SURE_STRONG 也算有把握
+DENSE_SURE_STRONG = 3  # 在 vault2 dev3 和作者真实库的开发问题上一起选（2 时 dev3 引错 7 道）
+
+
+def dense_decision(vault: Path, con: sqlite3.Connection, query: str, scope: str, hits: list[dict], ranked: list[dict],
+                   raw: list[str], df: dict[str, int], titled: set[str], n_docs: int, named: set[str],
+                   conf: str, strong: int = 0) -> tuple[str, str]:
+    """With local embeddings on (dense.py): answer only with a live page that both the lexical ranking and the
+    embedding model put in their top K. Among those, the best lexical one wins (rule pages first, as before). In a real
+    vault one subject shows up on a rule page, in logs and in a dossier; requiring the very same first page from both
+    refused nearly everything, so agreement is set membership, not equality. Off, still building, or broken: the
+    lexical decision stands unchanged."""
+    try:
+        import dense
+    except ImportError:
+        return conf, "off"
+    if DENSE_MODE == "tiered" and (conf == "high" or (DENSE_SURE_MEDIUM and conf == "medium" and strong >= DENSE_SURE_STRONG)):
+        return conf, "lexical-sure"  # 字面很有把握（规则页、领先明显，或命中多个实词）：不需要向量同意
+    info = dense.top_pages(vault, con, query, scope, limit=max(8, DENSE_TOP_K))
+    if info["state"] != "on":
+        return conf, info["state"]
+    dead = {r for (r,) in con.execute(
+        f"SELECT rel FROM docs WHERE status IN ({','.join('?' * len(DEAD_STATUS))})", tuple(DEAD_STATUS))}
+    floor = info.get("floor", 0.0)
+    d_top = [(r, s) for r, s in info["hits"] if r not in dead][:DENSE_TOP_K]
+    d_ok = {r: s for r, s in d_top if s >= floor}
+    lex = [h for h in ranked if h["status"] not in DEAD_STATUS][:DENSE_TOP_K]
+    pick = next((h for h in lex if h["rel"] in d_ok), None)
+    if pick is None and DENSE_MODE == "tiered" and conf == "none":
+        return "none", "disagree"
+    if pick is None:
+        return "none", "disagree"
+    if DENSE_MODE == "tiered" and conf == "none" and d_ok.get(pick["rel"], 0.0) < floor + DENSE_RESCUE_MARGIN:
+        return "none", "disagree"  # 字面拒了的题，向量要更有把握才救回来
+    if strong_matches(con, pick["rid"], raw, df, titled, small=n_docs < SMALL_VAULT, known=named) < DENSE_MIN_STRONG:
+        return "none", "disagree"
+    if pick in hits:
+        hits.remove(pick)
+    hits.insert(0, pick)
+    pick["dense"] = round(d_ok[pick["rel"]], 3)
+    return ("high" if pick["tier"] in ("rule", "topic") else "medium"), "agree"
 
 
 def strong_matches(con: sqlite3.Connection, rid: int, terms: list[str], df: dict[str, int],

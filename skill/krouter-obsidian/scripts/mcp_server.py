@@ -59,10 +59,45 @@ TOOLS = [
 ]
 
 
+def route_in_process(name: str, query: str, vault: str) -> tuple[str, bool]:
+    """Local embeddings on: run the router inside this long-lived process, so the model loads once, not per query."""
+    import contextlib
+    import io
+
+    import route_knowledge
+
+    out, err = io.StringIO(), io.StringIO()
+    saved_argv, saved_vault = sys.argv, os.environ.get("OBSIDIAN_VAULT")
+    sys.argv = ["route_knowledge.py", name, *([query] if query else [])]
+    os.environ["OBSIDIAN_VAULT"] = vault
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = route_knowledge.main()
+    except SystemExit as exc:  # noqa: PERF203
+        rc = exc.code if isinstance(exc.code, int) else 1
+    finally:
+        sys.argv = saved_argv
+        if saved_vault is None:
+            os.environ.pop("OBSIDIAN_VAULT", None)
+        else:
+            os.environ["OBSIDIAN_VAULT"] = saved_vault
+    text = out.getvalue().strip()
+    if rc:
+        return ((text + "\n" + err.getvalue()).strip()[-2000:] or f"KRouter exited {rc}", True)
+    return (text, False)
+
+
 def route(name: str, query: str) -> tuple[str, bool]:
     vault = vault_path()
     if not vault:
         return ("No vault configured: run the KRouter one-line install, or set OBSIDIAN_VAULT for this server.", True)
+    try:
+        import dense
+
+        if dense.config():
+            return route_in_process(name, query, vault)
+    except ImportError:
+        pass
     env = {**os.environ, "OBSIDIAN_VAULT": vault}
     try:
         proc = subprocess.run([sys.executable, str(HERE / "route_knowledge.py"), name, query], env=env,
@@ -115,6 +150,12 @@ def handle(msg: dict) -> dict | None:
 
 
 def main() -> int:
+    try:  # 开了本地向量：在向量专用的 venv 里运行，模型常驻内存
+        import dense
+
+        dense.reexec_if_needed(__file__, sys.argv[1:])
+    except ImportError:
+        pass
     for line in sys.stdin:
         line = line.strip()
         if not line:

@@ -99,6 +99,16 @@ def krouter_answers(rows: list[dict], vault_src: Path | None = None) -> list[dic
         shutil.copytree(vault_src or HERE / "vault", vault)
         import recall_index as ri
 
+        try:  # 本地向量开着（KROUTER_DENSE_CONFIG）：先把这份库的向量建好，像安装和夜间任务做的那样
+            import dense
+
+            if dense.config():
+                con = ri.connect(ri.cache_path(vault))
+                ri.refresh(vault, con)
+                dense.build(vault, con, dense.config()["model"])
+        except ImportError:
+            pass
+
         out = []
         for it in rows:
             res = ri.recall(vault, it["q"], limit=3)

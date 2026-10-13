@@ -45,9 +45,11 @@ def embedder():
     return _EMB
 
 
-def embed(texts: list[str]) -> list[list[float]]:
+def embed(texts: list[str], kind: str = "query") -> list[list[float]]:
     import numpy as np
 
+    if "e5" in MODEL.lower():  # e5 models are trained with these prefixes; without them they score lower
+        texts = [("query: " if kind == "query" else "passage: ") + t for t in texts]
     vecs = list(embedder().embed(texts))
     return [list(v / (np.linalg.norm(v) or 1.0)) for v in vecs]
 
@@ -85,7 +87,7 @@ def page_vectors() -> dict[str, list[float]]:
     f = cache / f"{key}.json"
     if f.is_file():
         return json.loads(f.read_text())
-    vecs = embed([t for _, t, _ in ps])
+    vecs = embed([t for _, t, _ in ps], kind="passage")
     data = {r: [float(x) for x in v] for (r, _, _), v in zip(ps, vecs)}
     f.write_text(json.dumps(data))
     return data

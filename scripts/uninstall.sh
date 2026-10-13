@@ -97,11 +97,15 @@ if [ "${KROUTER_NO_MCP:-0}" != 1 ]; then
     printf '%s\n' "removed: MCP server krouter (codex)"
   fi
 fi
+DENSE_CFG="${KROUTER_DENSE_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/krouter/dense.json}"
+DENSE_HOME="${KROUTER_DENSE_HOME:-$HOME/.local/share/krouter/dense}"
+if [ -f "$DENSE_CFG" ]; then run rm -f "$DENSE_CFG"; printf '%s\n' "removed: $DENSE_CFG"; fi
+if [ -d "$DENSE_HOME" ]; then run rm -rf "$DENSE_HOME"; printf '%s\n' "removed: $DENSE_HOME (local embeddings venv)"; fi
 VAULT_FILE="${KROUTER_VAULT_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/krouter/vault}"
 if [ -f "$VAULT_FILE" ]; then run rm -f "$VAULT_FILE"; printf '%s\n' "removed: $VAULT_FILE"; fi
 
 # 4. rebuildable state
-CACHE="${KROUTER_CACHE_DIR:-$HOME/.cache/krouter}"
+CACHE="${KROUTER_CACHE_DIR:-$HOME/.cache/krouter}"  # 也装着本地向量模型（models/，约 640 MB）：--purge 一并删除
 STATE="$HOME/.local/state/krouter"
 if [ "$PURGE" -eq 1 ]; then
   for d in "$CACHE" "$STATE"; do
