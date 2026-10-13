@@ -426,7 +426,18 @@ DENSE_TOP_K = 5  # 字面前 K 名和向量前 K 名里都有的页，才算两�
 DENSE_MODE = "tiered"  # gate：每题都要两边一致；tiered：字面很有把握的直接答，其余要一致，字面拒了的向量很有把握才救
 DENSE_RESCUE_MARGIN = 0.1
 DENSE_SURE_MEDIUM = True  # 字面 medium 且命中实词 ≥ DENSE_SURE_STRONG 也算有把握
+DENSE_SURE_TRIGGERS = 3  # 首条页的触发词里对上了几个问题里的词，就算字面有把握（作者库开发问题：2、3 相同，4 时丢 3 道）
 DENSE_SURE_STRONG = 3  # 在 vault2 dev3 和作者真实库的开发问题上一起选（2 时 dev3 引错 7 道）
+
+
+def trigger_matches(con: sqlite3.Connection, rid: int, raw: list[str]) -> int:
+    """How many distinct question words the page's triggers contain (aliases, learned triggers, checked card questions)."""
+    words = [t for t in dict.fromkeys(raw) if len(t) > 1 and not t.isdigit()]
+    if not words:
+        return 0
+    marks = ",".join("?" * len(words))
+    return con.execute(f"SELECT count(DISTINCT term) FROM vinst WHERE term IN ({marks}) AND doc = ? AND col = 'triggers'",
+                       words + [rid]).fetchone()[0]
 
 
 def dense_decision(vault: Path, con: sqlite3.Connection, query: str, scope: str, hits: list[dict], ranked: list[dict],
@@ -441,8 +452,12 @@ def dense_decision(vault: Path, con: sqlite3.Connection, query: str, scope: str,
         import dense
     except ImportError:
         return conf, "off"
-    if DENSE_MODE == "tiered" and (conf == "high" or (DENSE_SURE_MEDIUM and conf == "medium" and strong >= DENSE_SURE_STRONG)):
-        return conf, "lexical-sure"  # 字面很有把握（规则页、领先明显，或命中多个实词）：不需要向量同意
+    if DENSE_MODE == "tiered" and hits and conf != "none" and (
+            conf == "high" or (DENSE_SURE_MEDIUM and conf == "medium" and strong >= DENSE_SURE_STRONG)
+            or trigger_matches(con, hits[0]["rid"], raw) >= DENSE_SURE_TRIGGERS):
+        # 字面很有把握：规则页、领先明显、命中多个实词，或者问题对上了这页的触发词（别名、夜间学到的问法、
+        # 核对过的问答卡——都是专门为这个库学出来的证据）。不需要向量同意
+        return conf, "lexical-sure"
     info = dense.top_pages(vault, con, query, scope, limit=max(8, DENSE_TOP_K))
     if info["state"] != "on":
         return conf, info["state"]

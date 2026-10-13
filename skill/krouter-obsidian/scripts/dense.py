@@ -41,7 +41,10 @@ DEFAULT_MODEL = "jinaai/jina-embeddings-v2-base-zh"
 FLOORS = {"jinaai/jina-embeddings-v2-base-zh": 0.5}
 FLOOR_UNCALIBRATED = 0.5
 CHUNK = 600          # 每段最多多少字
-MAX_CHUNKS = 4       # 每页最多几段（长页只看开头这些；8 段时 527 页的库首次建要 29 分钟）
+MAX_CHUNKS = 4       # 每页最多几段（长页只看开头这些；8 段时作者库 1206 个文件首次建要 29 分钟，4 段 17 分钟）
+# 按页面类型给段数：规则页、主题页是问题最常落到的地方；项目资料、日志、会话摘录量大，只看开头一段
+CARD_VECTORS = False  # 核对过的问答卡问题也作为这一页的向量。作者库实测没有提升、多花约 3 分钟，默认关
+TIER_CHUNKS = {"rule": 4, "topic": 4, "other": 2, "project": 1, "log": 1, "dead": 1}
 BUILD_ON_QUERY = 20  # 查询时最多顺手补算几页；更多就留给夜间任务，这次退回纯字面
 COVERAGE_MIN = 0.95  # 已有向量的页面少于这个比例：视为还在建，退回纯字面
 
@@ -136,7 +139,7 @@ def embed(texts: list[str], model: str, kind: str) -> list[list[float]]:
     return [_norm(v) for v in embedder(model).embed(texts)]
 
 
-def chunks(title: str, body: str) -> list[str]:
+def chunks(title: str, body: str, cap: int = MAX_CHUNKS) -> list[str]:
     """Title + body cut at paragraph boundaries into pieces of at most CHUNK characters; every piece starts with the
     title, so a piece about one detail still knows which page it is on."""
     paras = [p.strip() for p in re.split(r"\n\s*\n", body) if p.strip()]
@@ -148,7 +151,7 @@ def chunks(title: str, body: str) -> list[str]:
         cur = (cur + "\n" + p).strip() if cur else p[: CHUNK * 2]
     if cur:
         out.append(cur)
-    return [f"{title}\n{c}" for c in (out or [""])[:MAX_CHUNKS]]
+    return [f"{title}\n{c}" for c in (out or [""])[:cap]]
 
 
 def ensure_table(con: sqlite3.Connection) -> None:
@@ -166,24 +169,47 @@ def _unpack(b: bytes) -> list[float]:
     return list(a)
 
 
-def pending(vault: Path, con: sqlite3.Connection, model: str) -> list[tuple[str, str, str, str]]:
-    """Pages whose vectors are missing or stale: [(rel, sha, title, body)]."""
+def pending(vault: Path, con: sqlite3.Connection, model: str) -> list[tuple[str, str, str, str, int]]:
+    """Pages whose vectors are missing or stale: [(rel, sha, title, body, chunk budget)]."""
     import recall_index as ri
     from krouter_redact import redact
 
     ensure_table(con)
     have = {(r, s) for r, s in con.execute("SELECT DISTINCT rel, sha FROM dense WHERE model = ?", (model,))}
+    cards = card_questions(vault) if CARD_VECTORS else {}
     out = []
     for full, rel in ri.walk_md(vault):
         try:
             raw = Path(full).read_bytes()
         except OSError:
             continue
-        sha = ri.body_hash(raw)
+        qs = cards.get(rel, [])
+        sha = ri.body_hash(raw) + ("+" + hashlib.sha1("\n".join(qs).encode("utf-8")).hexdigest()[:8] if qs else "")
         if (rel, sha) in have:
             continue
         meta, body = ri.split_frontmatter(redact(raw.decode("utf-8", errors="replace")))
-        out.append((rel, sha, meta.get("title") or Path(rel).stem, body))
+        tier = ri.tier_of(ri.zones.canon(vault, rel), (meta.get("status") or "").lower())
+        out.append((rel, sha, meta.get("title") or Path(rel).stem, body, TIER_CHUNKS.get(tier, 2), qs))
+    return out
+
+
+def card_questions(vault: Path) -> dict[str, list[str]]:
+    """{page: [question of a card that still matches the page and passed its checks]} — the nightly job's guesses at how
+    people ask about each page, embedded next to the page's own text."""
+    import recall_index as ri
+
+    out: dict[str, list[str]] = {}
+    for rel, cs in ri.card_triggers(vault).items():
+        path = vault / ri.zones.real(vault, rel)
+        try:
+            raw = path.read_bytes()
+        except OSError:
+            continue
+        hashes = ri.card_hashes(raw)
+        text = raw.decode("utf-8", errors="replace")
+        qs = [c["q"] for c in cs if c.get("sha") in hashes and c.get("v") and ri.grounded(c, text)]
+        if qs:
+            out[rel] = qs[:8]
     return out
 
 
@@ -192,8 +218,8 @@ def build(vault: Path, con: sqlite3.Connection, model: str, limit: int = 0) -> i
     todo = pending(vault, con, model)
     if limit:
         todo = todo[:limit]
-    for rel, sha, title, body in todo:
-        pieces = chunks(title, body)
+    for rel, sha, title, body, cap, qs in todo:
+        pieces = chunks(title, body, cap) + [f"{title}\n{q}" for q in qs]
         vecs = embed(pieces, model, "passage")
         con.execute("DELETE FROM dense WHERE rel = ? AND model = ?", (rel, model))
         con.executemany("INSERT INTO dense VALUES(?,?,?,?,?)", [(rel, sha, model, i, _pack(v)) for i, v in enumerate(vecs)])
