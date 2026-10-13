@@ -413,12 +413,84 @@ def recall(vault: Path, query: str, scope: str = "", limit: int = 5, refresh_fir
     if gate:
         conf, dense_state = dense_decision(vault, con, query, scope, hits, ranked, raw, df, titled, n_docs, named, conf,
                                            strong)
+    feats, cand_rel = None, None
+    try:
+        import decider
+    except ImportError:
+        decider = None
+    if decider is not None:
+        dinfo = None
+        try:
+            import dense as _dense
+
+            if _dense.config():
+                dinfo = _dense.top_pages(vault, con, query, scope, limit=8)
+        except ImportError:
+            pass
+        dense_on = bool(dinfo and dinfo.get("state") == "on")
+        m = decider.model(dense_on)
+        if m or COLLECT_FEATURES:
+            feats, cand = decision_inputs(vault, con, hits, ranked, raw, qtok, df, titled, n_docs, named, scale, margin,
+                                          need, unknown, alien, absent_words, off_vault, single, refuse, dinfo if dense_on else None)
+            cand_rel = cand["rel"] if cand else None
+            if m and gate and cand is not None:
+                p = decider.probability(feats, m)
+                conf = "none" if p < m["threshold"] else ("high" if p >= m.get("high", 0.85) else "medium")
+                if cand is not hits[0]:
+                    if cand in hits:
+                        hits.remove(cand)
+                    hits.insert(0, cand)
+                hits[0]["p"] = round(p, 3)
+                dense_state = ("agree" if feats.get("d_in_top") else "disagree") if dense_on else dense_state
+            elif m and gate:
+                conf = "none"
     for h in hits:
         h.pop("rid", None)
     if hits and conf != "none":
         attach_answers(vault, hits, raw, df)
-    return {"hits": hits, "stats": stats, "query_tokens": qtok, "margin": round(margin, 2),
-            "strong": strong, "confidence": conf, "dense": dense_state}
+    out = {"hits": hits, "stats": stats, "query_tokens": qtok, "margin": round(margin, 2),
+           "strong": strong, "confidence": conf, "dense": dense_state}
+    if COLLECT_FEATURES:
+        out["features"], out["candidate"] = feats, cand_rel
+    return out
+
+
+COLLECT_FEATURES = False  # bench/memory_honesty/train_decider.py 打开：每题带上判断用的特征和候选页
+
+
+def decision_inputs(vault, con, hits, ranked, raw, qtok, df, titled, n_docs, named, scale, margin, need, unknown, alien,
+                    absent_words, off_vault, single, rule_refuse, dinfo):
+    """The candidate page and the signals about it that decider.py weighs. Candidate: the best live lexical page;
+    with embeddings on, the best lexical page that is also in the embedding top K, if there is one."""
+    import decider
+
+    live = [h for h in ranked if h["status"] not in DEAD_STATUS]
+    if not live:
+        return None, None
+    cand = live[0]
+    dfeat = None
+    if dinfo is not None:
+        dead = {r for (r,) in con.execute(
+            f"SELECT rel FROM docs WHERE status IN ({','.join('?' * len(DEAD_STATUS))})", tuple(DEAD_STATUS))}
+        dl = [(r, s) for r, s in dinfo["hits"] if r not in dead]
+        dtop = dict(dl[:DENSE_TOP_K])
+        both = next((h for h in live[:DENSE_TOP_K] if h["rel"] in dtop), None)
+        if both is not None:
+            cand = both
+        sims = dict(dl)
+        dfeat = {"d_sim": sims.get(cand["rel"], 0.0), "d_in_top": float(cand["rel"] in dtop),
+                 "d_first": float(bool(dl) and dl[0][0] == cand["rel"]), "d_top_sim": dl[0][1] if dl else 0.0,
+                 "d_agree": float(bool(dl) and dl[0][0] == live[0]["rel"])}
+    strong = strong_matches(con, cand["rid"], raw, df, titled, small=n_docs < SMALL_VAULT, known=named)
+    lines = [ln for _n, ln in best_lines(vault / zones.real(vault, cand["rel"]), qtok, k=3)]
+    second = next((h["score"] for h in live if h is not cand), 0.0)
+    feats = decider.features(
+        top=cand["score"], floor=SCORE_MIN * scale, margin=(cand["score"] / second) if second else 9.9, strong=strong,
+        need=need, unknown=unknown, alien=alien, absent=absent_words, off_vault=off_vault,
+        triggers=trigger_matches(con, cand["rid"], raw), tier=cand["tier"], single=single,
+        qterms=query_content_terms(raw, df, titled), cover=decider.line_cover(lines, qtok, tokens),
+        rule_refuse=rule_refuse, dense=dfeat)
+    return feats, cand
 
 
 DENSE_MIN_STRONG = 1  # 向量开着时，选中的那页至少要对上几个实词才算"字面也认可"

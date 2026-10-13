@@ -97,6 +97,22 @@ def superseded() -> set[str]:
     return {r for r, _, m in pages() if m.get("status", "").lower() == "superseded"}
 
 
+def on_vault(path: Path):
+    """Temporarily point the prototype at another vault (to pick floors on dev3 / vault2 for a vault3 run)."""
+    import contextlib
+
+    @contextlib.contextmanager
+    def _cm():
+        global VAULT
+        old = VAULT
+        VAULT = path
+        try:
+            yield
+        finally:
+            VAULT = old
+    return _cm()
+
+
 def dense_scored(rows: list[dict], skip: bool = True) -> list[tuple[str, list[tuple[str, float]]]]:
     import numpy as np
 
@@ -114,7 +130,8 @@ def dense_scored(rows: list[dict], skip: bool = True) -> list[tuple[str, list[tu
 
 
 def dev_name() -> str:
-    return "dev3" if VAULT.name == "vault2" else "dev"
+    """The dev set floors are picked on: dev3 for the bilingual vaults (vault2, vault3, which has no dev set)."""
+    return "dev3" if VAULT.name in ("vault2", "vault3") else "dev"
 
 
 def dense_answers(rows: list[dict]) -> list[dict]:
@@ -174,8 +191,10 @@ def agree_answers(rows: list[dict], lex_floor: float | None = None, dense_floor:
     a real question about a page tends to land on it in both. Answer only when their top pages agree and each clears
     a floor picked on the dev set (one sweep over both floors, same utility as `run.pick_floor`)."""
     if lex_floor is None or dense_floor is None:
-        dev = bench.questions(dev_name())
-        lx, dn = dict(lex_scored(dev)), dict(dense_scored(dev))
+        dn_name = dev_name()
+        dev = bench.questions(dn_name)
+        with on_vault(bench.vault_of(dn_name)):
+            lx, dn = dict(lex_scored(dev)), dict(dense_scored(dev))
         lcands = sorted({0.0} | {h[0][1] for h in lx.values() if h})
         dcands = sorted({-1.0} | {h[0][1] for h in dn.values() if h})
         best = None
