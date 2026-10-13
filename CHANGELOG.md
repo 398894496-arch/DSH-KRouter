@@ -7,6 +7,11 @@ notice, then the details.
 
 ## Unreleased
 
+- Benchmark: a third held-out set by the outside reviewer, `heldout3.jsonl.gz`: 200 questions (80 neighbours, half
+  Chinese) on `vault3/`, 110 pages including 20 daily logs as distractors, with no dev set on that vault. `run.py`
+  gains `--ci` (bootstrap intervals), `--vs` (paired intervals), `--vs-matched` (equal coverage) and `--curve`.
+  Baseline: KRouter 1.0.3 is ahead of BM25 with the two rules at equal coverage on every measure, significant on
+  none. The decision rule for "surpasses BM25" and for a new default is in HELDOUT.md, written before any candidate.
 - Benchmark: a negative result recorded. Recall changes that were better on both dev sets were worse on held-out
   (38% / 31% wrong citations vs 25%), so they were not shipped (`docs/BENCHMARK.md`, "Tried and not shipped"). A
   second dev set, `questions_dev2.jsonl` (50 questions, written by the maintainer), is added for tuning.

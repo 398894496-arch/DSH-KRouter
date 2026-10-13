@@ -187,6 +187,17 @@ KRouter ships it cites fewer than half as many wrong pages for one fewer right a
 bench, not yet a feature: it needs an embedding model on the user's machine and floors that do not depend on a dev
 set of their own vault.
 
+## Third bench: 200 held-out questions on a vault nobody tunes on (2026-10-13)
+
+Fifty questions cannot separate two systems: a 5 / 28 against a 5 / 22 wrong-citation rate is noise. `vault3/` has
+110 pages (English and Chinese rule pages, their replaced versions, and 20 daily logs as distractors) and 200
+held-out questions, 80 of them neighbours, with **no dev set**: it stands for a vault KRouter has never seen. `run.py`
+now gives 95% bootstrap intervals (`--ci`), paired intervals against another system (`--vs`), a comparison at equal
+coverage (`--vs-matched`) and the coverage curve (`--curve`). Baseline at freeze, KRouter 1.0.3 minus BM25 with the two
+rules at KRouter's coverage: wrong-citation rate −4.3 points [−10.2, +1.4], answerable right +6 [−2, +14]. Ahead
+on every point estimate, significant on none. The rule for claiming "surpasses BM25", and for shipping a new default,
+was written down before any candidate ran: [`HELDOUT.md`](../bench/memory_honesty/HELDOUT.md), "Held-out set 3".
+
 ## Run it
 
 ```bash
@@ -196,6 +207,8 @@ python3 bench/memory_honesty/run.py --answers mine.jsonl
 python3 bench/memory_honesty/run.py --set heldout     # held-out set: aggregates only (HELDOUT.md)
 python3 bench/memory_honesty/run.py --set dev3        # second vault (vault2/), dev set
 python3 bench/memory_honesty/run.py --set heldout2    # second vault, held-out: aggregates only
+python3 bench/memory_honesty/run.py --set heldout3 --vs-matched bm25-floor   # third vault, equal coverage, intervals
+python3 bench/memory_honesty/run.py --set heldout3 --curve --adapter krouter  # coverage curve
 ```
 
 To grade another system, index `bench/memory_honesty/vault/` with it, ask each question in
