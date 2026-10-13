@@ -27,9 +27,9 @@ from pathlib import Path
 WEIGHTS = Path(__file__).resolve().parent / "decider_weights.json"
 _CACHE: dict = {}
 
-LEX = ("lex_score", "margin", "strong", "need_gap", "unknown", "alien", "absent", "off_vault", "triggers", "rule_tier",
-       "log_tier", "single", "qterms", "cover", "rule_refuse")
-DENSE = ("d_sim", "d_in_top", "d_first", "d_top_sim", "d_agree")
+# 只用和库无关的量：比值、比例、排名、是否。绝对分数（bm25 的量级、向量相似度）一换库就变了刻度
+LEX = ("ratio", "idf_cover", "cover", "trig_share", "rule_refuse")
+DENSE = ("d_rank", "d_agree")
 
 
 def load() -> dict:
@@ -63,28 +63,18 @@ def line_cover(lines: list[str], qtok: list[str], tokens) -> float:
     return max(len(want & set(tokens(ln))) for ln in lines) / len(want)
 
 
-def features(*, top: float, floor: float, margin: float, strong: int, need: int, unknown: int, alien: int,
-             absent: int, off_vault: bool, triggers: int, tier: str, single: bool, qterms: int, cover: float,
-             rule_refuse: bool, dense: dict | None = None) -> dict[str, float]:
+def features(*, margin: float, idf_cover: float, cover: float, triggers: int, qterms: int, rule_refuse: bool,
+             dense: dict | None = None) -> dict[str, float]:
     f = {
-        "lex_score": math.log1p(max(top, 0.0) / max(floor, 1e-6)),
-        "margin": math.log(max(1.0, min(margin, 9.9))),
-        "strong": min(strong, 6) / 6,
-        "need_gap": float(max(0, need - strong)),
-        "unknown": float(min(unknown, 4)),
-        "alien": float(min(alien, 4)),
-        "absent": float(min(absent, 4)),
-        "off_vault": float(off_vault),
-        "triggers": min(triggers, 6) / 6,
-        "rule_tier": float(tier in ("rule", "topic")),
-        "log_tier": float(tier == "log"),
-        "single": float(single),
-        "qterms": min(qterms, 8) / 8,
+        "ratio": math.log(max(1.0, min(margin, 9.9))),
+        "idf_cover": idf_cover,
         "cover": cover,
+        "trig_share": min(1.0, triggers / max(qterms, 1)),
         "rule_refuse": float(rule_refuse),
     }
     if dense is not None:
-        f.update({k: float(dense.get(k, 0.0)) for k in DENSE})
+        f["d_rank"] = 1.0 / dense["rank"] if dense.get("rank") else 0.0
+        f["d_agree"] = float(dense.get("agree", 0.0))
     return f
 
 

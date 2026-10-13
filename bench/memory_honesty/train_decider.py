@@ -134,9 +134,17 @@ def main() -> int:
                                cache=Path(args.real_cache) if args.real_cache else None, copy=False)
         wts["real"] = args.real_weight
     print(json.dumps({"examples": {s: len(e) for s, e in sets.items()}, "dense": args.dense}))
-    for left in sets:
-        m = fit({s: e for s, e in sets.items() if s != left}, wts, names, args.l2)
-        print(json.dumps({"left_out": left, "threshold": m["threshold"], **evaluate(sets[left], m, m["threshold"])}))
+    # 同一套评估口径下的手写规则：rule_refuse = 0 就作答，候选页同上（向量开着时就是方案 B 的规则判断）
+    rules = {"bias": 0.0, "coef": {"rule_refuse": -10.0}, "mean": {"rule_refuse": 0.0}, "std": {"rule_refuse": 1.0}}
+    print(json.dumps({"hand_rules": {s: evaluate(e, rules, 0.5) for s, e in sets.items()}}))
+    # 按库留一：dev 和 dev2 是同一个库（vault1），一起留出；不然模型已经见过这个库，结果偏乐观
+    vaults = {"vault1": ["dev", "dev2"], "vault2": ["dev3"], "real": ["real"]}
+    for name, left in vaults.items():
+        if not all(s in sets for s in left):
+            continue
+        m = fit({s: e for s, e in sets.items() if s not in left}, wts, names, args.l2)
+        print(json.dumps({"left_out_vault": name, "threshold": m["threshold"],
+                          **{s: evaluate(sets[s], m, m["threshold"]) for s in left}}))
     m = fit(sets, wts, names, args.l2)
     print(json.dumps({"all": {s: evaluate(e, m, m["threshold"]) for s, e in sets.items()}, "threshold": m["threshold"],
                       "coef": {k: round(v, 3) for k, v in m["coef"].items()}}, ensure_ascii=False))

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import sqlite3
@@ -481,15 +482,24 @@ def decision_inputs(vault, con, hits, ranked, raw, qtok, df, titled, n_docs, nam
         dfeat = {"d_sim": sims.get(cand["rel"], 0.0), "d_in_top": float(cand["rel"] in dtop),
                  "d_first": float(bool(dl) and dl[0][0] == cand["rel"]), "d_top_sim": dl[0][1] if dl else 0.0,
                  "d_agree": float(bool(dl) and dl[0][0] == live[0]["rel"])}
-    strong = strong_matches(con, cand["rid"], raw, df, titled, small=n_docs < SMALL_VAULT, known=named)
+    # 按稀有度加权的覆盖率：问题里的词（含库里没有的），候选页上有的那部分占多少 idf 分量
+    marks = ",".join("?" * len(raw))
+    on_page = {t for (t,) in con.execute(
+        f"SELECT DISTINCT term FROM vinst WHERE term IN ({marks}) AND doc = ? AND col IN ('title','triggers','body')",
+        raw + [cand["rid"]])}
+    idf = {t: math.log((n_docs + 1) / (df.get(t, 0) + 0.5)) for t in raw}
+    total = sum(idf.values()) or 1.0
+    idf_cover = sum(v for t, v in idf.items() if t in on_page) / total
     lines = [ln for _n, ln in best_lines(vault / zones.real(vault, cand["rel"]), qtok, k=3)]
+    if dfeat is not None:
+        order = [r for r, _s in dl]
+        dfeat = {"rank": order.index(cand["rel"]) + 1 if cand["rel"] in order else 0,
+                 "agree": float(bool(dl) and dl[0][0] == live[0]["rel"] == cand["rel"])}
     second = next((h["score"] for h in live if h is not cand), 0.0)
     feats = decider.features(
-        top=cand["score"], floor=SCORE_MIN * scale, margin=(cand["score"] / second) if second else 9.9, strong=strong,
-        need=need, unknown=unknown, alien=alien, absent=absent_words, off_vault=off_vault,
-        triggers=trigger_matches(con, cand["rid"], raw), tier=cand["tier"], single=single,
-        qterms=query_content_terms(raw, df, titled), cover=decider.line_cover(lines, qtok, tokens),
-        rule_refuse=rule_refuse, dense=dfeat)
+        margin=(cand["score"] / second) if second else 9.9, idf_cover=idf_cover,
+        cover=decider.line_cover(lines, qtok, tokens), triggers=trigger_matches(con, cand["rid"], raw),
+        qterms=max(1, len(qtok)), rule_refuse=rule_refuse, dense=dfeat)
     return feats, cand
 
 
