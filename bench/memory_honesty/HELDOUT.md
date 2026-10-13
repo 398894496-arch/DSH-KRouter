@@ -108,3 +108,59 @@ On vault2 the BM25 baselines split Chinese into character pairs; `bm25-floor` pi
 | 2026-10-12 | Vault, dev3 and heldout2 written by the reviewer; integrity checked by script; one duplicate of a dev2 question replaced; frozen; first run, **aggregates only** for KRouter, BM25 and BM25-floor (table above). The reviewer has not looked at per-question held-out results. |
 | 2026-10-12 | Applied by the maintainer's Claude Code session (the one that changes the ranker). The file was decompressed only by code: a count of rows and a scan for key-shaped text, nothing printed; the session did not read the questions. Aggregates only, matching the baseline (KRouter 33%, 9 / 20, 24 / 30). |
 | 2026-10-12 | Maintainer's session: dense-retrieval prototype (`dense.py`, local multilingual MiniLM via fastembed) tuned on dev3 only. Candidate pre-registered on dev3 before the run: `agree` (BM25 over character pairs and dense must agree on the top page, both skipping superseded pages, floors picked on dev3). One heldout2 run, aggregates only: `agree` 18% wrong citations (5 / 28), 15 / 20 refused, 23 / 30 right. Also reported, not used to choose: `dense` 23% (7 / 30), 13 / 20, 23; `vote` 27% (10 / 37), 10 / 20, 27; KRouter 1.0.3 33% (12 / 36), 9 / 20, 24; bm25-floor 19% (4 / 21), 16 / 20, 17 (the freeze table says 5 / 22, 15 / 20; the one-question difference is under investigation). No `--reveal`. |
+
+## Held-out set 3 (`heldout3.jsonl.gz`)
+
+200 questions on a third vault, `vault3/`, and **no development set on that vault**: nobody tunes on vault3, so it
+measures what a vault KRouter has never seen gets, which is every new user's vault. All rules above apply.
+
+**The vault.** 110 pages: 30 English rule pages under `Handbook/` and 30 Chinese under `团队手册/` (15 of each were
+replaced, and their 30 old pages say `status: superseded`), plus 20 daily logs (`Daily log/`, `工作日志/`) that
+mention old decisions and open discussions in passing. The logs are distractors: they are never a gold page, and
+citing one first counts as a wrong citation. Real vaults are full of such pages; vault1 and vault2 had none. The logs
+sit in plain folders, not in KRouter's `05 时间日志/`, so no system gets a head start from the layout.
+
+**The questions.** 100 English and 100 Chinese: 60 corrections, 60 current, 80 neighbours (40%). Two answerable
+questions per rule page, on different facts or in different words. Same checks as set 2, run by script before any
+system was run: every answerable question's `evidence` sentence is on its gold page; every neighbour question's
+`absent` term is in the question and on no page of vault3, logs included, English plurals counted. Before the first
+run the checker was tightened (plurals) and two Chinese neighbour questions had their `absent` term set to the
+question's own wording; no question text changed. Written on 2026-10-13 (Pacific) by the same outside reviewer, who
+had not read the code of `feature/dense` or the logistic-regression work, and knew of them only from the maintainer's
+summary (method names and dev3 / real-vault aggregates). Stored gzipped, as set 2.
+
+**What it is for.** Enough questions to tell systems apart: with 50 questions the 95% intervals of a wrong-citation
+rate are about ±15 points wide, here about ±7. `run.py` gives bootstrap intervals (`--ci`), paired intervals against
+another system (`--vs`), a comparison at the same coverage (`--vs-matched`), and the coverage curve (`--curve`).
+All four are aggregates and may be run on this set.
+
+**Baseline at freeze** (main `792c74e`, KRouter 1.0.3; `bm25-floor` uses the floor picked on dev3, since vault3 has no
+dev set). 95% bootstrap intervals in brackets.
+
+| System | wrong citations | neighbours refused (of 80) | answerable right (of 120) |
+|---|---|---|---|
+| Plain BM25, always answers | 58% (116 / 199) [52, 65] | 1 [0, 3] | 83 [69, 96] |
+| BM25 + skip superseded + floor from dev3 | 21% (18 / 85) [13, 30] | 64 [52, 78] | 67 [54, 80] |
+| KRouter 1.0.3 | 27% (37 / 139) [19, 34] | 46 [35, 58] | 102 [88, 116] |
+| BM25 + skip superseded, **same coverage as KRouter** (top 139) | 31% (43 / 139) | 44 | 96 |
+
+KRouter 1.0.3 minus BM25 at the same coverage, paired 95% intervals: wrong-citation rate [-10.2, +1.4] points,
+answerable right [-2, +14], neighbours refused [-7, +11]. Better on every point estimate, and not yet significant on
+any. Along the whole coverage curve KRouter cites fewer wrong pages than BM25 at each coverage measured (for
+example 19 vs 23 wrong at about 100 answered); its default threshold sits at the permissive end of its curve.
+
+**Pre-registered decision rule** (written before any candidate is run on this set; amend only before a run, and log it).
+A candidate is run on heldout3 once, at the default it would ship with.
+1. **"Surpasses BM25"** may be claimed only if `run.py --set heldout3 --vs-matched bm25-floor` gives a paired 95%
+   interval for the wrong-citation-rate difference entirely below zero, and an interval for the answerable-right
+   difference that is not entirely below zero.
+2. **Ships as the new default** only if, on heldout3, its wrong-citation rate is at most 27%, it refuses at least 46 of
+   80 neighbours and gets at least 97 of 120 answerable questions right (1.0.3 minus 5), **and** the time-split blind
+   judge on real traffic does not fall more than 0.05 below 1.0.3. Rule 2 does not need rule 1.
+3. At most two candidates per release cycle are run on heldout3; each run is a line in the log below.
+
+### Log, set 3
+
+| Date | Event |
+|---|---|
+| 2026-10-13 | Vault3 and heldout3 written by the reviewer; checked by script; frozen; first run, **aggregates only** (KRouter 1.0.3, BM25, BM25-floor, with intervals, the matched comparison and both coverage curves; table above). No `--reveal`. Not a candidate run. |
