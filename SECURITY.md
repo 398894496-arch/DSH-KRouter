@@ -9,7 +9,7 @@ where data goes and how to report a problem.
 |---|---|---|
 | Router queries and answers | Nowhere: a local SQLite cache under `~/.cache/krouter/` and a local query log under `~/.local/state/krouter/` | Every query |
 | Yesterday's logs and sessions | The model lane you chose (a logged-in AI coding CLI, or an API key) | The nightly job, only if you turned it on |
-| Your past Claude Code / Codex sessions (questions and closing answers, redacted) | Pages in your vault, on this machine | At install and nightly, only after you said yes to the import (`import_sessions.py --consent`; `--revoke` stops it) |
+| Your past Claude Code / Codex / Cursor agent sessions (questions and closing answers, redacted) | Pages in your vault, on this machine | At install and nightly, only after you said yes to the import (`import_sessions.py --consent`; `--revoke` stops it) |
 | The same session excerpts | The model lane, to write "what was decided" | Only if you also said yes to distilling; the install says how many characters first |
 | claude-mem's memory (`~/.claude-mem/claude-mem.db`, opened read-only) | Pages in your vault, on this machine | Only after you said yes (`import_claude_mem.py --consent`); nightly after that |
 | One project's claude-mem decisions | The model lane, to sort what is still in force | Only with distilling on |

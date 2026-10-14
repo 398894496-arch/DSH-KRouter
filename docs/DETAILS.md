@@ -4,7 +4,7 @@ Everything the front page leaves out: install options, what leaves the machine, 
 
 ## Importing what you already have
 
-- **Agent sessions** (`import_sessions.py`): Claude Code and Codex transcripts become one page per session and day
+- **Agent sessions** (`import_sessions.py`): Claude Code, Codex and Cursor agent transcripts become one page per session and day
   under `05 时间日志/会话摘录/`. Each page keeps your questions and each turn's closing answer, redacted. Tool output,
   thinking, injected context, subagents and headless runs are left out. `--distill` adds "what was decided, what
   changed" from the model lane. `--consent` lets the nightly job import yesterday; `--file PATH` imports one

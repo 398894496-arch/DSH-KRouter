@@ -4,7 +4,7 @@
 
 ## 导入你已经有的东西
 
-- **agent 会话**（`import_sessions.py`）：Claude Code 和 Codex 的会话记录，每个会话每天一页，放在 `05 时间日志/会话摘录/`。只留你的提问和每轮最后的回答，先脱敏；工具输出、思考过程、注入的上下文、子 agent 和无头运行都不收。加 `--distill` 让模型写出「定了什么、改了什么」。`--consent` 之后，夜间任务每天导入前一天的会话；`--file 路径` 只导一个会话，插件的会话结束 hook 用的就是这个。
+- **agent 会话**（`import_sessions.py`）：Claude Code、Codex 和 Cursor agent 的会话记录，每个会话每天一页，放在 `05 时间日志/会话摘录/`。只留你的提问和每轮最后的回答，先脱敏；工具输出、思考过程、注入的上下文、子 agent 和无头运行都不收。加 `--distill` 让模型写出「定了什么、改了什么」。`--consent` 之后，夜间任务每天导入前一天的会话；`--file 路径` 只导一个会话，插件的会话结束 hook 用的就是这个。
 - **claude-mem**（`import_claude_mem.py`，已在 claude-mem 13.35.0 的真实安装上跑通）：按会话所在仓库的路径（claude-mem 的 `cwd`）区分项目；老版本没有这个字段，那些会话照样导入，但不会自动带进新会话。只读打开 `~/.claude-mem/claude-mem.db`。会话总结和记录写进 `05 时间日志/claude-mem/`；每个项目的「决定」汇成一页，放在 `02 经验与方法/从 claude-mem 导入/`，状态是 `status: candidate`。加 `--distill` 会把这些决定分成「还有效的」和「被取代的」。
 - **会话 hook**（Claude Code 插件里的 `session_hook.py`）：会话结束时，在后台导入刚结束的这个会话；新会话开始时，带上这个仓库（按 git 根目录匹配，不按文件夹名）最近的至多 8 条决定，每条注明出处页。默认只带你确认过的页（`status: active` 或 `confirmed: true`）里的全部条目，加上其他页里的纠错条目，并标「待确认」。没同意之前两个都不做；`KROUTER_INJECT=all` 全部带上，`KROUTER_INJECT=0` 都不带。
 

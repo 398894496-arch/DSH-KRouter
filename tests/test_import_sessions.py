@@ -67,14 +67,40 @@ def _codex_session(root: Path, days_ago: int, originator: str = "codex_cli_rs") 
     return _jsonl(root / day.strftime("%Y/%m/%d") / f"rollout-{originator}.jsonl", rows)
 
 
+def _cursor_ask(days_ago: int, hour: int, text: str) -> str:
+    """A Cursor question as Cursor writes it: local time with its UTC offset, the question in `<user_query>`."""
+    local = (datetime.now().astimezone() - timedelta(days=days_ago)).replace(hour=hour, minute=7, second=0, microsecond=0)
+    off = local.utcoffset() or timedelta(0)
+    sign, mins = ("-" if off < timedelta(0) else "+"), abs(int(off.total_seconds() // 60))
+    stamp = local.strftime("%A, %b %-d, %Y, %-I:%M %p") if os.name != "nt" else local.strftime("%A, %b %d, %Y, %I:%M %p")
+    tz = f"(UTC{sign}{mins // 60}" + (f":{mins % 60:02d})" if mins % 60 else ")")
+    return f"<timestamp>{stamp} {tz}</timestamp>\n<image_files>shot.png</image_files>\n<user_query>\n{text}\n</user_query>"
+
+
+def _cursor_session(root: Path, project_dir: Path, days_ago: int) -> Path:
+    slug = "-".join(p for p in project_dir.parts if p not in ("/", "\\") and not p.endswith(":\\"))
+    sid = "c0ffee00-1111-2222-3333-444455556666"
+    rows = [
+        {"role": "user", "message": {"content": [{"type": "text", "text": _cursor_ask(days_ago, 9, "日志级别怎么定？token " + KEY)}]}},
+        {"role": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read", "input": {"path": "x"}}]}},
+        {"role": "assistant", "message": {"content": [{"type": "text", "text": "先看看配置。"}]}},
+        {"role": "assistant", "message": {"content": [{"type": "text", "text": "定了：生产环境 info，debug 只在开关后面。"}]}},
+        {"type": "turn_ended", "status": "success"},
+    ]
+    _jsonl(root / slug / "agent-transcripts" / sid / "subagents" / "sub.jsonl",
+           [{"role": "user", "message": {"content": [{"type": "text", "text": "subagent prompt"}]}}])
+    return _jsonl(root / slug / "agent-transcripts" / sid / f"{sid}.jsonl", rows)
+
+
 @pytest.fixture()
 def env(tmp_path):
     vault = tmp_path / "vault"
     (vault / "05 时间日志").mkdir(parents=True)
-    claude, codex = tmp_path / "claude", tmp_path / "codex"
+    claude, codex, cursor = tmp_path / "claude", tmp_path / "codex", tmp_path / "cursor"
     e = {**os.environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_CLAUDE_PROJECTS": str(claude),
-         "KROUTER_CODEX_SESSIONS": str(codex), "KROUTER_STATE_DIR": str(tmp_path / "state"), "KROUTER_NO_QUERY_LOG": "1"}
-    return {"vault": vault, "claude": claude, "codex": codex, "env": e}
+         "KROUTER_CODEX_SESSIONS": str(codex), "KROUTER_CURSOR_PROJECTS": str(cursor),
+         "KROUTER_STATE_DIR": str(tmp_path / "state"), "KROUTER_NO_QUERY_LOG": "1"}
+    return {"vault": vault, "claude": claude, "codex": codex, "cursor": cursor, "env": e}
 
 
 def _run(env: dict, *args: str) -> dict:
@@ -104,6 +130,33 @@ def test_import_keeps_asks_and_closing_answers_only_and_redacts(env):
         assert noise not in claude_page
     codex_page = next(v for k, v in pages.items() if "缓存过期" in k)
     assert "原来 30 分钟，改成 10 分钟。" in codex_page and "environment_context" not in codex_page
+
+
+def test_cursor_sessions_import_with_their_own_time_and_project(env, tmp_path):
+    project = tmp_path / "work" / "log-svc"
+    project.mkdir(parents=True)
+    _cursor_session(env["cursor"], project, 2)
+    out = _run(env, "--days", "7")
+    assert out["pages"] == 1 and out["agents"] == ["cursor"]
+    name, page = next(iter(_pages(env).items()))
+    day = (datetime.now().astimezone() - timedelta(days=2)).date().isoformat()
+    assert name.startswith(day) and "日志级别怎么定" in name  # 日子取自 <timestamp>，不是文件时间
+    assert "agent: cursor" in page and "（09:07）" in page
+    assert "定了：生产环境 info，debug 只在开关后面。" in page and "先看看配置" not in page
+    assert KEY not in page and "<redacted>" in page
+    for noise in ("<user_query>", "<timestamp>", "image_files", "subagent prompt"):
+        assert noise not in page
+    if os.name != "nt":  # 目录名里的 `-` 有歧义：按磁盘上真实存在的路径还原
+        assert "project: log-svc" in page
+
+
+def test_cursor_timestamp_parsing():
+    sys.path.insert(0, str(SCRIPTS))
+    import import_sessions as imp
+
+    assert imp._cursor_ts("<timestamp>Wednesday, Oct 8, 2026, 10:42 PM (UTC-7)</timestamp>") == "2026-10-09T05:42:00.000Z"
+    assert imp._cursor_ts("<timestamp>Monday, Jan 05, 2026, 12:03 AM (UTC+5:30)</timestamp>") == "2026-01-04T18:33:00.000Z"
+    assert imp._cursor_ts("no stamp here") == ""
 
 
 def test_dry_run_writes_nothing_and_foreign_pages_are_never_touched(env):
@@ -154,7 +207,8 @@ def test_distill_puts_decisions_on_top_and_keeps_them(env, monkeypatch):
     sent = []
     monkeypatch.setattr(llm, "complete", lambda prompt, vault=None: sent.append(prompt) or
                         "好的：\n- 发版只从 main 打 tag（10:05）\n- 原来手动发 → 改成 CI 发（10:05）\n总结完毕")
-    for k in ("OBSIDIAN_VAULT", "KROUTER_CLAUDE_PROJECTS", "KROUTER_CODEX_SESSIONS", "KROUTER_STATE_DIR"):
+    for k in ("OBSIDIAN_VAULT", "KROUTER_CLAUDE_PROJECTS", "KROUTER_CODEX_SESSIONS", "KROUTER_CURSOR_PROJECTS",
+              "KROUTER_STATE_DIR"):
         monkeypatch.setenv(k, env["env"][k])
     monkeypatch.setattr(sys, "argv", ["import_sessions.py", "--distill"])
     assert imp.main() == 0

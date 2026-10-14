@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Import the agent sessions already on this machine, so the vault is useful on day one.
 
-Reads Claude Code (`~/.claude/projects/*/*.jsonl`) and Codex (`~/.codex/sessions/YYYY/MM/DD/*.jsonl`) transcripts
-and writes one page per session and day under `05 时间日志/会话摘录/`, named after the session's title (or its first
+Reads Claude Code (`~/.claude/projects/*/*.jsonl`), Codex (`~/.codex/sessions/YYYY/MM/DD/*.jsonl`) and Cursor agent
+(`~/.cursor/projects/*/agent-transcripts/<id>/<id>.jsonl`) transcripts and writes one page per session and day under `05 时间日志/会话摘录/`, named after the session's title (or its first
 question): what you asked and the agent's closing answer, turn by turn. Tool calls, tool output, thinking, injected
 context and headless runs (`claude -p`, `codex exec`, the nightly job itself) are dropped; every line goes through
 `redact()` first, so a key that once scrolled past in a session prints as `<redacted>`.
@@ -16,7 +16,8 @@ rewrites only our pages, so the excerpt follows the transcript; a page already d
 session grows. `--consent` records your yes for the nightly job, which then imports yesterday on its own; `--revoke`
 takes it back. The nightly job imports nothing without that yes.
 
-Env: `KROUTER_CLAUDE_PROJECTS`, `KROUTER_CODEX_SESSIONS` point at other transcript roots (tests, other machines).
+Env: `KROUTER_CLAUDE_PROJECTS`, `KROUTER_CODEX_SESSIONS`, `KROUTER_CURSOR_PROJECTS` point at other transcript roots
+(tests, other machines).
 """
 
 from __future__ import annotations
@@ -73,7 +74,8 @@ def save_state(data: dict) -> None:
 def roots() -> dict[str, Path]:
     home = Path.home()
     return {"claude-code": Path(os.environ.get("KROUTER_CLAUDE_PROJECTS") or home / ".claude/projects"),
-            "codex": Path(os.environ.get("KROUTER_CODEX_SESSIONS") or home / ".codex/sessions")}
+            "codex": Path(os.environ.get("KROUTER_CODEX_SESSIONS") or home / ".codex/sessions"),
+            "cursor": Path(os.environ.get("KROUTER_CURSOR_PROJECTS") or home / ".cursor/projects")}
 
 
 def _dt(ts: str) -> datetime | None:
@@ -176,6 +178,81 @@ def read_codex(path: Path) -> dict:
     return s
 
 
+# Cursor 在每条提问前面加 `<timestamp>Wednesday, Oct 8, 2026, 10:42 PM (UTC-7)</timestamp>`，问题本身包在
+# `<user_query>` 里；记录本身没有时间字段
+CURSOR_TS = re.compile(r"<timestamp>\s*\w+,\s*(\w{3})\w*\s+(\d{1,2}),\s*(\d{4}),\s*(\d{1,2}):(\d{2})\s*([AP]M)?"
+                       r"\s*(?:\(UTC([+-]\d{1,2})(?::?(\d{2}))?\))?\s*</timestamp>", re.I)
+CURSOR_QUERY = re.compile(r"<user_query>(.*?)</user_query>", re.S)
+CURSOR_WRAP = re.compile(r"<(timestamp|image_files|attached_files|user_info|rules|agent_requestable_workspace_rules|"
+                         r"open_and_recently_viewed_files|system_reminder|git_status)>.*?</\1>", re.S)
+MONTHS = {m: i for i, m in enumerate(("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov",
+                                      "dec"), 1)}
+
+
+def _cursor_ts(text: str) -> str:
+    """The `<timestamp>` Cursor puts on a question, as an ISO string in UTC; "" when there is none."""
+    m = CURSOR_TS.search(text)
+    if not m or m.group(1).lower()[:3] not in MONTHS:
+        return ""
+    mon, day, year, hh, mm, ampm, oh, om = m.groups()
+    hour = int(hh) % 12 + (12 if (ampm or "").upper() == "PM" else 0) if ampm else int(hh)
+    off = timedelta(hours=int(oh or 0), minutes=(int(om or 0) * (-1 if (oh or "").startswith("-") else 1)))
+    try:
+        local = datetime(int(year), MONTHS[mon.lower()[:3]], int(day), hour, int(mm), tzinfo=timezone(off))
+    except ValueError:
+        return ""
+    return local.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
+def cursor_cwd(slug: str) -> str:
+    """`Users-fe1-Cursor-dsh-saas` → `/Users/fe1/Cursor/dsh-saas`: Cursor names a project folder after its path with
+    `/` turned into `-`, so a name that itself has a `-` is ambiguous. Walk the disk and take the path that exists."""
+    parts = [p for p in slug.split("-") if p]
+
+    def walk(base: Path, i: int) -> Path | None:
+        if i == len(parts):
+            return base
+        for j in range(len(parts), i, -1):  # 先试最长的名字
+            nxt = base / "-".join(parts[i:j])
+            if nxt.is_dir():
+                found = walk(nxt, j)
+                if found:
+                    return found
+        return None
+
+    root = Path(Path.home().anchor or "/")
+    found = walk(root, 0)
+    return str(found) if found else ""
+
+
+def read_cursor(path: Path) -> dict:
+    """{turns, cwd, title, id} of one Cursor agent transcript (`agent-transcripts/<id>/<id>.jsonl`)."""
+    s = {"turns": [], "cwd": "", "title": "", "id": path.stem}
+    try:
+        mtime = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    except OSError:
+        mtime = ""
+    for d in _lines(path):
+        msg = d.get("message") or {}
+        if d.get("role") == "user":
+            raw = "\n".join(t for t in _texts(msg.get("content"), ("text",)) if t.strip())
+            qs = CURSOR_QUERY.findall(raw)
+            ask = "\n".join(q.strip() for q in qs) if qs else CURSOR_WRAP.sub("", raw).strip()
+            if ask and not NOISE.match(ask):
+                # 没有 <timestamp> 的提问记在文件最后修改的时刻上
+                s["turns"].append({"ts": _cursor_ts(raw) or mtime, "ask": ask, "answer": ""})
+        elif d.get("role") == "assistant" and s["turns"]:
+            said = [t for t in _texts(msg.get("content"), ("text",)) if t.strip()]
+            if said:
+                s["turns"][-1]["answer"] = said[-1]
+    # 记录在 `<项目目录名>/agent-transcripts/<id>/<id>.jsonl`
+    up = path.parents
+    if len(up) >= 3 and up[1].name == "agent-transcripts":
+        s["cwd"] = cursor_cwd(up[2].name)
+        s["project"] = "" if s["cwd"] or up[2].name == "empty-window" else up[2].name  # 目录已删：用记录目录名
+    return s
+
+
 def transcripts(since: date) -> list[tuple[str, Path]]:
     """Transcript files touched on or after `since` (mtime), oldest first."""
     cut = datetime.combine(since, datetime.min.time()).timestamp()
@@ -188,8 +265,11 @@ def transcripts(since: date) -> list[tuple[str, Path]]:
                 mtime = path.stat().st_mtime
             except OSError:
                 continue
-            if mtime >= cut and "subagents" not in path.parts:
-                found.append((mtime, agent, path))
+            if mtime < cut or "subagents" in path.parts:
+                continue
+            if agent == "cursor" and "agent-transcripts" not in path.parts:
+                continue  # ~/.cursor/projects 下还有别的 JSONL（工具输出之类），只要会话记录
+            found.append((mtime, agent, path))
     return [(a, p) for _, a, p in sorted(found)]
 
 
@@ -201,6 +281,8 @@ def agent_of(path: Path) -> str:
             return agent
         except ValueError:
             pass
+    if "agent-transcripts" in path.parts:
+        return "cursor"
     return "codex" if path.name.startswith("rollout-") else "claude-code"
 
 
@@ -208,7 +290,7 @@ def collect(since: date, until: date, files: list[Path] | None = None) -> list[d
     """One entry per (session, local day): {agent, id, day, project, title, turns}."""
     out: list[dict] = []
     for agent, path in ([(agent_of(f), f) for f in files] if files else transcripts(since)):
-        s = read_claude(path) if agent == "claude-code" else read_codex(path)
+        s = {"claude-code": read_claude, "codex": read_codex, "cursor": read_cursor}[agent](path)
         by_day: dict[date, list[dict]] = defaultdict(list)
         for t in s["turns"]:
             day = local_day(t["ts"])
@@ -216,7 +298,8 @@ def collect(since: date, until: date, files: list[Path] | None = None) -> list[d
                 by_day[day].append(t)
         for day, turns in by_day.items():
             out.append({"agent": agent, "id": s["id"], "day": day, "turns": turns,
-                        "project": Path(s["cwd"]).name if s["cwd"] else "", "root": project_root(s["cwd"]),
+                        "project": Path(s["cwd"]).name if s["cwd"] else s.get("project", ""),
+                        "root": project_root(s["cwd"]),
                         "title": s["title"] or clean(turns[0]["ask"], 60).split("\n")[0]})
     out.sort(key=lambda e: (e["day"], e["turns"][0]["ts"]))
     return out

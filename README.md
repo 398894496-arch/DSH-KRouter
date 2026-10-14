@@ -34,7 +34,7 @@ Python 3 is the only requirement. The installer makes a vault (or uses yours wit
 
 ## Five minutes later
 
-1. **"Import the agent sessions already on this machine?"** On a yes, the last 7 days of Claude Code and Codex sessions become pages, one per session: your questions and each turn's closing answer. Key-shaped text is redacted first, and nothing leaves the machine.
+1. **"Import the agent sessions already on this machine?"** On a yes, the last 7 days of Claude Code, Codex and Cursor agent sessions become pages, one per session: your questions and each turn's closing answer. Key-shaped text is redacted first, and nothing leaves the machine.
 2. **"Have your model pull out what was decided?"** On a yes, the model you already use (a logged-in CLI or an API key) writes "what was decided, what changed" at the top of each recent session's page. The installer tells you how many characters that sends before it sends anything.
 3. Ask your agent: *"what did we decide about X last week?"* It answers from the vault, names the page, and says plainly when the vault has nothing on it.
 
