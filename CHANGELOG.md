@@ -7,7 +7,10 @@ notice, then the details.
 
 ## Unreleased
 
-Nothing yet.
+- **Cursor sessions import too.** Cursor agent transcripts (`~/.cursor/projects/*/agent-transcripts/`) become
+  session pages like Claude Code and Codex ones: your questions (the `<user_query>` part), each turn's closing answer,
+  redacted, on the day and minute Cursor stamped on the question. The project folder is recovered from Cursor's
+  folder name by checking which path exists. `KROUTER_CURSOR_PROJECTS` points at another root. Closes #26.
 
 ## 1.0.4 — 2026-10-14
 

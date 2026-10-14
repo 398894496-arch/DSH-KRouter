@@ -18,6 +18,7 @@ os.environ["KROUTER_NO_PROMPT"] = "1"  # 测试里安装脚本不向终端提问
 # 会话导入读的是宿主真实的 agent 会话记录；测试只读自己造的。一键安装也不许改宿主的 MCP 配置和库路径记录。
 os.environ["KROUTER_CLAUDE_PROJECTS"] = str(_ISOLATED / "no-claude-projects")
 os.environ["KROUTER_CODEX_SESSIONS"] = str(_ISOLATED / "no-codex-sessions")
+os.environ["KROUTER_CURSOR_PROJECTS"] = str(_ISOLATED / "no-cursor-projects")
 os.environ["KROUTER_VAULT_FILE"] = str(_ISOLATED / "config/vault")
 os.environ["KROUTER_NO_MCP"] = "1"
 os.environ["KROUTER_CLAUDE_MEM_DB"] = str(_ISOLATED / "no-claude-mem.db")
