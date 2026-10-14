@@ -48,7 +48,7 @@ It fetches the latest release (a tag, never `main`) and checks its SHA-256 again
 | The lock does what the protocol says | 25/25 topics, 39/39 aliases, 0 conflicts on the template | Exhaustive, reproducible from a clone (CI) |
 | Lock vs nearest-neighbor retrieval | Lock refuses where TF-IDF, MiniLM and BGE-M3 cite a neighbor | Frozen replay, reproducible (CI) |
 | Recall refuses instead of guessing | English template: off-topic and half-off-topic refused 12/12. Chinese template: 6/6 and 5/6; gold page first 9/12 — the same with the alias table emptied | Public bench, reproducible (CI) |
-| Real traffic, author's vault | 92 real router queries, blind-judged: 0.62 → 1.47 of 2 (≤ 0.5.1 → 0.9.0) | **Development set** — failures were studied on these queries. On the held-out synthetic set the gain since 0.6 is flat (88% / 75% → 88% / 71%). A blind judge on fresh queries is scheduled for 2026-10-16 |
+| Real traffic, author's vault | 92 real router queries, blind-judged: 0.62 → 1.47 of 2 (≤ 0.5.1 → 0.9.0) | **Development set** — failures were studied on these queries. On the held-out synthetic set the gain since 0.6 is flat (88% / 75% → 88% / 71%). A blind judge on fresh queries runs once 50 are logged (not before 2026-10-20) |
 | Answer cards | Ablation on the same 92: no measurable effect (±0.05) | Kept on pending the fresh test; may become opt-in |
 
 Details, methods and what still fails: [`docs/VERIFY.md`](VERIFY.md).
