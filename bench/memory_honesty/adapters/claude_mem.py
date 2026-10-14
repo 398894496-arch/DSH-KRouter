@@ -13,6 +13,9 @@ Setup used for docs/BENCHMARK.md (claude-mem 13.35.0, observer model claude-haik
     cp -R bench/memory_honesty/vault /tmp/benchvault && cd /tmp/benchvault && git init && git add -A && git commit -m vault
     claude -p --allowedTools "Read Glob" "Read every .md file under Engineering/, one file per Read call, then list each rule."
     # wait until claude-mem's processing queue is empty, then:
+    # (13.39: hooks call `claude-mem` from $HOME/.local/bin, so put it on PATH; set CLAUDE_MEM_CLAUDE_CONFIG_DIR and
+    #  CLAUDE_MEM_OBSERVER_CLAUDE_CONFIG_DIR to a new directory and start the worker with CLAUDE_CODE_OAUTH_TOKEN in its
+    #  environment, or it looks up the host's keychain login; heldout3 was read in four sessions, one per top folder)
     python3 bench/memory_honesty/adapters/claude_mem.py --set dev --project benchvault > cm.jsonl
     python3 bench/memory_honesty/run.py --answers cm.jsonl
 """
