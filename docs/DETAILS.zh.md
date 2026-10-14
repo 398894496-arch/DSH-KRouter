@@ -20,7 +20,7 @@ Windows（PowerShell，不需要管理员）：
 irm https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.ps1 | iex
 ```
 
-它会下载最新发布版（tag，永远不是 `main`），先按 release 里的 `SHA256SUMS` 核对 SHA-256，再在 `文稿/第二大脑` 建一座库（系统语言是中文就用中文模板），装好路由器和 agent 规则，并在 Obsidian 里打开这座库。然后它会**先问你**要不要装夜间任务，用一句话说清：会用哪个 CLI、以什么权限运行，每晚会发出多少页、多少 token——数字来自在新库上的一次预演。没有终端可问就不装；`--timer` 表示事先同意，`--no-timer` 表示不要。想固定在某个版本：`… | KROUTER_TAG=v1.0.3 sh`（Windows 先设 `$env:KROUTER_TAG`）。已有的库（`… | sh -s -- --vault ~/MyVault`）一个文件都不动，只补缺失的骨架文件。同一行再跑一次就是升级。唯一的前提是 Python 3（Windows 脚本缺 Python 时会用 winget 自动装）。最后一行会告诉你还剩哪一步：登录一个 AI 编程工具，或者贴一个 API key。之后不需要维护任何东西——锁名词只是可选的快捷方式，不是前提；召回自己就能按页面标题和正文答，答不了就直说，不硬猜。哪天晚上的活没干成，会弹桌面通知说明原因。数据去向、CLI 写入器能看到什么：[`SECURITY.md`](../SECURITY.md)。
+它会下载最新发布版（tag，永远不是 `main`），先按 release 里的 `SHA256SUMS` 核对 SHA-256，再在 `文稿/第二大脑` 建一座库（系统语言是中文就用中文模板），装好路由器和 agent 规则，并在 Obsidian 里打开这座库。然后它会**先问你**要不要装夜间任务，用一句话说清：会用哪个 CLI、以什么权限运行，每晚会发出多少页、多少 token——数字来自在新库上的一次预演。没有终端可问就不装；`--timer` 表示事先同意，`--no-timer` 表示不要。想固定在某个版本：`… | KROUTER_TAG=v1.0.4 sh`（Windows 先设 `$env:KROUTER_TAG`）。已有的库（`… | sh -s -- --vault ~/MyVault`）一个文件都不动，只补缺失的骨架文件。同一行再跑一次就是升级。唯一的前提是 Python 3（Windows 脚本缺 Python 时会用 winget 自动装）。最后一行会告诉你还剩哪一步：登录一个 AI 编程工具，或者贴一个 API key。之后不需要维护任何东西——锁名词只是可选的快捷方式，不是前提；召回自己就能按页面标题和正文答，答不了就直说，不硬猜。哪天晚上的活没干成，会弹桌面通知说明原因。数据去向、CLI 写入器能看到什么：[`SECURITY.md`](../SECURITY.md)。
 
 ## 什么会离开本机，要花多少
 
