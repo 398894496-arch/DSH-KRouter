@@ -1,0 +1,50 @@
+{"id": "D3-01", "cited": ["Engineering/JavaScript package manager (old).md", "Engineering/JavaScript package manager.md", "工程规范/服务器操作系统.md"], "scores": [1.2381578767350114, 1.0973442712827735, 0.6178135619774974], "refused": false}
+{"id": "D3-02", "cited": ["Engineering/Database migrations (old).md", "Engineering/Database migrations.md", "工程规范/恢复演练.md"], "scores": [1.2318241699572952, 1.0225306858256475, 0.5999050019285903], "refused": false}
+{"id": "D3-03", "cited": ["Engineering/API versioning (old).md", "Engineering/Public API rate limits.md", "Engineering/API versioning.md"], "scores": [1.2269593440063544, 1.174200882768547, 1.019639968050392], "refused": false}
+{"id": "D3-04", "cited": ["Engineering/Expense approval.md", "Engineering/Expense approval (old).md", "工程规范/测试覆盖率.md"], "scores": [0.7542258068988303, 0.7434063380124414, 0.5539892338625503], "refused": false}
+{"id": "D3-05", "cited": ["Engineering/Password hashing (old).md", "Engineering/Password hashing.md", "Engineering/Public API rate limits.md"], "scores": [1.2305201529227383, 0.8265391601742819, 0.6261413203636721], "refused": false}
+{"id": "D3-06", "cited": ["Engineering/Laptop security.md", "Engineering/Database migrations (old).md", "Engineering/Database migrations.md"], "scores": [1.1731964115285904, 1.1014676939404549, 0.9325876369599814], "refused": false}
+{"id": "D3-07", "cited": ["Engineering/Container base image (old).md", "Engineering/Container base image.md", "Engineering/JavaScript package manager (old).md"], "scores": [1.2436625036787887, 1.0485824084155757, 0.6177782972193723], "refused": false}
+{"id": "D3-08", "cited": ["Engineering/Deploy freeze (old).md", "Engineering/Deploy freeze.md", "Engineering/Mobile release train.md"], "scores": [1.2469293177286966, 1.070679386567614, 0.7180609660392463], "refused": false}
+{"id": "D3-09", "cited": ["工程规范/请假审批.md", "工程规范/告警分级.md", "工程规范/代码评审时限（旧）.md"], "scores": [0.747083079688748, 0.7419646352086726, 0.7361486459013165], "refused": false}
+{"id": "D3-10", "cited": ["工程规范/代码评审时限.md", "工程规范/代码评审时限（旧）.md", "工程规范/测试覆盖率.md"], "scores": [0.7745856404121962, 0.7698283809781898, 0.7312273119819377], "refused": false}
+{"id": "D3-11", "cited": ["工程规范/前端框架（旧）.md", "工程规范/前端框架.md", "工程规范/上线方式（旧）.md"], "scores": [0.9008285337433506, 0.8431470223508484, 0.7782980863180295], "refused": false}
+{"id": "D3-12", "cited": ["工程规范/前端框架（旧）.md", "工程规范/新人入职.md", "工程规范/恢复演练.md"], "scores": [0.7426233244419151, 0.7348521231294693, 0.721965620378354], "refused": false}
+{"id": "D3-13", "cited": ["工程规范/代码评审时限.md", "工程规范/代码评审时限（旧）.md", "工程规范/测试覆盖率.md"], "scores": [0.8206067256800722, 0.7592763831320255, 0.7493196333269605], "refused": false}
+{"id": "D3-14", "cited": ["工程规范/请假审批.md", "工程规范/请假审批（旧）.md", "工程规范/会议纪要.md"], "scores": [0.7145736095943676, 0.7068091852998446, 0.7037323297680995], "refused": false}
+{"id": "D3-15", "cited": ["工程规范/请假审批.md", "工程规范/请假审批（旧）.md", "工程规范/生产环境部署.md"], "scores": [0.7398016673548398, 0.7309569556500648, 0.7307815119837571], "refused": false}
+{"id": "D3-16", "cited": ["Engineering/Laptop security.md", "Engineering/Database migrations.md", "Engineering/Database migrations (old).md"], "scores": [1.171415467303395, 1.0, 0.834809101546457], "refused": false}
+{"id": "D3-17", "cited": ["Engineering/Contractor access.md", "Engineering/Accessibility.md", "Engineering/Expense approval (old).md"], "scores": [1.1358157540379783, 1.0, 0.5558994037891392], "refused": false}
+{"id": "D3-18", "cited": ["Engineering/P1 bugs.md", "工程规范/告警分级.md", "Engineering/Error tracking.md"], "scores": [1.2639055809671584, 0.9214530325251579, 0.6496138581792064], "refused": false}
+{"id": "D3-19", "cited": ["Engineering/Database migrations.md", "Engineering/Laptop security.md", "工程规范/日志保留（旧）.md"], "scores": [1.1853210863144492, 1.0009692570823066, 0.5951203900501625], "refused": false}
+{"id": "D3-20", "cited": ["Engineering/Mobile release train.md", "Engineering/Daily standup.md", "Engineering/Deploy freeze (old).md"], "scores": [1.2375430037071056, 0.5566409847010618, 0.5554701303188931], "refused": false}
+{"id": "D3-21", "cited": ["Engineering/Commit messages.md", "Engineering/JavaScript package manager (old).md", "Engineering/JavaScript package manager.md"], "scores": [1.2301469881247535, 0.7209417691714005, 0.6782857016801818], "refused": false}
+{"id": "D3-22", "cited": ["Engineering/Python formatting.md", "工程规范/代码评审时限.md", "工程规范/代码评审时限（旧）.md"], "scores": [1.226203703057616, 0.5581103523081463, 0.5553992015774565], "refused": false}
+{"id": "D3-23", "cited": ["工程规范/接口路径命名.md", "工程规范/请假审批.md", "工程规范/代码评审时限（旧）.md"], "scores": [0.72669267172658, 0.722903641515968, 0.721544234776438], "refused": false}
+{"id": "D3-24", "cited": ["工程规范/会议纪要.md", "工程规范/告警分级.md", "工程规范/新人入职.md"], "scores": [0.7251193993217822, 0.7201847566647075, 0.7178569212155068], "refused": false}
+{"id": "D3-25", "cited": ["工程规范/请假审批.md", "工程规范/告警分级.md", "工程规范/生产环境部署.md"], "scores": [0.693337605117101, 0.688532938420904, 0.6850373436914179], "refused": false}
+{"id": "D3-26", "cited": ["工程规范/依赖升级.md", "工程规范/代码评审时限（旧）.md", "工程规范/请假审批.md"], "scores": [0.739074839777004, 0.7178147421517451, 0.7133984517397209], "refused": false}
+{"id": "D3-27", "cited": ["工程规范/接口路径命名.md", "工程规范/请假审批.md", "工程规范/请假审批（旧）.md"], "scores": [1.240819687788187, 0.7116756827750077, 0.6978170540301516], "refused": false}
+{"id": "D3-28", "cited": ["工程规范/生产环境部署.md", "工程规范/金额存储.md", "工程规范/代码评审时限.md"], "scores": [0.730717258711719, 0.6932683289598387, 0.6876091165407203], "refused": false}
+{"id": "D3-29", "cited": ["工程规范/告警分级.md", "Engineering/P1 bugs.md", "工程规范/请假审批.md"], "scores": [1.2250455521769255, 0.9729310748321125, 0.70099328245621], "refused": false}
+{"id": "D3-30", "cited": ["工程规范/会议纪要.md", "工程规范/请假审批.md", "工程规范/代码评审时限（旧）.md"], "scores": [0.7501471636886077, 0.7261392977452203, 0.7198926204506435], "refused": false}
+{"id": "D3-31", "cited": ["Engineering/Error tracking.md", "Engineering/Analytics event names.md", "Engineering/Product page caching (old).md"], "scores": [1.1950138528588383, 1.062187153544374, 0.63331334671558], "refused": false}
+{"id": "D3-32", "cited": ["Engineering/Error tracking.md"], "scores": [1.0], "refused": false}
+{"id": "D3-33", "cited": ["Engineering/Laptop security.md", "Engineering/Container base image (old).md", "Engineering/Container base image.md"], "scores": [1.1777471117062144, 1.095512662422065, 0.9384210671397257], "refused": false}
+{"id": "D3-34", "cited": ["Engineering/Public API rate limits.md", "Engineering/API versioning (old).md", "Engineering/API versioning.md"], "scores": [1.2302704714666584, 0.6750916064914195, 0.6457412150068579], "refused": false}
+{"id": "D3-35", "cited": ["Engineering/Python formatting.md", "工程规范/文件上传大小（旧）.md", "工程规范/文件上传大小.md"], "scores": [1.196919735863734, 0.6292447567348187, 0.6238882953174425], "refused": false}
+{"id": "D3-36", "cited": ["Engineering/Deploy freeze (old).md", "Engineering/Database migrations.md", "Engineering/Deploy freeze.md"], "scores": [1.1821480165949703, 0.7798466876472113, 0.71811586360998], "refused": false}
+{"id": "D3-37", "cited": ["Engineering/Public API rate limits.md", "Engineering/Error tracking.md", "Engineering/Expense approval.md"], "scores": [1.0, 0.7077985770687258, 0.6339482091840907], "refused": false}
+{"id": "D3-38", "cited": ["Engineering/Public API rate limits.md", "Engineering/API versioning (old).md", "Engineering/Commit messages.md"], "scores": [1.1661251029976405, 1.0002646804832196, 0.6140823907542465], "refused": false}
+{"id": "D3-39", "cited": ["Engineering/Error tracking.md", "Engineering/Error tracking (old).md", "Engineering/P1 bugs.md"], "scores": [1.2302347696146365, 0.834651762602137, 0.7336878848037371], "refused": false}
+{"id": "D3-40", "cited": ["Engineering/Accessibility.md", "工程规范/前端框架（旧）.md", "工程规范/服务器操作系统（旧）.md"], "scores": [1.1951593897990846, 0.5607237712308617, 0.5504227854436223], "refused": false}
+{"id": "D3-41", "cited": ["工程规范/请假审批.md", "工程规范/告警分级.md", "工程规范/代码评审时限（旧）.md"], "scores": [0.7165445384318598, 0.7079649467757179, 0.7037382943279322], "refused": false}
+{"id": "D3-42", "cited": ["工程规范/接口路径命名.md", "工程规范/缓存键命名.md", "工程规范/请假审批.md"], "scores": [0.7434048862431837, 0.6772162430135538, 0.675831534826143], "refused": false}
+{"id": "D3-43", "cited": ["工程规范/请假审批.md", "工程规范/告警分级.md", "工程规范/代码评审时限（旧）.md"], "scores": [0.7093049284258015, 0.7032081777461983, 0.701634185354095], "refused": false}
+{"id": "D3-44", "cited": ["工程规范/请假审批.md", "工程规范/告警分级.md", "工程规范/代码评审时限（旧）.md"], "scores": [0.7458281646195228, 0.7389866066339987, 0.73576154362358], "refused": false}
+{"id": "D3-45", "cited": ["工程规范/请假审批.md", "工程规范/金额存储.md", "工程规范/代码评审时限（旧）.md"], "scores": [0.7591882835626791, 0.7559754846678288, 0.7549612041851912], "refused": false}
+{"id": "D3-46", "cited": ["工程规范/会议纪要.md", "工程规范/代码评审时限.md", "工程规范/请假审批.md"], "scores": [0.7565133862936033, 0.7105337656636532, 0.7104169277660883], "refused": false}
+{"id": "D3-47", "cited": ["工程规范/请假审批.md", "工程规范/告警分级.md", "工程规范/代码评审时限（旧）.md"], "scores": [0.7458281646195228, 0.7389866066339987, 0.73576154362358], "refused": false}
+{"id": "D3-48", "cited": ["工程规范/依赖升级.md", "工程规范/告警分级.md", "工程规范/请假审批.md"], "scores": [0.754406511621438, 0.707149078388106, 0.7020675747580469], "refused": false}
+{"id": "D3-49", "cited": ["工程规范/生产环境部署.md", "工程规范/请假审批.md", "工程规范/测试覆盖率.md"], "scores": [0.7724917137609264, 0.7195024368452447, 0.7072874613627107], "refused": false}
+{"id": "D3-50", "cited": ["工程规范/代码评审时限（旧）.md", "工程规范/请假审批.md", "工程规范/数据库连接池.md"], "scores": [0.7625313083871106, 0.7541671732647739, 0.7498207258827279], "refused": false}

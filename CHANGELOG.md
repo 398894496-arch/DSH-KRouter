@@ -7,6 +7,9 @@ notice, then the details.
 
 ## Unreleased
 
+- Benchmark: basic-memory 0.23.2 (latest) on the 200-question third bench, at its defaults: 78% wrong citations,
+  0 of 80 neighbour questions refused, 45 of 120 right, against KRouter 1.0.3's 27%, 46 and 102 (every difference
+  significant). `floor.py` and both adapters now run on all three vaults; the container runs offline.
 - Docs: the README's honest numbers now come from the third bench (200 held-out questions, 95% intervals): level
   with BM25 plus the two rules at equal coverage, not ahead. The fresh-traffic blind judge waits for 50 new queries
   instead of a fixed 2026-10-16 date.

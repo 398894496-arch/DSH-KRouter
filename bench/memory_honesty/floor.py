@@ -26,12 +26,12 @@ bench = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bench)
 
 
-def superseded() -> set[str]:
+def superseded(vault: Path) -> set[str]:
     out = set()
-    for path in (HERE / "vault").rglob("*.md"):
+    for path in vault.rglob("*.md"):
         head = path.read_text(encoding="utf-8").split("\n---", 1)[0]
         if re.search(r"(?m)^status:\s*superseded\s*$", head):
-            out.add(path.relative_to(HERE / "vault").as_posix())
+            out.add(path.relative_to(vault).as_posix())
     return out
 
 
@@ -51,15 +51,21 @@ def main() -> int:
     ap.add_argument("--dev", required=True, help="the system's scored answers on the dev set")
     ap.add_argument("--target", required=True, help="its scored answers on the set to grade")
     ap.add_argument("--set", choices=sorted(bench.SETS), default="dev", dest="qset")
+    ap.add_argument("--dev-set", choices=sorted(bench.SETS), default="",
+                    help="the set the --dev answers are on (default: the dev set on the target's vault, dev3 for vault3)")
+    ap.add_argument("--ci", action="store_true", help="add 95%% bootstrap intervals")
     args = ap.parse_args()
-    skip = superseded()
-    dev_rows = bench.questions("dev")
-    floor = bench.pick_floor(dev_rows, scored_of(Path(args.dev), skip))
+    dev_set = args.dev_set or bench.floor_dev_of(args.qset)
+    dev_rows = bench.questions(dev_set)
+    floor = bench.pick_floor(dev_rows, scored_of(Path(args.dev), superseded(bench.vault_of(dev_set))))
     rows = bench.questions(args.qset)
-    res = bench.score(rows, bench.floor_answers(scored_of(Path(args.target), skip), floor))
-    if args.qset == "heldout":
+    answers = bench.floor_answers(scored_of(Path(args.target), superseded(bench.vault_of(args.qset))), floor)
+    res = bench.score(rows, answers)
+    if args.ci:
+        res["ci95"] = bench.bootstrap(rows, answers)
+    if args.qset in bench.HELDOUT_SETS:
         res = bench.aggregate(res)
-    print(json.dumps({"floor_picked_on_dev": round(floor, 4), **res}, ensure_ascii=False, indent=1))
+    print(json.dumps({"floor_picked_on": dev_set, "floor": round(floor, 4), **res}, ensure_ascii=False, indent=1))
     return 0
 
 
