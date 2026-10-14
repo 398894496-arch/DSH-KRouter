@@ -7,6 +7,16 @@ notice, then the details.
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.1.0 — 2026-10-14
+
+**What you will notice**
+- **Cursor users get their history on day one.** The install's "import the agent sessions already on this machine?"
+  now covers Cursor agent sessions as well as Claude Code and Codex: one page per session and day, your questions and
+  each turn's closing answer, redacted, nothing leaving the machine.
+
+**Details**
 - **Cursor sessions import too.** Cursor agent transcripts (`~/.cursor/projects/*/agent-transcripts/`) become
   session pages like Claude Code and Codex ones: your questions (the `<user_query>` part), each turn's closing answer,
   redacted, on the day and minute Cursor stamped on the question. The project folder is recovered from Cursor's
