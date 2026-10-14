@@ -7,6 +7,9 @@ notice, then the details.
 
 ## Unreleased
 
+- Docs: the README's honest numbers now come from the third bench (200 held-out questions, 95% intervals): level
+  with BM25 plus the two rules at equal coverage, not ahead. The fresh-traffic blind judge waits for 50 new queries
+  instead of a fixed 2026-10-16 date.
 - Benchmark: a third held-out set by the outside reviewer, `heldout3.jsonl.gz`: 200 questions (80 neighbours, half
   Chinese) on `vault3/`, 110 pages including 20 daily logs as distractors, with no dev set on that vault. `run.py`
   gains `--ci` (bootstrap intervals), `--vs` (paired intervals), `--vs-matched` (equal coverage) and `--curve`.
