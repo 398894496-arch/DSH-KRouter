@@ -67,8 +67,28 @@ The one-line install downloads a tagged release, never `main`, and checks the pa
 install; a release without one installs only with `KROUTER_ALLOW_UNVERIFIED=1`.
 
 What the checksum does and does not prove: it is published in the same release as the package, so it catches a
-corrupted or truncated download, not a compromised repository or release. For that, compare the package with the
-tagged source yourself (`npm pack` on a checkout of the tag gives the same files).
+corrupted or truncated download, not a compromised repository or release. Releases after v1.0.3 also carry a GitHub
+build-provenance attestation, signed by GitHub's workflow identity rather than stored next to the package: it says
+which commit and which workflow built the file.
+
+```bash
+gh attestation verify dsh-krouter-X.Y.Z.tgz --repo 398894496-arch/KRouter
+```
+
+Or compare the package with the tagged source yourself (`npm pack` on a checkout of the tag gives the same files).
+
+## What static scanners flag
+
+Capability scanners read the shipped code and list what it could do. dsh-xray rates the DeepSeek Harness plugin C3
+("powerful capability combined with sensitive behavior"; its own page says levels are capability, not malice). All
+three flags are in `extras/dsh/`, the optional DeepSeek Harness plugin; the core router, the MCP server and the
+Claude Code plugin are not part of it.
+
+| Flag | What it is | File |
+|---|---|---|
+| patches the dsh runtime | The plugin manifest DeepSeek Harness reads to register a plugin's tools: it inserts a `krouter` entry with read-only routes. It does not change DeepSeek Harness's own code | `extras/dsh/cordis.patch.yml` |
+| command execution | The plugin spawns KRouter's router (`route_knowledge.sh`) with one of seven read-only routes; anything else is rejected before spawning | `extras/dsh/lib/route.js` |
+| reads credential-class env vars | `keyPresent()` checks whether any usable key exists, in `*_API_KEY` variables or in the keys file whose *path* `KROUTER_KEYS_ENV` names, and returns yes or no; no value is printed, stored or sent | `extras/dsh/lib/index.js` |
 
 ## Reporting a vulnerability
 

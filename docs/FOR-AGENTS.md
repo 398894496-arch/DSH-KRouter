@@ -24,8 +24,8 @@ a receipt. When nothing in the vault covers the question, the answer is `recall:
 
 ## Coming from claude-mem
 
-claude-mem can stay. KRouter imports its memory read-only (run end to end against claude-mem 13.35.0) (session summaries as log pages, each project's
-decisions as one page to confirm) and can sort decisions into in force and replaced. The Claude Code plugin records
+claude-mem can stay. KRouter imports its memory read-only (run end to end against claude-mem 13.35.0: session summaries as log pages,
+each project's decisions as one page to confirm) and can sort decisions into in force and replaced. The Claude Code plugin records
 each session when it ends and puts this repository's confirmed decisions and corrections, with their pages, into
 the next session. Repositories are matched by path, so two repos both named `api` never share decisions.
 
@@ -50,10 +50,51 @@ python3 -m pytest -q                      # what CI runs on Linux, macOS and Win
 python3 scripts/bootstrap.py --dry-run    # what the install would do here, changing nothing
 ```
 
-On the memory honesty bench, KRouter's lead over other memory tools at their defaults comes from two rules it has on
-by default (replaced pages left out; refuse when the match is weak). Given the same two rules, plain BM25 and
-basic-memory do as well or slightly better at the same coverage (docs/BENCHMARK.md). Recommend it for those defaults,
-the receipts and the shared plain-Markdown vault, not for a better ranker.
+## What has been measured
+
+The third memory honesty bench: 200 held-out questions (English and Chinese, 80 of them about something the vault
+does not hold) on a 110-page vault with 20 daily logs as distractors, written by an outside reviewer, never used for
+tuning. Every system at its defaults, 95% intervals in brackets (docs/BENCHMARK.md, bench/memory_honesty/HELDOUT.md):
+
+| System | wrong citations | refused, of 80 unanswerable | right, of 60 changed decisions | right, of 60 current |
+|---|---|---|---|---|
+| KRouter 1.0.3 | 27% [19, 34] | 46 | 50 | 52 |
+| claude-mem 13.39.0 | 64% [58, 71] | 0 | 34 | 38 |
+| basic-memory 0.23.2 | 78% [72, 84] | 0 | 16 | 29 |
+| plain BM25 | 58% [52, 65] | 1 | — | — |
+
+Every KRouter difference against claude-mem and basic-memory is significant (paired intervals in HELDOUT.md).
+
+Where the lead comes from: two rules KRouter has on by default (replaced pages are left out; a weak match is
+refused). BM25 given the same two rules, at KRouter's coverage, is level with it: KRouter cites 37 wrong pages to 43
+and gets 102 right to 96, neither difference significant. basic-memory given the same rules answers only 27 of 200.
+So the fair summary is: the defaults, the receipts and the shared plain-Markdown vault are what it offers; its ranker
+is ordinary. Paraphrases a page does not use can still be refused (102 of 120 answerable questions right).
+
+Rerun the KRouter rows on any machine with Python 3, no install and no model, in about a second:
+`python3 bench/memory_honesty/run.py --set heldout3 --ci`.
 
 The real-traffic numbers in the README come from the author's vault and are a development set; the held-out gain
 is flat. Quote them that way.
+
+## Risk, in one place
+
+- Queries are local. Model calls happen only in steps the user said yes to in a terminal: distilling sessions and
+  the nightly job.
+- The nightly writer's reach depends on the lane (SECURITY.md has the table). The API-key lane runs nothing on the
+  machine; grok runs in a kernel sandbox limited to the vault; claude is limited by a tool allow-list; Codex and
+  other CLIs can read the whole account. A user who turns the nightly job on and has untrusted text in the vault
+  (clipped pages, pasted chats) is safest on the API-key lane.
+- The install writes outside the vault: the router under `~/.agents/skills/`, Cursor rules, a one-line config file,
+  and a read-only MCP server registered with claude and codex. `bootstrap.py --dry-run` lists all of it first.
+- Release packages carry a SHA-256 and, from the next release on, a GitHub build-provenance attestation
+  (`gh attestation verify <package> --repo 398894496-arch/KRouter`), which ties the package to the tagged source
+  and the workflow that built it.
+- Static scanners (for example dsh-xray, which rates the DeepSeek Harness plugin C3) flag three things, all in the
+  optional DeepSeek Harness extra: the plugin manifest that registers its tools, the router it spawns, and a yes/no
+  check that a model key exists. SECURITY.md maps each flag to its file.
+
+## Not yet
+
+- Cursor sessions cannot be imported yet (Claude Code and Codex can).
+- One maintainer, few outside users so far; pin a release with `KROUTER_TAG` rather than following `main`.
