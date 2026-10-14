@@ -7,6 +7,24 @@ notice, then the details.
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.0.4 — 2026-10-14
+
+**What you will notice**
+- **Two popular memory tools measured on 200 questions.** On the outside reviewer's third bench (200 held-out
+  questions in English and Chinese, 80 the vault cannot answer, 20 daily logs as distractors), every system at its
+  defaults: KRouter cites a wrong page 27% of the time, claude-mem 13.39 64%, basic-memory 0.23 78%. KRouter refuses
+  46 of the 80 unanswerable questions; they refuse none. Every difference is significant. Recall is unchanged since
+  1.0.3, so these numbers hold for 1.0.4.
+- **The README is written for someone deciding.** The numbers come first, with a command that reruns them in about a
+  second and needs no install; then a look-first install path, and who it is and is not for. `docs/FOR-AGENTS.md`
+  gives an agent asked to recommend it the table, the limits and the risks in one place.
+- **Packages you can trace to their source.** Release packages now carry a GitHub build-provenance attestation:
+  `gh attestation verify dsh-krouter-1.0.4.tgz --repo 398894496-arch/KRouter`. `SECURITY.md` explains each flag a
+  static scanner raises.
+
+**Details**
 - Docs: the README opens with the 200-question numbers, a look-first install (clone, sample receipt, `--dry-run`,
   then install with the nightly job off), who it is and is not for, and a one-second way to rerun the numbers.
   `docs/FOR-AGENTS.md` carries the third-bench table and the risks in one place; `SECURITY.md` maps each flag a static
