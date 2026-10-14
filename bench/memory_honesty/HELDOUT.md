@@ -159,6 +159,33 @@ A candidate is run on heldout3 once, at the default it would ship with.
    judge on real traffic does not fall more than 0.05 below 1.0.3. Rule 2 does not need rule 1.
 3. At most two candidates per release cycle are run on heldout3; each run is a line in the log below.
 
+**Real-traffic blind judge for candidate 1** (pre-registered 2026-10-14, after candidate 1's heldout3 run and before
+any fresh query was judged; amend only before the judge runs, and log it). Candidate 1 already fails rule 2 (93 < 97
+right), so it cannot become the default; this judge decides only whether local embeddings ship as an **opt-in**
+(`--dense`, balanced tier).
+- **Systems, exactly two.** KRouter 1.0.3 (`v1.0.3`, `f7e2df7`) and candidate 1 (`4412acd`, the configuration logged
+  above, embeddings on, balanced tier, no decider weights). The strict tier is not judged: it was never run on a
+  held-out set, and adding it after the fact would turn the judge into a choice between variants. If embeddings ship,
+  the strict tier ships as an option documented as unmeasured on held-out data.
+- **Queries.** Every routed query in `~/.local/state/krouter/queries.jsonl` with `ts` ≥ `2026-10-13T11:24:32Z`,
+  de-duplicated by `(route, q)`, minus queries sent by the maintainer's KRouter development sessions (identified from
+  the Claude Code transcripts of the KRouter repository). The judge runs on the first day on or after 2026-10-20 that
+  has at least 50 such queries, and no later than 2026-11-10. At the freeze rate (8 logged queries in three days, none
+  in the first 13 hours after the freeze) 50 is unlikely before late October. Fewer than 50 on 2026-11-10: judged
+  anyway, reported as underpowered, and embeddings do not ship on it.
+- **Running.** Both systems on one copy of the author's vault at a single recorded git commit, separate recall caches,
+  candidate vectors built before the run, `KROUTER_NO_QUERY_LOG=1`, API-key variables unset. Router output is passed
+  to the judge verbatim except lines that name the version or say whether embeddings are on (the receipt's `dense:`
+  line), which are removed from both.
+- **Scoring.** As layer 4 in `docs/VERIFY.md`: Claude Opus, the two outputs per query shuffled into X / Y, batches of
+  10, 0 useless or empty / 1 relevant, still digging / 2 directly answers. Judged twice with independent shuffles; a
+  query's score is the mean of the two. Primary measure: mean score of candidate 1 minus 1.0.3, with a paired
+  bootstrap 95% interval over queries (10 000 resamples, seed 0). Also reported, not decisive: count of 0s per system,
+  queries where exactly one system refuses.
+- **Pass line.** Embeddings ship as opt-in if the mean difference is ≥ −0.05 (rule 2's blind-judge clause). "Better
+  on real traffic" may be claimed only if the interval is entirely above zero; otherwise only "not measurably worse".
+  Below −0.05: embeddings stay on the branch.
+
 ### Log, set 3
 
 | Date | Event |
@@ -168,3 +195,4 @@ A candidate is run on heldout3 once, at the default it would ship with.
 | 2026-10-13 | **Candidate 1 pre-registered** (before its run): `feature/dense` at `96741e1`, local embeddings on. Model `jinaai/jina-embeddings-v2-base-zh`; chunks per page by tier rule 4 / topic 4 / other 2 / project 1 / log 1 / dead 1 (max 4), card vectors off; decision `tiered`: lexical-sure answers stand (conf high, or medium with ≥3 matched content words, or ≥3 question words in the page's triggers), otherwise the lexical top 5 and dense top 5 must share a live page with dense similarity ≥ 0.5 and ≥1 matched content word; lexical refusals rescued only at similarity ≥ 0.6. No decider weights. Run once on heldout3: aggregates, `--ci`, `--vs-matched bm25-floor`. **Baseline, not a candidate:** `agree` from `bench/memory_honesty/dense.py` (BM25 over character pairs and the same jina model must agree, floors picked on dev3), to tell KRouter's rules from the effect of adding embeddings. Any claim says embeddings were on. Shipping also needs the time-split real-traffic blind judge (queries frozen from 2026-10-13T11:24Z, judged on or after 2026-10-20). |
 | 2026-10-13 | **Candidate 1 run** (`4412acd`, config as pre-registered above; one run, aggregates only, no `--reveal`). Candidate: 14.7% wrong citations (16 / 109) [8.1, 21.4], 64 / 80 neighbours refused [51, 77], 93 / 120 right [79, 107]. vs BM25 + two rules at the same coverage (109): wrong-rate difference [-16.8, -4.4] points, right [+3, +20], refused [+1, +14] — **rule 1 met** (embeddings on). Rule 2: wrong ≤ 27% met, refused ≥ 46 met, right ≥ 97 **not met** (93), so it cannot be the default. Baseline `agree` (BM25 + same jina model, floors from dev3): 5.5% (4 / 73), 76 / 80, 69 / 120; candidate minus agree: wrong rate [+3.5, +15.3], right [+14, +34], refused [-19, -6] — a different point on the trade-off, not above it. Not changed after this run. |
 | 2026-10-13 | Equal-coverage check of candidate 1 against its baseline (not a candidate run; candidate 1 per-question output was not saved, so only the baseline side was recomputed). `agree` (BM25 + jina) widened to 109 answers by ranking agreed questions by dense similarity, cut by coverage only: 16.5% wrong (18 / 109), 62 / 80 refused, 91 / 120 right, against candidate 1's 14.7% (16 / 109), 64 / 80, 93 / 120. Two questions apart: a tie at this size (no paired interval possible). KRouter's tiered rules show no measured gain over plain agreement on heldout3. Note from the maintainer's real vault (a dev set): top-1 agreement between KRouter's lexical ranking and dense refused most questions there (22 → 11 of 25 right), which is why the tiered rules exist. |
+| 2026-10-14 | **Real-traffic blind judge pre-registered** (section above, before any fresh query was judged): 1.0.3 vs candidate 1 only, strict tier excluded; queries logged from 2026-10-13T11:24:32Z, at least 50, judged on or after 2026-10-20 and no later than 2026-11-10; pass line −0.05. Also recorded: the lexical logistic-regression decider (leave-one-vault-out, dev sets only) is roughly level with the hand rules (fewer wrong citations, slightly fewer right); the dense variant fails on the author's vault. Neither is a candidate this cycle; no weights shipped. The equal-coverage candidate-1-vs-`agree` comparison stays as logged above (aggregates; per-question output of the candidate run was not saved, so no paired interval and no re-run). |
