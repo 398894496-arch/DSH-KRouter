@@ -7,6 +7,8 @@ notice, then the details.
 
 ## Unreleased
 
+- Benchmark: claude-mem 13.39.0 (latest) on the 200-question third bench, at its defaults: 64% wrong citations,
+  0 of 80 neighbours refused, 72 of 120 right, against KRouter 1.0.3's 27%, 46 and 102 (every difference significant).
 - Benchmark: basic-memory 0.23.2 (latest) on the 200-question third bench, at its defaults: 78% wrong citations,
   0 of 80 neighbour questions refused, 45 of 120 right, against KRouter 1.0.3's 27%, 46 and 102 (every difference
   significant). `floor.py` and both adapters now run on all three vaults; the container runs offline.

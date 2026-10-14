@@ -198,21 +198,25 @@ rules at KRouter's coverage: wrong-citation rate −4.3 points [−10.2, +1.4], 
 on every point estimate, significant on none. The rule for claiming "surpasses BM25", and for shipping a new default,
 was written down before any candidate ran: [`HELDOUT.md`](../bench/memory_honesty/HELDOUT.md), "Held-out set 3".
 
-**Another memory system on the same 200 questions (2026-10-14).** basic-memory 0.23.2, the latest release, at its
-defaults (in 0.23 that is full text plus semantic search), run in a container, registered in HELDOUT.md before the run.
+**Other memory systems on the same 200 questions (2026-10-14).** basic-memory 0.23.2 and claude-mem 13.39.0, the
+latest releases, at their defaults (basic-memory 0.23: full text plus semantic search, in a container; claude-mem:
+four Claude Code sessions read every page, its haiku observer took notes, in an isolated home), registered in
+HELDOUT.md before each run.
 95% intervals in brackets.
 
 | System | wrong citations | neighbours refused (of 80) | corrections right (of 60) | current right (of 60) |
 |---|---|---|---|---|
 | KRouter 1.0.3, default | 27% (37 / 139) [19, 34] | 46 | 50 | 52 |
+| claude-mem 13.39.0, default | 64% (128 / 200) [58, 71] | 0 | 34 | 38 |
 | basic-memory 0.23.2, default | 78% (155 / 200) [72, 84] | 0 | 16 | 29 |
 | basic-memory + the two rules (floor from dev3) | 19% (5 / 27) [4, 33] | 76 | 3 | 19 |
 
-KRouter minus basic-memory at their defaults, paired 95% intervals: wrong-citation rate −43 to −59 points, answerable
-right +43 to +72, neighbours refused +35 to +58. With the two rules basic-memory cites few wrong pages but answers 27
+KRouter minus each at their defaults, paired 95% intervals: against claude-mem, wrong-citation rate −30 to −45 points,
+answerable right +17 to +44; against basic-memory, −43 to −59 points and +43 to +72; neighbours refused +35 to +58
+against both. Neither has a way to refuse, and neither knows a page was replaced. With the two rules basic-memory cites few wrong pages but answers 27
 of 200 questions: its scores do not separate right from wrong well enough for one floor to keep the right answers.
-claude-mem, mem0 and Zep were not run on this set; on the first, 25-question bench claude-mem cited a wrong page 60%
-of the time at its defaults.
+claude-mem gives no score, so it has no floor variant. mem0 and Zep were not run: both need a hosted model to
+extract memories, and none was configured.
 
 ## Run it
 
