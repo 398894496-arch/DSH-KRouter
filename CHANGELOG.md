@@ -7,6 +7,12 @@ notice, then the details.
 
 ## Unreleased
 
+- Docs: the README opens with the 200-question numbers, a look-first install (clone, sample receipt, `--dry-run`,
+  then install with the nightly job off), who it is and is not for, and a one-second way to rerun the numbers.
+  `docs/FOR-AGENTS.md` carries the third-bench table and the risks in one place; `SECURITY.md` maps each flag a static
+  scanner raises to its file.
+- Release: packages get a GitHub build-provenance attestation (`gh attestation verify`), so a package can be tied to
+  the tagged source and the workflow that built it, not only to a checksum in the same release.
 - Benchmark: claude-mem 13.39.0 (latest) on the 200-question third bench, at its defaults: 64% wrong citations,
   0 of 80 neighbours refused, 72 of 120 right, against KRouter 1.0.3's 27%, 46 and 102 (every difference significant).
 - Benchmark: basic-memory 0.23.2 (latest) on the 200-question third bench, at its defaults: 78% wrong citations,

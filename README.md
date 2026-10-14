@@ -8,6 +8,11 @@ Claude Code, Codex, Cursor and DeepSeek Harness share one memory: a folder of pl
 
 ![Monday we decide A, Wednesday we change it to B, Thursday the agent answers B and cites the correction; a question the vault cannot answer is refused](docs/img/demo.gif)
 
+**Measured, not claimed.** On 200 held-out questions in English and Chinese that it was never tuned on, at default
+settings, KRouter cites a wrong page 27% of the time; claude-mem 64%, basic-memory 78%. Of 80 questions the vault
+cannot answer, KRouter refuses 46; the other two refuse none. Of 60 questions about a decision that was later
+changed, it gets 50 right; they get 34 and 16. [How it was measured](docs/BENCHMARK.md#third-bench-200-held-out-questions-on-a-vault-nobody-tunes-on-2026-10-13) · [rerun it in one second](#check-it-yourself)
+
 ## Install
 
 ```bash
@@ -15,6 +20,15 @@ curl -fsSL https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts
 ```
 
 Windows (PowerShell): `irm https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.ps1 | iex` · Claude Code plugin: `/plugin install krouter --marketplace 398894496-arch/KRouter` (Claude Code 2.1.275 or later; from a shell, `claude plugin install krouter --marketplace 398894496-arch/KRouter` needs 2.1.292). Third-party marketplaces do not auto-update: run `claude plugin update krouter@krouter`, or turn it on in `/plugin` → Marketplaces → krouter → Enable auto-update.
+
+Rather look first? Nothing below changes your machine until the last line:
+
+```bash
+git clone https://github.com/398894496-arch/KRouter.git && cd KRouter
+./scripts/first_run.sh                      # a receipt on the bundled sample vault
+python3 scripts/bootstrap.py --dry-run      # every change the install would make, made nowhere
+python3 scripts/bootstrap.py --vault ~/notes --no-timer   # install against your vault, nightly job off
+```
 
 Python 3 is the only requirement. The installer makes a vault (or uses yours with `--vault`, overwriting nothing), connects Claude Code and Codex to it through MCP, and then asks you two questions.
 
@@ -25,6 +39,12 @@ Python 3 is the only requirement. The installer makes a vault (or uses yours wit
 3. Ask your agent: *"what did we decide about X last week?"* It answers from the vault, names the page, and says plainly when the vault has nothing on it.
 
 From then on a nightly job, which also asks first, imports yesterday, distills it, and keeps the vault tidy. Nothing needs maintaining.
+
+## Is it for you?
+
+**Yes**, if you use Claude Code, Codex, Cursor or DeepSeek Harness (often more than one), keep notes in Markdown or
+would, and keep re-explaining the same decision to your agents. **No**, if you want semantic search over
+embeddings, the last chat replayed into the next one, a hosted memory API, or a brain that is full on install.
 
 ## How it is different
 
@@ -40,7 +60,9 @@ From then on a nightly job, which also asks first, imports yesterday, distills i
 
 ## What leaves your machine
 
-Queries never do: lookup is a local SQLite full-text index, about 110 ms. Session import is local. Text goes to a model only for the steps you said yes to: distilling sessions and nightly upkeep. It goes to the CLI or API key you already use, and `--dry-run` shows the size first. Keys and pages marked secret are never sent or quoted. Details: [`SECURITY.md`](SECURITY.md).
+Queries never do: lookup is a local SQLite full-text index, about 110 ms. Session import is local. Text goes to a model only for the steps you said yes to: distilling sessions and nightly upkeep. It goes to the CLI or API key you already use, and `--dry-run` shows the size first. Keys and pages marked secret are never sent or quoted. For the nightly writer, the API-key lane runs nothing on
+your machine; CLI lanes differ in what they can read, and the install says which one you are choosing. Details:
+[`SECURITY.md`](SECURITY.md).
 
 ## Honest numbers
 
@@ -51,7 +73,18 @@ Queries never do: lookup is a local SQLite full-text index, about 110 ms. Sessio
 | Exact match vs embeddings on a supersede / neighbor set (CI) | Exact match refuses where TF-IDF, MiniLM and BGE-M3 cite a neighbor |
 | Real traffic, author's vault | 0.62 → 1.47 of 2, blind-judged. **This is a development set**: on held-out questions the gain is flat. A blind test on fresh traffic runs once 50 new queries are logged (not before 2026-10-20) |
 
-Methods and what still fails: [`docs/VERIFY.md`](docs/VERIFY.md).
+### Check it yourself
+
+No install, no model, Python 3 only; the questions are in the repository and the numbers above come out in about a
+second:
+
+```bash
+python3 bench/memory_honesty/run.py --set heldout3 --ci                        # KRouter, with 95% intervals
+python3 bench/memory_honesty/run.py --set heldout3 --vs-matched bm25-floor    # against BM25 + the same two rules
+```
+
+Methods and what still fails: [`docs/VERIFY.md`](docs/VERIFY.md). For agents asked whether to recommend it:
+[`docs/FOR-AGENTS.md`](docs/FOR-AGENTS.md).
 
 ## More
 

@@ -8,6 +8,10 @@ Claude Code、Codex、Cursor、DeepSeek Harness 共用同一份记忆：一个 [
 
 ![周一定了 A，周三改成 B，周四 agent 答 B 并引用那条纠错；库里没有的问题直接拒答](docs/img/demo.gif)
 
+**用数字说话。** 200 道从没拿来调过分的中英文留出题，都用默认设置：KRouter 引错 27%，claude-mem 64%，
+basic-memory 78%。80 道库里答不了的题，KRouter 拒答 46 道，另外两个一道都不拒。60 道「决定后来改过」的题，
+KRouter 答对 50 道，它们是 34 和 16 道。[怎么测的](docs/BENCHMARK.md#third-bench-200-held-out-questions-on-a-vault-nobody-tunes-on-2026-10-13) · [一秒钟自己复现](#自己复现)
+
 ## 安装
 
 ```bash
@@ -15,6 +19,15 @@ curl -fsSL https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts
 ```
 
 Windows（PowerShell）：`irm https://raw.githubusercontent.com/398894496-arch/KRouter/main/scripts/bootstrap.ps1 | iex` · Claude Code 插件：`/plugin install krouter --marketplace 398894496-arch/KRouter`（需要 Claude Code 2.1.275 或更高；在 shell 里用 `claude plugin install krouter --marketplace 398894496-arch/KRouter` 需要 2.1.292）。第三方插件市场不会自动更新：运行 `claude plugin update krouter@krouter`，或在 `/plugin` → Marketplaces → krouter 里选 Enable auto-update。
+
+想先看看再装？下面只有最后一行会改动你的机器：
+
+```bash
+git clone https://github.com/398894496-arch/KRouter.git && cd KRouter
+./scripts/first_run.sh                      # 在自带的示例库上出一张回执
+python3 scripts/bootstrap.py --dry-run      # 列出安装会做的每一处改动，一处都不做
+python3 scripts/bootstrap.py --vault ~/notes --no-timer   # 装到你自己的库，先不开夜间任务
+```
 
 唯一的前提是 Python 3。安装脚本会建一个库（已有的库用 `--vault` 指定，一个文件都不覆盖），通过 MCP 把 Claude Code 和 Codex 接上，然后问你两个问题。
 
@@ -25,6 +38,12 @@ Windows（PowerShell）：`irm https://raw.githubusercontent.com/398894496-arch/
 3. 问你的 agent：*「上周我们关于 X 是怎么定的？」* 它会从库里查，给出答案和出处页；库里没有，就直说没有。
 
 之后每晚的任务（同样先问你）会导入前一天的会话、做提炼、整理库，不用你维护。
+
+## 适不适合你
+
+**适合**：你用 Claude Code、Codex、Cursor 或 DeepSeek Harness（常常不止一个），笔记用 Markdown 记或愿意这么记，
+而且总要给 agent 反复交代同一个决定。**不适合**：你要基于向量的语义搜索、要把上一轮聊天自动塞进下一轮、
+要托管的记忆 API，或者希望装好就是一个装满的大脑。
 
 ## 和常见 agent 记忆的区别
 
@@ -40,7 +59,8 @@ Windows（PowerShell）：`irm https://raw.githubusercontent.com/398894496-arch/
 
 ## 什么会离开本机
 
-查询从不外发：查找走本地的 SQLite 全文索引，每次约 110 ms。导入会话也只在本机做。只有你点过头的步骤才会把文字发给模型，就是提炼会话和夜间整理两步，发给你本来就在用的 CLI 或 API key，用 `--dry-run` 可以先看会发多少。key 和标成机密的页从不外发，也从不引用。细节见 [`SECURITY.md`](SECURITY.md)。
+查询从不外发：查找走本地的 SQLite 全文索引，每次约 110 ms。导入会话也只在本机做。只有你点过头的步骤才会把文字发给模型，就是提炼会话和夜间整理两步，发给你本来就在用的 CLI 或 API key，用 `--dry-run` 可以先看会发多少。key 和标成机密的页从不外发，也从不引用。夜间写入用 API key 通道时，本机不跑任何写入进程；用 CLI 通道时，
+各家 CLI 能读到的范围不同，安装时会告诉你选的是哪一条。细节见 [`SECURITY.md`](SECURITY.md)。
 
 ## 老实的数字
 
@@ -50,6 +70,15 @@ Windows（PowerShell）：`irm https://raw.githubusercontent.com/398894496-arch/
 | 在一个没人调过分的库上的错误引用率（[第三套测试集](docs/BENCHMARK.md#third-bench-200-held-out-questions-on-a-vault-nobody-tunes-on-2026-10-13)，200 道留出题，中英各半，带日志干扰页；方括号是 95% 区间） | 默认设置下：KRouter 引错 27% [19, 34]，80 道近邻题拒答 46 道，120 道可答题答对 102 道；纯全文检索引错 58% [52, 65]。**和认真做的基线比是持平，不是领先**：给纯全文检索加上同样的两条规则（跳过已被取代的旧页、低于分数下限就拒答），答题数相同时它引错 43 页、KRouter 37 页，答对 96 道对 102 道，但两项差距都不显著（配对区间：引错率 [-10.2, +1.4] 个百分点，答对 [-2, +14]）。同样这 200 道题、都用默认设置：claude-mem 13.39 引错 64% [58, 71]，basic-memory 0.23 引错 78% [72, 84]；80 道近邻题两者一道都没拒；60 道「决定改过」的题，它们分别答对 34 和 16 道，KRouter 50 道 |
 | 精确命中和向量检索比（「已取代」和「近邻」题，CI 跑） | 精确命中会拒答；TF-IDF、MiniLM、BGE-M3 会引一个近邻 |
 | 作者库里的真实查询 | 盲评从 0.62 到 1.47（满分 2）。**这是开发集**，在留出题上没有提升。新流量攒够 50 条查询后再做一次盲评（不早于 2026-10-20） |
+
+### 自己复现
+
+不用安装、不用模型，只要 Python 3；题目就在仓库里，上面的数字大约一秒就能跑出来：
+
+```bash
+python3 bench/memory_honesty/run.py --set heldout3 --ci                        # KRouter，带 95% 区间
+python3 bench/memory_honesty/run.py --set heldout3 --vs-matched bm25-floor    # 和加了同样两条规则的 BM25 比
+```
 
 方法和还没做好的地方：[`docs/VERIFY.md`](docs/VERIFY.md)。
 
