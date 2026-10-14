@@ -20,6 +20,7 @@ Setup used for docs/BENCHMARK.md (claude-mem 13.35.0, observer model claude-haik
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import sys
@@ -28,14 +29,17 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]
-SETS = {"dev": "questions.jsonl", "heldout": "heldout.jsonl"}
+_spec = importlib.util.spec_from_file_location("mh_bench_cm", HERE / "run.py")
+bench = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(bench)
+TOPS: tuple[str, ...] = ("Engineering",)
 
 
 def page_of(path: str) -> str:
-    """`/tmp/benchvault/Engineering/X.md` or `Engineering/X.md` → `Engineering/X.md`."""
+    """`/tmp/benchvault/Engineering/X.md` or `Engineering/X.md` → `Engineering/X.md` (any top folder of the vault)."""
     path = path.replace("\\", "/")
-    i = path.find("Engineering/")
-    return path[i:] if i >= 0 else ""
+    hits = [i for i in (path.find(t + "/") for t in TOPS) if i >= 0 and (i == 0 or path[i - 1] == "/")]
+    return path[min(hits):] if hits else ""
 
 
 def ask(base: str, q: str, project: str, limit: int) -> list[str]:
@@ -57,12 +61,14 @@ def ask(base: str, q: str, project: str, limit: int) -> list[str]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--set", choices=sorted(SETS), default="dev")
+    ap.add_argument("--set", choices=sorted(bench.SETS), default="dev")
     ap.add_argument("--project", default="benchvault")
     ap.add_argument("--limit", type=int, default=3)
     ap.add_argument("--base", default=os.environ.get("CLAUDE_MEM_URL", "http://127.0.0.1:37777"))
     args = ap.parse_args()
-    rows = [json.loads(x) for x in (HERE / SETS[args.set]).read_text(encoding="utf-8").splitlines() if x.strip()]
+    global TOPS
+    TOPS = tuple(sorted(p.name for p in bench.vault_of(args.set).iterdir() if p.is_dir()))
+    rows = bench.questions(args.set)
     for it in rows:
         cited = ask(args.base, it["q"], args.project, args.limit)
         print(json.dumps({"id": it["id"], "cited": cited, "refused": not cited}, ensure_ascii=False))
