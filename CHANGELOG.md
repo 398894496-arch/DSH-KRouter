@@ -21,6 +21,14 @@ notice, then the details.
   confined CLI further down the list is used instead, unless you set `KROUTER_ALLOW_UNCONFINED=1` (environment or
   keys file). A pinned `KROUTER_WRITER` or `KROUTER_LEARN_CLI` follows the same rule; the writer and `host_action` say
   why one was skipped.
+- **The nightly learner no longer learns from neighbour pages.** On the dev sets it picked pages that only share a
+  question's subject and so made recall worse after one night (wrong citations 2 → 5 and 7 → 9). It now sees the start
+  of each candidate page and must copy the sentence that answers the question; a pick without that sentence on the page
+  is not learned, and the old bare-path answer no longer counts. After one night: no wrong triggers, no change to wrong
+  citations or refusals. Secret pages are never shown to it. `learn_bench.py` measures this.
+- Benchmark: `bench/memory_honesty/human_set/` (instructions, template, checker) for a held-out set written by a
+  person, each thing asked twice in different words; `learn_bench.py` ("learns from use": week 1 through the router
+  and one night of learning, week 2 scored before and after).
 - Docs: one story for the nightly job everywhere. `PROTOCOL.md`, `first_run.sh`, `install.sh` and the nightly writer's
   files said "timer on by default"; the one-line install asks first, and only the manual `install.sh` installs it.
 - Docs: the comparison with claude-mem and basic-memory says up front that neither can refuse, so their 0 of 80 is

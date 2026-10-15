@@ -2,9 +2,11 @@
 """Nightly trigger learning from the router's own query log (retrieval-driven reconsolidation).
 
 Reads queries the router could not answer well (literal fallback, or low-confidence recall), shows
-a model the top recall candidates for each, and asks which page answers it — or none. Accepted
-pairs are appended to `下意识触发词-自学习.psv` as `rel|original query`: recall-only, never a lock,
-no paraphrase invented. Half of real router calls repeat an earlier question, so one fix pays again.
+a model the top recall candidates for each with the start of each page, and asks which page answers it — or none —
+and to copy the sentence on that page that answers it. A pick is learned only if that sentence is really on the page:
+a page that is merely about the same subject (a neighbour) has no such sentence. Accepted pairs are appended to
+`下意识触发词-自学习.psv` as `rel|original query`: recall-only, never a lock, no paraphrase invented. Half of real
+router calls repeat an earlier question, so one fix pays again. Pages marked secret are never shown to the model.
 """
 
 from __future__ import annotations
@@ -23,13 +25,18 @@ import recall_index as ri  # noqa: E402
 
 MISS = {"bounded-literal-search-complete"}
 DEFAULT_OUT = "90 系统文件/自动化/下意识触发词-自学习.psv"
-PROMPT = """下面是一个个人知识库路由器没答好的查询。每条给出：查询原文，以及召回排名前列的候选页（路径 + 一句话结论）。
+PROMPT = """下面是一个个人知识库路由器没答好的查询。每条给出：查询原文，以及召回排名前列的候选页（路径 + 页面开头的原文）。
 判断哪一个候选页能回答这个查询。规则：
+- 只有页面原文里有一句话直接回答了这个查询，才选它，并把那句话原样抄出来（一字不改）。
+- 查询问到的具体对象（某个工具、系统、文件、场景、数字）在那页原文里没有出现，就是 none：同一话题不等于答案。
 - 只能从该条给出的候选里选，原样输出路径；候选都不对就输出 none。宁可 none，不要硬选。
 - 查询问的是库外常识、闲聊、或候选只是碰巧有相同字词，一律 none。
-只输出 JSON：{"<id>": "<候选路径或 none>", ...}
+只输出 JSON：{"<id>": {"page": "<候选路径>", "quote": "<页面上回答它的那句原文>"}, ...}，答不了的写 "<id>": "none"。
 
 """
+CANDS = 4          # 每条查询给模型看几个候选
+EXCERPT = 600      # 每个候选给看多少字的正文
+QUOTE_MIN = 8      # 引用至少这么长才算一句话
 
 
 def state_dir() -> Path:
@@ -63,7 +70,30 @@ def learned(out: Path) -> set[tuple[str, str]]:
     return pairs
 
 
-def ask(vault: Path, prompt: str) -> dict[str, str]:
+def page_text(vault: Path, rel: str) -> str | None:
+    """The page body as the learner may see it (redacted); None for a secret page or a missing one."""
+    try:
+        text = ri.redact((vault / rel).read_text(encoding="utf-8", errors="replace"))
+    except OSError:
+        return None
+    meta, body = ri.split_frontmatter(text)
+    if ri.is_secret_page(ri.zones.canon(vault, rel), meta):
+        return None
+    return re.sub(r"\s+", " ", body).strip()
+
+
+def grounded(pick, cands: dict[str, str]) -> str:
+    """The page a verdict names, if its quote is on that page; "" otherwise (a bare path no longer counts)."""
+    if not isinstance(pick, dict):
+        return ""
+    rel, quote = str(pick.get("page") or "").strip(), re.sub(r"\s+", " ", str(pick.get("quote") or "")).strip()
+    body = cands.get(rel)
+    if not body or len(quote) < QUOTE_MIN:
+        return ""
+    return rel if quote.strip("。.\"'「」 ") in body else ""
+
+
+def ask(vault: Path, prompt: str) -> dict:
     text = llm.complete(prompt, vault)
     m = re.search(r"\{.*\}", text, re.S)
     if not m:
@@ -97,18 +127,24 @@ def main() -> int:
     items = []
     for row in misses:
         res = ri.recall(vault, row["q"], limit=8, gate=False)
-        cands = [h for h in res["hits"] if h["tier"] != "dead"]
-        if cands and not any((h["rel"], row["q"]) in have for h in cands):
+        cands = {}
+        for h in res["hits"]:
+            body = page_text(vault, h["rel"]) if h["tier"] != "dead" else None
+            if body and len(cands) < CANDS:
+                cands[h["rel"]] = body
+        if cands and not any((rel, row["q"]) in have for rel in cands):
             items.append({"id": str(len(items)), "q": row["q"], "cands": cands})
     report = {"misses": len(misses), "asked": len(items), "learned": 0, "none": 0}
     if args.dry_run:
-        report["chars"] = len(PROMPT) + sum(len(it["q"]) + sum(len(h["rel"]) + 75 for h in it["cands"]) for it in items) if items else 0
-        report["sends"] = "router queries the router did not answer well, and candidate page paths" if items else "nothing"
+        report["chars"] = len(PROMPT) + sum(len(it["q"]) + sum(len(rel) + min(len(b), EXCERPT) + 8 for rel, b in
+                                                               it["cands"].items()) for it in items) if items else 0
+        report["sends"] = ("router queries the router did not answer well, candidate page paths and the start of each "
+                           "candidate page (redacted; secret pages never)") if items else "nothing"
         report["writes"] = [args.out] if items else []
     if items and not args.dry_run:
         blocks = []
         for it in items:
-            lines = "\n".join(f"  - {h['rel']} ｜ {h['how'][:70]}" for h in it["cands"])
+            lines = "\n".join(f"  - {rel} ｜ {body[:EXCERPT]}" for rel, body in it["cands"].items())
             blocks.append(f"### id={it['id']} 查询：{ri.redact(it['q'])}\n候选：\n{lines}\n")
         try:
             verdict = ask(vault, PROMPT + "\n".join(blocks))
@@ -117,8 +153,8 @@ def main() -> int:
             return 0
         new_lines = []
         for it in items:
-            pick = (verdict.get(it["id"]) or "none").strip()
-            if pick in {h["rel"] for h in it["cands"]}:
+            pick = grounded(verdict.get(it["id"]), it["cands"])
+            if pick:
                 new_lines.append(f"{pick}|{it['q'].replace('|', '／').replace(';', '，')}")
                 report["learned"] += 1
             else:
