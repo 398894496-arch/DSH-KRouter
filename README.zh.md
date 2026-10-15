@@ -10,7 +10,9 @@ Claude Code、Codex、Cursor、DeepSeek Harness 共用同一份记忆：一个 [
 
 **用数字说话。** 200 道从没拿来调过分的中英文留出题，都用默认设置：KRouter 引错 27%，claude-mem 64%，
 basic-memory 78%。80 道库里答不了的题，KRouter 拒答 46 道，另外两个一道都不拒。60 道「决定后来改过」的题，
-KRouter 答对 50 道，它们是 34 和 16 道。[怎么测的](docs/BENCHMARK.md#third-bench-200-held-out-questions-on-a-vault-nobody-tunes-on-2026-10-13) · [一秒钟自己复现](#自己复现)
+KRouter 答对 50 道，它们是 34 和 16 道。这两款工具本来就没有拒答机制，也不知道哪页被取代了，所以差距有一部分是
+结构决定的：给纯全文检索加上 KRouter 那两条规则，它就和 KRouter 打平。KRouter 多出来的，是这两条规则默认就开着，
+外加出处回执和一个你能直接编辑的库。[怎么测的](docs/BENCHMARK.md#third-bench-200-held-out-questions-on-a-vault-nobody-tunes-on-2026-10-13) · [一秒钟自己复现](#自己复现)
 
 ## 安装
 

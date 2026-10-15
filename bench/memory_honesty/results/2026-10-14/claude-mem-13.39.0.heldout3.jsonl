@@ -1,0 +1,200 @@
+{"id": "H3-001", "cited": ["Handbook/Analytics queries.md", "团队手册/数据看板.md", "Handbook/Access reviews.md"], "refused": false}
+{"id": "H3-002", "cited": ["Handbook/Analytics queries.md", "团队手册/服务拆分.md", "团队手册/数据看板.md"], "refused": false}
+{"id": "H3-003", "cited": ["Handbook/Feature requests.md", "团队手册/客户回访.md", "Handbook/Customer interview notes.md"], "refused": false}
+{"id": "H3-004", "cited": ["Handbook/Feature requests.md", "团队手册/意见反馈.md", "团队手册/发布说明.md"], "refused": false}
+{"id": "H3-005", "cited": ["Handbook/Model deployment.md", "团队手册/数据分级.md", "团队手册/设备申领.md"], "refused": false}
+{"id": "H3-006", "cited": ["Handbook/Model deployment.md", "Handbook/API deprecation.md", "Handbook/Price changes.md"], "refused": false}
+{"id": "H3-007", "cited": ["Handbook/Customer data deletion.md", "Daily log/2026-08-05.md", "Handbook/Customer interview notes.md"], "refused": false}
+{"id": "H3-008", "cited": ["Handbook/Customer data deletion.md", "Daily log/2026-08-05.md", "Handbook/Customer interview notes.md"], "refused": false}
+{"id": "H3-009", "cited": ["Handbook/Cloud infrastructure changes.md", "Handbook/Cloud cost alerts.md", "团队手册/代码托管.md"], "refused": false}
+{"id": "H3-010", "cited": ["Handbook/Cloud infrastructure changes.md", "Handbook/Feature requests.md", "Handbook/Repository ownership.md"], "refused": false}
+{"id": "H3-011", "cited": ["Handbook/Support escalation.md", "团队手册/发布说明.md", "Handbook/Feature requests.md"], "refused": false}
+{"id": "H3-012", "cited": ["团队手册/客户投诉.md", "Handbook/Support escalation.md", "团队手册/客户投诉（旧）.md"], "refused": false}
+{"id": "H3-013", "cited": ["Handbook/Interview process.md", "Handbook/On-site days.md", "团队手册/需求评审.md"], "refused": false}
+{"id": "H3-014", "cited": ["Handbook/Interview process.md", "Handbook/Customer interview notes.md", "团队手册/意见反馈.md"], "refused": false}
+{"id": "H3-015", "cited": ["Handbook/Mobile release criteria.md", "工作日志/2026-06-25.md", "团队手册/App 系统版本.md"], "refused": false}
+{"id": "H3-016", "cited": ["Handbook/Mobile release criteria.md", "工作日志/2026-06-25.md", "团队手册/权限申请.md"], "refused": false}
+{"id": "H3-017", "cited": ["Handbook/Third-party scripts.md", "Handbook/Price changes.md", "团队手册/服务拆分.md"], "refused": false}
+{"id": "H3-018", "cited": ["Handbook/Third-party scripts.md", "团队手册/软件采购.md", "团队手册/短信通道（旧）.md"], "refused": false}
+{"id": "H3-019", "cited": ["Handbook/Database for new services.md", "团队手册/服务拆分.md", "团队手册/数据看板.md"], "refused": false}
+{"id": "H3-020", "cited": ["Handbook/Database for new services.md", "团队手册/服务拆分.md", "团队手册/服务拆分（旧）.md"], "refused": false}
+{"id": "H3-021", "cited": ["Handbook/Product search.md", "Handbook/Feature requests.md", "团队手册/软件采购.md"], "refused": false}
+{"id": "H3-022", "cited": ["Handbook/Product search.md", "Daily log/2026-07-01.md", "Handbook/Feature requests.md"], "refused": false}
+{"id": "H3-023", "cited": ["Handbook/On-site days.md", "团队手册/节假日安排.md", "Handbook/Interview process.md"], "refused": false}
+{"id": "H3-024", "cited": ["Handbook/On-site days.md", "团队手册/设备申领.md", "团队手册/需求评审.md"], "refused": false}
+{"id": "H3-025", "cited": ["Handbook/Customer refunds.md", "Handbook/Bug bounty.md", "团队手册/意见反馈.md"], "refused": false}
+{"id": "H3-026", "cited": ["Handbook/Customer refunds.md", "团队手册/出差标准.md", "Handbook/Repository ownership.md"], "refused": false}
+{"id": "H3-027", "cited": ["Handbook/Transactional email.md", "团队手册/数据共享.md", "Daily log/2026-07-15.md"], "refused": false}
+{"id": "H3-028", "cited": ["Handbook/Transactional email.md", "团队手册/数据共享.md", "团队手册/数据共享（旧）.md"], "refused": false}
+{"id": "H3-029", "cited": ["Handbook/Repository ownership.md", "团队手册/代码托管.md", "团队手册/代码托管（旧）.md"], "refused": false}
+{"id": "H3-030", "cited": ["Handbook/Cloud cost alerts.md", "Handbook/Repository ownership.md", "团队手册/服务拆分.md"], "refused": false}
+{"id": "H3-031", "cited": ["Handbook/Design handoff.md", "团队手册/技术方案模板.md", "Handbook/Support escalation.md"], "refused": false}
+{"id": "H3-032", "cited": ["Handbook/Design handoff.md", "团队手册/技术方案模板.md", "团队手册/需求评审.md"], "refused": false}
+{"id": "H3-033", "cited": ["Handbook/Customer interview notes.md", "Handbook/Interview process.md", "团队手册/客户回访.md"], "refused": false}
+{"id": "H3-034", "cited": ["Handbook/Customer interview notes.md", "团队手册/技术分享.md", "团队手册/消息队列.md"], "refused": false}
+{"id": "H3-035", "cited": ["Handbook/API deprecation.md", "Handbook/Customer data deletion.md", "团队手册/接口文档.md"], "refused": false}
+{"id": "H3-036", "cited": ["Handbook/API deprecation.md", "团队手册/服务拆分（旧）.md", "团队手册/技术分享（旧）.md"], "refused": false}
+{"id": "H3-037", "cited": ["Handbook/GPU usage.md", "团队手册/权限申请.md", "团队手册/出差标准.md"], "refused": false}
+{"id": "H3-038", "cited": ["Handbook/GPU usage.md", "团队手册/设备申领.md", "工作日志/2026-07-30.md"], "refused": false}
+{"id": "H3-039", "cited": ["Handbook/Bug bounty.md", "Daily log/2026-07-29.md", "Handbook/Analytics queries.md"], "refused": false}
+{"id": "H3-040", "cited": ["Handbook/Bug bounty.md", "Daily log/2026-07-29.md", "团队手册/软件采购.md"], "refused": false}
+{"id": "H3-041", "cited": ["Handbook/Status page.md", "Daily log/2026-07-22.md", "Handbook/Customer data deletion.md"], "refused": false}
+{"id": "H3-042", "cited": ["Daily log/2026-07-22.md", "Handbook/Status page.md", "Handbook/Support hours.md"], "refused": false}
+{"id": "H3-043", "cited": ["Handbook/Access reviews.md", "团队手册/绩效评估（旧）.md", "Handbook/Feature requests.md"], "refused": false}
+{"id": "H3-044", "cited": ["Handbook/Access reviews.md", "Handbook/Analyst data access.md", "团队手册/办公网络.md"], "refused": false}
+{"id": "H3-045", "cited": ["Handbook/Price changes.md", "团队手册/客户投诉.md", "团队手册/客户投诉（旧）.md"], "refused": false}
+{"id": "H3-046", "cited": ["Handbook/Price changes.md", "Daily log/2026-08-05.md", "团队手册/软件采购.md"], "refused": false}
+{"id": "H3-047", "cited": ["Handbook/A/B tests.md", "Handbook/Interview process.md", "团队手册/测试环境.md"], "refused": false}
+{"id": "H3-048", "cited": ["Handbook/A/B tests.md", "Handbook/Model deployment.md", "Handbook/Interview process.md"], "refused": false}
+{"id": "H3-049", "cited": ["Handbook/Support hours.md", "Handbook/Browser support.md", "团队手册/发布说明（旧）.md"], "refused": false}
+{"id": "H3-050", "cited": ["Handbook/Support hours.md", "团队手册/客户回访.md", "团队手册/设备申领.md"], "refused": false}
+{"id": "H3-051", "cited": ["Handbook/Language for code.md", "团队手册/技术方案模板.md", "团队手册/代码托管.md"], "refused": false}
+{"id": "H3-052", "cited": ["Handbook/Language for code.md", "团队手册/发布说明（旧）.md", "团队手册/技术分享.md"], "refused": false}
+{"id": "H3-053", "cited": ["Handbook/Analyst data access.md", "团队手册/数据看板.md", "Handbook/Access reviews.md"], "refused": false}
+{"id": "H3-054", "cited": ["Handbook/Analyst data access.md", "工作日志/2026-07-30.md", "Handbook/Access reviews.md"], "refused": false}
+{"id": "H3-055", "cited": ["Handbook/Hackathon.md", "Daily log/2026-07-22.md", "Handbook/Feature requests.md"], "refused": false}
+{"id": "H3-056", "cited": ["Handbook/Hackathon.md", "Handbook/Bug bounty.md", "Handbook/Repository ownership.md"], "refused": false}
+{"id": "H3-057", "cited": ["Handbook/Cloud cost alerts.md", "Handbook/Cloud infrastructure changes.md", "Handbook/Price changes.md"], "refused": false}
+{"id": "H3-058", "cited": ["Handbook/Cloud cost alerts.md", "Handbook/Price changes.md", "团队手册/意见反馈.md"], "refused": false}
+{"id": "H3-059", "cited": ["Handbook/Browser support.md", "团队手册/App 系统版本.md", "团队手册/App 系统版本（旧）.md"], "refused": false}
+{"id": "H3-060", "cited": ["Handbook/Browser support.md", "团队手册/开源许可证.md", "团队手册/图片资源.md"], "refused": false}
+{"id": "H3-061", "cited": ["团队手册/代码托管（旧）.md", "团队手册/Go 代码规范.md", "团队手册/节假日安排.md"], "refused": false}
+{"id": "H3-062", "cited": ["团队手册/节假日安排.md", "团队手册/出差标准（旧）.md", "团队手册/出差标准.md"], "refused": false}
+{"id": "H3-063", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-064", "cited": ["团队手册/消息队列.md", "团队手册/接口文档.md", "团队手册/技术分享.md"], "refused": false}
+{"id": "H3-065", "cited": ["团队手册/出差标准.md", "团队手册/数据共享.md", "团队手册/数据标注.md"], "refused": false}
+{"id": "H3-066", "cited": ["团队手册/出差标准（旧）.md", "团队手册/出差标准.md", "团队手册/接口文档.md"], "refused": false}
+{"id": "H3-067", "cited": ["团队手册/出差标准.md", "团队手册/发布说明（旧）.md", "团队手册/发布说明.md"], "refused": false}
+{"id": "H3-068", "cited": ["团队手册/软件采购.md", "团队手册/出差标准（旧）.md", "团队手册/出差标准.md"], "refused": false}
+{"id": "H3-069", "cited": ["团队手册/出差标准（旧）.md", "团队手册/出差标准.md", "团队手册/节假日安排.md"], "refused": false}
+{"id": "H3-070", "cited": ["团队手册/出差标准.md", "团队手册/出差标准（旧）.md", "团队手册/意见反馈.md"], "refused": false}
+{"id": "H3-071", "cited": ["团队手册/App 系统版本.md", "团队手册/App 系统版本（旧）.md", "团队手册/接口文档.md"], "refused": false}
+{"id": "H3-072", "cited": ["团队手册/发布说明（旧）.md", "团队手册/发布说明.md", "团队手册/接口文档.md"], "refused": false}
+{"id": "H3-073", "cited": ["团队手册/数据共享.md", "团队手册/数据标注.md", "团队手册/消息队列.md"], "refused": false}
+{"id": "H3-074", "cited": ["团队手册/出差标准.md", "团队手册/发布说明（旧）.md", "团队手册/发布说明.md"], "refused": false}
+{"id": "H3-075", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-076", "cited": ["团队手册/发布说明（旧）.md", "团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md"], "refused": false}
+{"id": "H3-077", "cited": ["团队手册/App 系统版本.md", "团队手册/App 系统版本（旧）.md", "团队手册/意见反馈.md"], "refused": false}
+{"id": "H3-078", "cited": ["团队手册/App 系统版本.md", "团队手册/App 系统版本（旧）.md", "团队手册/团队周会.md"], "refused": false}
+{"id": "H3-079", "cited": ["团队手册/技术分享.md", "团队手册/技术分享（旧）.md", "团队手册/服务拆分（旧）.md"], "refused": false}
+{"id": "H3-080", "cited": ["团队手册/服务拆分（旧）.md", "团队手册/技术分享（旧）.md", "团队手册/技术分享.md"], "refused": false}
+{"id": "H3-081", "cited": ["团队手册/消息队列.md", "团队手册/发布说明（旧）.md", "团队手册/发布说明.md"], "refused": false}
+{"id": "H3-082", "cited": ["团队手册/团队周会.md", "团队手册/技术分享（旧）.md", "团队手册/服务拆分（旧）.md"], "refused": false}
+{"id": "H3-083", "cited": ["团队手册/短信通道（旧）.md", "团队手册/短信通道.md", "团队手册/消息队列.md"], "refused": false}
+{"id": "H3-084", "cited": ["团队手册/短信通道（旧）.md", "团队手册/短信通道.md", "团队手册/出差标准（旧）.md"], "refused": false}
+{"id": "H3-085", "cited": ["团队手册/代码托管.md", "团队手册/代码托管（旧）.md", "团队手册/Go 代码规范.md"], "refused": false}
+{"id": "H3-086", "cited": ["团队手册/办公网络.md", "团队手册/节假日安排.md", "团队手册/数据分级.md"], "refused": false}
+{"id": "H3-087", "cited": ["团队手册/技术方案模板.md", "团队手册/消息队列.md", "团队手册/发布说明（旧）.md"], "refused": false}
+{"id": "H3-088", "cited": ["团队手册/发布说明（旧）.md", "团队手册/发布说明.md", "团队手册/技术方案模板.md"], "refused": false}
+{"id": "H3-089", "cited": ["团队手册/出差标准.md", "团队手册/出差标准（旧）.md", "团队手册/数据共享.md"], "refused": false}
+{"id": "H3-090", "cited": ["团队手册/服务拆分（旧）.md", "团队手册/技术分享（旧）.md", "团队手册/技术分享.md"], "refused": false}
+{"id": "H3-091", "cited": ["团队手册/发布说明（旧）.md", "团队手册/出差标准.md", "团队手册/出差标准（旧）.md"], "refused": false}
+{"id": "H3-092", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-093", "cited": ["团队手册/接口文档.md", "团队手册/服务拆分（旧）.md", "团队手册/数据分级.md"], "refused": false}
+{"id": "H3-094", "cited": ["团队手册/技术方案模板.md", "团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md"], "refused": false}
+{"id": "H3-095", "cited": ["团队手册/团队周会.md", "团队手册/出差标准（旧）.md", "团队手册/出差标准.md"], "refused": false}
+{"id": "H3-096", "cited": ["团队手册/出差标准（旧）.md", "团队手册/出差标准.md", "团队手册/发布说明（旧）.md"], "refused": false}
+{"id": "H3-097", "cited": ["团队手册/意见反馈.md", "团队手册/App 系统版本（旧）.md", "团队手册/App 系统版本.md"], "refused": false}
+{"id": "H3-098", "cited": ["团队手册/技术分享（旧）.md", "团队手册/服务拆分（旧）.md", "团队手册/技术分享.md"], "refused": false}
+{"id": "H3-099", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-100", "cited": ["团队手册/接口文档.md", "团队手册/软件采购.md", "团队手册/开源许可证.md"], "refused": false}
+{"id": "H3-101", "cited": ["团队手册/办公网络.md", "团队手册/技术分享（旧）.md", "团队手册/服务拆分（旧）.md"], "refused": false}
+{"id": "H3-102", "cited": ["团队手册/出差标准（旧）.md", "团队手册/出差标准.md", "团队手册/代码托管（旧）.md"], "refused": false}
+{"id": "H3-103", "cited": ["团队手册/消息队列.md", "团队手册/技术分享.md", "团队手册/技术分享（旧）.md"], "refused": false}
+{"id": "H3-104", "cited": ["团队手册/办公网络.md", "团队手册/权限申请（旧）.md", "团队手册/服务拆分.md"], "refused": false}
+{"id": "H3-105", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-106", "cited": ["团队手册/意见反馈.md", "团队手册/出差标准（旧）.md", "团队手册/数据共享.md"], "refused": false}
+{"id": "H3-107", "cited": ["团队手册/接口文档.md", "团队手册/技术方案模板.md", "团队手册/App 系统版本.md"], "refused": false}
+{"id": "H3-108", "cited": ["团队手册/接口文档.md", "团队手册/App 系统版本.md", "团队手册/App 系统版本（旧）.md"], "refused": false}
+{"id": "H3-109", "cited": ["团队手册/代码托管（旧）.md", "团队手册/代码托管.md", "团队手册/Go 代码规范.md"], "refused": false}
+{"id": "H3-110", "cited": ["团队手册/Go 代码规范.md", "团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md"], "refused": false}
+{"id": "H3-111", "cited": ["团队手册/节假日安排.md", "团队手册/出差标准（旧）.md", "团队手册/发布说明（旧）.md"], "refused": false}
+{"id": "H3-112", "cited": ["团队手册/服务拆分（旧）.md", "团队手册/技术分享（旧）.md", "团队手册/数据看板（旧）.md"], "refused": false}
+{"id": "H3-113", "cited": ["团队手册/出差标准.md", "团队手册/数据共享.md", "团队手册/数据标注.md"], "refused": false}
+{"id": "H3-114", "cited": ["团队手册/出差标准.md", "团队手册/数据共享.md", "团队手册/数据标注.md"], "refused": false}
+{"id": "H3-115", "cited": ["团队手册/团队周会.md", "团队手册/技术分享（旧）.md", "团队手册/服务拆分（旧）.md"], "refused": false}
+{"id": "H3-116", "cited": ["团队手册/团队周会.md", "团队手册/出差标准.md", "团队手册/出差标准（旧）.md"], "refused": false}
+{"id": "H3-117", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-118", "cited": ["团队手册/软件采购.md", "团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md"], "refused": false}
+{"id": "H3-119", "cited": ["团队手册/节假日安排.md", "团队手册/出差标准（旧）.md", "团队手册/Go 代码规范.md"], "refused": false}
+{"id": "H3-120", "cited": ["团队手册/App 系统版本.md", "团队手册/App 系统版本（旧）.md", "团队手册/出差标准.md"], "refused": false}
+{"id": "H3-121", "cited": ["团队手册/数据看板.md", "团队手册/数据看板（旧）.md", "Handbook/Analyst data access.md"], "refused": false}
+{"id": "H3-122", "cited": ["Handbook/Analytics queries.md", "团队手册/软件采购.md", "Daily log/2026-08-05.md"], "refused": false}
+{"id": "H3-123", "cited": ["Handbook/Feature requests.md", "Handbook/Price changes.md", "团队手册/意见反馈.md"], "refused": false}
+{"id": "H3-124", "cited": ["Handbook/Model deployment.md", "团队手册/数据标注.md", "团队手册/设备申领.md"], "refused": false}
+{"id": "H3-125", "cited": ["团队手册/数据分级.md", "Handbook/Model deployment.md", "团队手册/技术分享.md"], "refused": false}
+{"id": "H3-126", "cited": ["团队手册/数据共享（旧）.md", "Handbook/Analyst data access.md", "工作日志/2026-07-30.md"], "refused": false}
+{"id": "H3-127", "cited": ["Handbook/Cloud infrastructure changes.md", "Handbook/Cloud cost alerts.md", "团队手册/图片资源.md"], "refused": false}
+{"id": "H3-128", "cited": ["Handbook/Cloud infrastructure changes.md", "团队手册/服务拆分.md", "Handbook/Model deployment.md"], "refused": false}
+{"id": "H3-129", "cited": ["Handbook/Support escalation.md", "Handbook/Status page.md", "团队手册/数据分级.md"], "refused": false}
+{"id": "H3-130", "cited": ["Handbook/Interview process.md", "团队手册/团队周会.md", "Handbook/Customer interview notes.md"], "refused": false}
+{"id": "H3-131", "cited": ["Handbook/Interview process.md", "团队手册/意见反馈.md", "团队手册/需求评审.md"], "refused": false}
+{"id": "H3-132", "cited": ["团队手册/App 系统版本.md", "Handbook/Mobile release criteria.md", "团队手册/App 系统版本（旧）.md"], "refused": false}
+{"id": "H3-133", "cited": ["团队手册/图片资源.md", "Handbook/Browser support.md", "Handbook/Analytics queries.md"], "refused": false}
+{"id": "H3-134", "cited": ["Handbook/Database for new services.md", "团队手册/服务拆分.md", "Handbook/Support hours.md"], "refused": false}
+{"id": "H3-135", "cited": ["Handbook/Database for new services.md", "团队手册/数据共享（旧）.md", "团队手册/客户回访.md"], "refused": false}
+{"id": "H3-136", "cited": ["Handbook/Product search.md", "团队手册/数据标注.md", "团队手册/数据共享.md"], "refused": false}
+{"id": "H3-137", "cited": ["Handbook/Feature requests.md", "Handbook/Model deployment.md", "团队手册/数据标注.md"], "refused": false}
+{"id": "H3-138", "cited": ["团队手册/办公网络.md", "Handbook/On-site days.md", "Handbook/Language for code.md"], "refused": false}
+{"id": "H3-139", "cited": ["Handbook/On-site days.md", "团队手册/节假日安排.md", "Handbook/GPU usage.md"], "refused": false}
+{"id": "H3-140", "cited": ["团队手册/短信通道.md", "Handbook/Customer refunds.md", "Handbook/Support hours.md"], "refused": false}
+{"id": "H3-141", "cited": ["Handbook/Database for new services.md", "Handbook/Support hours.md", "Handbook/Transactional email.md"], "refused": false}
+{"id": "H3-142", "cited": ["团队手册/意见反馈.md", "Handbook/Transactional email.md", "团队手册/消息队列.md"], "refused": false}
+{"id": "H3-143", "cited": ["Handbook/Repository ownership.md", "Handbook/Cloud infrastructure changes.md", "团队手册/发布说明.md"], "refused": false}
+{"id": "H3-144", "cited": ["Handbook/Design handoff.md", "团队手册/技术方案模板.md", "团队手册/需求评审.md"], "refused": false}
+{"id": "H3-145", "cited": ["团队手册/技术分享.md", "工作日志/2026-07-30.md", "Handbook/Customer interview notes.md"], "refused": false}
+{"id": "H3-146", "cited": ["Handbook/API deprecation.md", "团队手册/代码托管（旧）.md", "团队手册/接口文档.md"], "refused": false}
+{"id": "H3-147", "cited": ["Handbook/GPU usage.md", "团队手册/技术分享.md", "团队手册/软件采购.md"], "refused": false}
+{"id": "H3-148", "cited": ["Handbook/Bug bounty.md", "Daily log/2026-07-29.md", "Handbook/Support escalation.md"], "refused": false}
+{"id": "H3-149", "cited": ["Handbook/Status page.md", "Daily log/2026-07-22.md", "Handbook/Support hours.md"], "refused": false}
+{"id": "H3-150", "cited": ["团队手册/设备申领.md", "Handbook/Access reviews.md", "团队手册/绩效评估（旧）.md"], "refused": false}
+{"id": "H3-151", "cited": ["Handbook/Customer refunds.md", "Handbook/Price changes.md", "团队手册/权限申请.md"], "refused": false}
+{"id": "H3-152", "cited": ["Handbook/A/B tests.md", "团队手册/数据标注.md", "团队手册/需求评审.md"], "refused": false}
+{"id": "H3-153", "cited": ["Handbook/Support hours.md", "Handbook/Customer refunds.md", "团队手册/App 系统版本.md"], "refused": false}
+{"id": "H3-154", "cited": ["团队手册/消息队列.md", "Handbook/Support hours.md", "Handbook/Customer interview notes.md"], "refused": false}
+{"id": "H3-155", "cited": ["Handbook/Language for code.md", "团队手册/Go 代码规范.md", "团队手册/短信通道.md"], "refused": false}
+{"id": "H3-156", "cited": ["Handbook/Analyst data access.md", "团队手册/绩效评估.md", "团队手册/数据共享.md"], "refused": false}
+{"id": "H3-157", "cited": ["Handbook/Hackathon.md", "Daily log/2026-07-22.md", "Daily log/2026-07-29.md"], "refused": false}
+{"id": "H3-158", "cited": ["Handbook/Cloud cost alerts.md", "Handbook/Cloud infrastructure changes.md", "团队手册/数据标注.md"], "refused": false}
+{"id": "H3-159", "cited": ["Handbook/Browser support.md", "团队手册/App 系统版本.md", "Handbook/Mobile release criteria.md"], "refused": false}
+{"id": "H3-160", "cited": ["Handbook/Browser support.md", "团队手册/App 系统版本.md", "团队手册/App 系统版本（旧）.md"], "refused": false}
+{"id": "H3-161", "cited": ["团队手册/代码托管（旧）.md", "团队手册/代码托管.md", "团队手册/Go 代码规范.md"], "refused": false}
+{"id": "H3-162", "cited": ["团队手册/消息队列.md", "团队手册/技术分享（旧）.md", "团队手册/数据看板（旧）.md"], "refused": false}
+{"id": "H3-163", "cited": ["团队手册/消息队列.md", "团队手册/接口文档.md", "团队手册/技术分享（旧）.md"], "refused": false}
+{"id": "H3-164", "cited": ["团队手册/意见反馈.md", "团队手册/发布说明（旧）.md", "团队手册/数据看板（旧）.md"], "refused": false}
+{"id": "H3-165", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-166", "cited": ["团队手册/接口文档.md", "团队手册/消息队列.md", "团队手册/意见反馈.md"], "refused": false}
+{"id": "H3-167", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-168", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-169", "cited": ["团队手册/出差标准（旧）.md", "团队手册/出差标准.md", "团队手册/节假日安排.md"], "refused": false}
+{"id": "H3-170", "cited": ["团队手册/出差标准.md", "团队手册/出差标准（旧）.md", "团队手册/节假日安排.md"], "refused": false}
+{"id": "H3-171", "cited": ["团队手册/接口文档.md", "团队手册/发布说明.md", "团队手册/发布说明（旧）.md"], "refused": false}
+{"id": "H3-172", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-173", "cited": ["团队手册/节假日安排.md", "团队手册/出差标准（旧）.md", "团队手册/出差标准.md"], "refused": false}
+{"id": "H3-174", "cited": ["团队手册/节假日安排.md", "团队手册/App 系统版本（旧）.md", "团队手册/意见反馈.md"], "refused": false}
+{"id": "H3-175", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-176", "cited": ["团队手册/服务拆分（旧）.md", "团队手册/技术分享（旧）.md", "团队手册/技术分享.md"], "refused": false}
+{"id": "H3-177", "cited": ["团队手册/消息队列.md", "团队手册/出差标准（旧）.md", "团队手册/接口文档.md"], "refused": false}
+{"id": "H3-178", "cited": ["团队手册/短信通道（旧）.md", "团队手册/短信通道.md", "团队手册/出差标准（旧）.md"], "refused": false}
+{"id": "H3-179", "cited": ["团队手册/代码托管（旧）.md", "团队手册/代码托管.md", "团队手册/Go 代码规范.md"], "refused": false}
+{"id": "H3-180", "cited": ["团队手册/接口文档.md", "团队手册/技术方案模板.md", "团队手册/发布说明（旧）.md"], "refused": false}
+{"id": "H3-181", "cited": ["团队手册/团队周会.md", "团队手册/节假日安排.md", "团队手册/开源许可证.md"], "refused": false}
+{"id": "H3-182", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-183", "cited": ["团队手册/接口文档.md", "Handbook/Language for code.md", "团队手册/技术方案模板.md"], "refused": false}
+{"id": "H3-184", "cited": ["团队手册/发布说明（旧）.md", "团队手册/发布说明.md", "团队手册/代码托管.md"], "refused": false}
+{"id": "H3-185", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-186", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-187", "cited": ["团队手册/发布说明（旧）.md", "团队手册/接口文档.md", "团队手册/出差标准.md"], "refused": false}
+{"id": "H3-188", "cited": ["团队手册/办公网络.md", "团队手册/短信通道.md", "团队手册/短信通道（旧）.md"], "refused": false}
+{"id": "H3-189", "cited": ["团队手册/出差标准.md", "团队手册/出差标准（旧）.md", "团队手册/数据共享.md"], "refused": false}
+{"id": "H3-190", "cited": ["团队手册/接口文档.md", "Handbook/Language for code.md", "团队手册/App 系统版本.md"], "refused": false}
+{"id": "H3-191", "cited": ["团队手册/代码托管（旧）.md", "团队手册/代码托管.md", "团队手册/Go 代码规范.md"], "refused": false}
+{"id": "H3-192", "cited": ["团队手册/节假日安排.md", "团队手册/出差标准.md", "团队手册/App 系统版本.md"], "refused": false}
+{"id": "H3-193", "cited": ["团队手册/App 系统版本.md", "团队手册/发布说明（旧）.md", "团队手册/数据共享.md"], "refused": false}
+{"id": "H3-194", "cited": ["团队手册/团队周会.md", "团队手册/技术分享（旧）.md", "团队手册/服务拆分（旧）.md"], "refused": false}
+{"id": "H3-195", "cited": ["团队手册/办公网络.md", "团队手册/代码托管（旧）.md", "团队手册/代码托管.md"], "refused": false}
+{"id": "H3-196", "cited": ["团队手册/发布说明（旧）.md", "团队手册/发布说明.md", "团队手册/数据看板（旧）.md"], "refused": false}
+{"id": "H3-197", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-198", "cited": ["团队手册/数据看板（旧）.md", "团队手册/数据共享（旧）.md", "团队手册/权限申请（旧）.md"], "refused": false}
+{"id": "H3-199", "cited": ["团队手册/出差标准.md", "团队手册/数据共享.md", "团队手册/数据标注.md"], "refused": false}
+{"id": "H3-200", "cited": ["团队手册/出差标准（旧）.md", "团队手册/开源许可证.md", "团队手册/数据看板（旧）.md"], "refused": false}

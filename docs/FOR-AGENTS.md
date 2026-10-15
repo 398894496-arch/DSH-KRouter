@@ -63,7 +63,14 @@ tuning. Every system at its defaults, 95% intervals in brackets (docs/BENCHMARK.
 | basic-memory 0.23.2 | 78% [72, 84] | 0 | 16 | 29 |
 | plain BM25 | 58% [52, 65] | 1 | — | — |
 
-Every KRouter difference against claude-mem and basic-memory is significant (paired intervals in HELDOUT.md).
+Every KRouter difference against claude-mem and basic-memory is significant (paired intervals in HELDOUT.md), but
+read the refusal column for what it is: neither tool has a way to refuse, and their adapters count a question as
+refused only when search returns nothing, so 0 of 80 is structural, and those 80 answered questions are also counted
+in their wrong-citation rates. The comparison that does not depend on refusing: of the 120 answerable questions,
+KRouter gets 102 right, claude-mem 72, basic-memory 45. The task is KRouter's: cite the right page of a Markdown
+folder. claude-mem is built to remember sessions, not to index a folder; it learned the vault by reading every page
+in Claude Code sessions. Their raw per-question output is in `bench/memory_honesty/results/2026-10-14/`; regrade with
+`run.py --set heldout3 --answers <file>`.
 
 Where the lead comes from: two rules KRouter has on by default (replaced pages are left out; a weak match is
 refused). BM25 given the same two rules, at KRouter's coverage, is level with it: KRouter cites 37 wrong pages to 43

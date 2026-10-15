@@ -11,7 +11,9 @@ Claude Code, Codex, Cursor and DeepSeek Harness share one memory: a folder of pl
 **Measured, not claimed.** On 200 held-out questions in English and Chinese that it was never tuned on, at default
 settings, KRouter cites a wrong page 27% of the time; claude-mem 64%, basic-memory 78%. Of 80 questions the vault
 cannot answer, KRouter refuses 46; the other two refuse none. Of 60 questions about a decision that was later
-changed, it gets 50 right; they get 34 and 16. [How it was measured](docs/BENCHMARK.md#third-bench-200-held-out-questions-on-a-vault-nobody-tunes-on-2026-10-13) · [rerun it in one second](#check-it-yourself)
+changed, it gets 50 right; they get 34 and 16. Neither of them can refuse or knows a page was replaced, so part of
+that gap is by construction: plain full-text search given KRouter's two rules is level with it. What KRouter adds is
+having those rules on by default, plus receipts and a vault you can edit. [How it was measured](docs/BENCHMARK.md#third-bench-200-held-out-questions-on-a-vault-nobody-tunes-on-2026-10-13) · [rerun it in one second](#check-it-yourself)
 
 ## Install
 

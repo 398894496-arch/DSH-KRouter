@@ -60,3 +60,22 @@ def test_floor_tool_on_stored_basic_memory_scores():
                           str(path), "--set", "dev"], capture_output=True, text=True, timeout=120)
     res = json.loads(out.stdout)
     assert (res["wrong_citations"], res["answered"], res["refused"], res["correction_hit"]) == (4, 24, "6/10", "10/10")
+
+
+HELDOUT3 = REPO / "bench/memory_honesty/results/2026-10-14"
+PUBLISHED_HELDOUT3 = {  # docs/BENCHMARK.md「Other memory systems on the same 200 questions」, aggregates only
+    "claude-mem-13.39.0": {"wrong_citations": 128, "answered": 200, "refused": "0/80", "right": 72},
+    "basic-memory-0.23.2": {"wrong_citations": 155, "answered": 200, "refused": "0/80", "right": 45},
+}
+
+
+def test_heldout3_competitor_rows_regrade_from_stored_output():
+    """Anyone can regrade the published heldout3 rows: `run.py --set heldout3 --answers <file>`."""
+    rows = bench.questions("heldout3")
+    for name, want in PUBLISHED_HELDOUT3.items():
+        answers = [json.loads(x) for x in (HELDOUT3 / f"{name}.heldout3.jsonl").read_text(encoding="utf-8").splitlines()
+                   if x.strip()]
+        r = bench.aggregate(bench.score(rows, answers))
+        right = int(r["correction_hit"].split("/")[0]) + int(r["current_hit"].split("/")[0])
+        assert {"wrong_citations": r["wrong_citations"], "answered": r["answered"], "refused": r["refused"],
+                "right": right} == want, name
