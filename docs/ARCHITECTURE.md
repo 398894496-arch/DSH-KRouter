@@ -14,7 +14,8 @@
 > - **Nightly job:** the one-line install asks before installing it; the manual `install.sh` installs it
 >   (`KROUTER_NO_TIMER=1` skips). Queries never leave the machine.
 > - **Nightly writer lanes:** an API key runs nothing locally; grok (kernel sandbox) and claude (tool allow-list) are
->   limited to the vault; Codex can read the whole account and writes only the vault; other CLIs are unconfined.
+>   limited to the vault; Codex can read the whole account and writes only the vault; other CLIs are unconfined and
+>   are never picked unless you set `KROUTER_ALLOW_UNCONFINED=1`.
 >   [SECURITY.md](https://github.com/398894496-arch/KRouter/blob/main/SECURITY.md) has the table.
 <!-- krouter-status:end -->
 
