@@ -215,7 +215,10 @@ KRouter minus each at their defaults, paired 95% intervals: against claude-mem, 
 answerable right +17 to +44; against basic-memory, −43 to −59 points and +43 to +72; neighbours refused +35 to +58
 against both. Neither has a way to refuse, and neither knows a page was replaced. With the two rules basic-memory cites few wrong pages but answers 27
 of 200 questions: its scores do not separate right from wrong well enough for one floor to keep the right answers.
-claude-mem gives no score, so it has no floor variant. mem0 and Zep were not run: both need a hosted model to
+Neither tool can refuse (an empty search is the only refusal the adapters can see), so their 0 / 80 neighbour
+refusals are structural, and the answerable-right columns are the comparison that does not depend on refusing.
+Their raw per-question output is stored in `bench/memory_honesty/results/2026-10-14/` and regraded in CI
+(`tests/test_memory_honesty_competitors.py`). claude-mem gives no score, so it has no floor variant. mem0 and Zep were not run: both need a hosted model to
 extract memories, and none was configured.
 
 ## Run it

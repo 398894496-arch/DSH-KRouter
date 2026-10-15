@@ -7,7 +7,12 @@ notice, then the details.
 
 ## Unreleased
 
-Nothing yet.
+- Docs: one story for the nightly job everywhere. `PROTOCOL.md`, `first_run.sh`, `install.sh` and the nightly writer's
+  files said "timer on by default"; the one-line install asks first, and only the manual `install.sh` installs it.
+- Docs: the comparison with claude-mem and basic-memory says up front that neither can refuse, so their 0 of 80 is
+  structural, and that BM25 with KRouter's two rules is level with it; the answerable-right column (102 / 72 / 45 of
+  120) is the comparison that does not depend on refusing. Their heldout3 per-question output is stored and regraded
+  in CI. `extras/hooks/exec-gate.py` is described as an accident guard, not a security boundary.
 
 ## 1.1.0 — 2026-10-14
 

@@ -123,7 +123,7 @@ fi
 
 printf '%s\n' ""
 printf '%s\n' "First run passed on $OBSIDIAN_VAULT"
-printf '%s\n' "Lock is proven. Self-evolution timer is on by default; paste *_API_KEY on the vault key page or log in grok/codex/claude."
+printf '%s\n' "Lock is proven. The nightly job is not installed yet: the one-line install asks first; install.sh installs it (KROUTER_NO_TIMER=1 skips). It needs an API key or a logged-in grok/codex/claude."
 printf '%s\n' "Next: copy template/ to your Obsidian vault and run install.sh with OBSIDIAN_VAULT set; your alias table is 90 系统文件/canonical_sources.psv in that vault (propose_aliases.py drafts rows for you to tick)."
 
 [ "$fail" -eq 0 ]

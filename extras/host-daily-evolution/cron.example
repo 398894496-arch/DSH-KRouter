@@ -1,3 +1,3 @@
-# Timer on by default. Key lives on the vault page, or an already-logged-in CLI.
+# Installed only on your yes (one-line install) or by install.sh. Key lives on the vault page, or an already-logged-in CLI.
 # Replace __RUN_SH__ and __VAULT__. No API key slot. No writer pin.
 10 9 * * * OBSIDIAN_VAULT=__VAULT__ __RUN_SH__

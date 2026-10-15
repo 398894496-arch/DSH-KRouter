@@ -1,6 +1,6 @@
 # Self-evolution writer prompt
 
-The OS scheduler runs this prompt. Timer is on by default.
+The OS scheduler runs this prompt once the nightly job is installed (the one-line install asks first).
 
 Lane 1: vault-page `*_API_KEY` — lock that provider's flagship model, then distill and promote.
 Lane 2: no key — Claudian-class subscription CLI already logged in (`grok` / official Codex / `claude` / opencode / …) does the same work.

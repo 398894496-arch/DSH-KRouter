@@ -1,0 +1,200 @@
+{"id": "H3-001", "cited": ["Handbook/Analytics queries (old).md", "Handbook/Analytics queries.md", "Daily log/2026-06-03.md"], "scores": [1.228872485864404, 1.0376188845090122, 1.007032696623239], "refused": false}
+{"id": "H3-002", "cited": ["Daily log/2026-06-03.md", "Handbook/Analytics queries (old).md", "Handbook/Analytics queries.md"], "scores": [1.2022483714446943, 0.9062370273639663, 0.7672669547227107], "refused": false}
+{"id": "H3-003", "cited": ["Handbook/Feature requests (old).md", "Daily log/2026-06-10.md", "Handbook/Feature requests.md"], "scores": [1.1886639239341847, 1.1830864154967011, 1.0346357926670646], "refused": false}
+{"id": "H3-004", "cited": ["Handbook/Feature requests (old).md", "Handbook/Feature requests.md", "Daily log/2026-06-10.md"], "scores": [1.2177897594223503, 0.9951208995418119, 0.894997407546008], "refused": false}
+{"id": "H3-005", "cited": ["Handbook/Model deployment (old).md", "Handbook/Model deployment.md", "Daily log/2026-06-10.md"], "scores": [1.2222941993269354, 0.978532552816054, 0.734776465493904], "refused": false}
+{"id": "H3-006", "cited": ["Daily log/2026-06-10.md", "Handbook/Interview process.md", "Handbook/Model deployment (old).md"], "scores": [1.1969307492457488, 0.9715141027713782, 0.8968175172950639], "refused": false}
+{"id": "H3-007", "cited": ["Handbook/Customer interview notes.md", "Handbook/Customer data deletion (old).md", "Handbook/Customer data deletion.md"], "scores": [1.2067248190418078, 0.9035685863976257, 0.9033164095562244], "refused": false}
+{"id": "H3-008", "cited": ["Handbook/Feature requests (old).md", "Handbook/Customer data deletion (old).md", "Daily log/2026-08-05.md"], "scores": [1.2017558500489485, 1.1008506823712427, 0.9775806664606643], "refused": false}
+{"id": "H3-009", "cited": ["Handbook/Cloud infrastructure changes (old).md", "Handbook/Cloud infrastructure changes.md", "Handbook/Product search.md"], "scores": [1.2374576941469848, 1.0156126540927257, 0.7322407964514648], "refused": false}
+{"id": "H3-010", "cited": ["Handbook/Cloud infrastructure changes (old).md", "Handbook/Cloud infrastructure changes.md", "Handbook/Access reviews.md"], "scores": [1.200997439043983, 0.9954716767126183, 0.8618367156938632], "refused": false}
+{"id": "H3-011", "cited": ["Handbook/Bug bounty.md", "Handbook/Support escalation (old).md", "Handbook/Browser support.md"], "scores": [1.175073293725675, 1.1307615165606404, 1.0763178428708327], "refused": false}
+{"id": "H3-012", "cited": ["Handbook/Support escalation.md", "Handbook/Bug bounty.md", "Handbook/Customer refunds (old).md"], "scores": [1.1939801063582303, 0.7919579316935869, 0.7588586511512849], "refused": false}
+{"id": "H3-013", "cited": ["Handbook/Interview process.md", "Handbook/Interview process (old).md", "Handbook/Design handoff.md"], "scores": [1.2129351937399913, 1.0206671123033566, 0.5697394524413522], "refused": false}
+{"id": "H3-014", "cited": ["Handbook/Interview process.md", "Handbook/Customer interview notes.md", "Handbook/Interview process (old).md"], "scores": [1.2210879485866948, 0.6671747753235859, 0.6658804020935278], "refused": false}
+{"id": "H3-015", "cited": ["Daily log/2026-06-24.md", "Handbook/Mobile release criteria (old).md", "Handbook/Mobile release criteria.md"], "scores": [1.2292843834391187, 0.992215967517798, 0.9676919825815149], "refused": false}
+{"id": "H3-016", "cited": ["Handbook/Mobile release criteria (old).md", "Handbook/Mobile release criteria.md", "Daily log/2026-06-24.md"], "scores": [1.2115499762978, 1.0285540296745017, 0.8644581996584584], "refused": false}
+{"id": "H3-017", "cited": ["Daily log/2026-06-24.md", "Handbook/Third-party scripts (old).md", "Handbook/Transactional email.md"], "scores": [1.1791815949303135, 0.9134366687030558, 0.8208688034303671], "refused": false}
+{"id": "H3-018", "cited": ["Handbook/Third-party scripts.md", "Handbook/Third-party scripts (old).md", "Daily log/2026-06-24.md"], "scores": [1.2250296246609793, 0.9337101074460123, 0.8772509348287478], "refused": false}
+{"id": "H3-019", "cited": ["Handbook/Database for new services (old).md", "Handbook/Database for new services.md", "Daily log/2026-07-01.md"], "scores": [1.2460181259200909, 1.0548339422753912, 0.836201590235608], "refused": false}
+{"id": "H3-020", "cited": ["Handbook/Repository ownership (old).md", "Handbook/Analyst data access.md", "Handbook/Database for new services (old).md"], "scores": [1.1727655287543235, 1.0987386256710876, 0.9523121295808243], "refused": false}
+{"id": "H3-021", "cited": ["Handbook/Product search (old).md", "Handbook/Product search.md", "Handbook/Feature requests.md"], "scores": [1.2132256143476945, 0.9621398363912524, 0.7388335183817838], "refused": false}
+{"id": "H3-022", "cited": ["Handbook/Product search.md", "Handbook/Product search (old).md", "Daily log/2026-07-01.md"], "scores": [1.231166104811107, 0.7007516138051457, 0.6915792925555877], "refused": false}
+{"id": "H3-023", "cited": ["Handbook/On-site days (old).md", "Daily log/2026-07-08.md", "Handbook/On-site days.md"], "scores": [1.2275124197019147, 1.1482737331507058, 1.021298080982812], "refused": false}
+{"id": "H3-024", "cited": ["Handbook/On-site days.md", "Handbook/GPU usage.md", "Daily log/2026-07-08.md"], "scores": [1.1883822709628966, 0.6823749800535657, 0.5974626113758106], "refused": false}
+{"id": "H3-025", "cited": ["Handbook/Customer refunds (old).md", "Handbook/Customer refunds.md", "Daily log/2026-07-08.md"], "scores": [1.2393292729256065, 1.066037778249877, 1.0322766841980806], "refused": false}
+{"id": "H3-026", "cited": ["Handbook/Customer refunds.md", "Handbook/Customer refunds (old).md", "Daily log/2026-07-08.md"], "scores": [0.7620707769226485, 0.7539987559765677, 0.7066814634258503], "refused": false}
+{"id": "H3-027", "cited": ["Handbook/Transactional email (old).md", "Handbook/Transactional email.md", "Handbook/Database for new services (old).md"], "scores": [1.2358906932670641, 1.029995645045885, 0.709414805627564], "refused": false}
+{"id": "H3-028", "cited": ["Handbook/Transactional email.md", "Handbook/Third-party scripts (old).md", "Handbook/Customer refunds.md"], "scores": [1.2282712550177621, 0.6637975803314562, 0.6007304308102073], "refused": false}
+{"id": "H3-029", "cited": ["Handbook/Repository ownership (old).md", "Handbook/Repository ownership.md", "Handbook/Database for new services.md"], "scores": [1.254648214946397, 1.0739146072344734, 0.9960390488790762], "refused": false}
+{"id": "H3-030", "cited": ["Handbook/Cloud cost alerts.md", "Handbook/Support escalation.md", "Handbook/Repository ownership.md"], "scores": [1.194967846864824, 1.0840799859553272, 0.9221025913719286], "refused": false}
+{"id": "H3-031", "cited": ["Handbook/Design handoff.md", "Handbook/Support escalation.md", "Handbook/Repository ownership (old).md"], "scores": [1.206670594208174, 0.5941107033914914, 0.5604546133437633], "refused": false}
+{"id": "H3-032", "cited": ["Handbook/Design handoff.md", "Handbook/Mobile release criteria.md", "Handbook/Feature requests.md"], "scores": [1.2320097282842875, 0.5920852967039831, 0.5764184027109138], "refused": false}
+{"id": "H3-033", "cited": ["Handbook/Customer interview notes.md", "Handbook/Interview process.md", "Handbook/Interview process (old).md"], "scores": [1.2471184292784252, 0.7923913883479715, 0.7562502481379789], "refused": false}
+{"id": "H3-034", "cited": ["Daily log/2026-08-05.md", "Handbook/Interview process (old).md", "Handbook/Customer interview notes.md"], "scores": [1.1869070655721692, 1.1408089600574645, 1.0372546923622705], "refused": false}
+{"id": "H3-035", "cited": ["Handbook/API deprecation.md", "Handbook/Interview process.md", "Handbook/On-site days.md"], "scores": [1.2321395155633916, 1.1586456324507588, 1.0898868584063126], "refused": false}
+{"id": "H3-036", "cited": ["Handbook/API deprecation.md", "Handbook/Customer refunds (old).md", "团队手册/发布说明（旧）.md"], "scores": [1.2238224910174267, 0.6453041645678887, 0.6264191752278521], "refused": false}
+{"id": "H3-037", "cited": ["Handbook/GPU usage.md", "Handbook/Customer refunds.md", "Handbook/Interview process.md"], "scores": [1.1761905679858138, 0.7014668508600013, 0.631412163022544], "refused": false}
+{"id": "H3-038", "cited": ["Handbook/GPU usage.md", "Daily log/2026-08-05.md", "工作日志/2026-06-04.md"], "scores": [1.1930194426472098, 0.7237555282955395, 0.5856650574570761], "refused": false}
+{"id": "H3-039", "cited": ["Handbook/Bug bounty.md", "Daily log/2026-07-29.md", "Handbook/Support escalation.md"], "scores": [1.2548385736155632, 1.0651457260372996, 0.7389979814642567], "refused": false}
+{"id": "H3-040", "cited": ["Handbook/Bug bounty.md", "Daily log/2026-07-29.md", "Handbook/Support escalation (old).md"], "scores": [1.2595769723392203, 1.0546868727100167, 0.6742141617393643], "refused": false}
+{"id": "H3-041", "cited": ["Handbook/Status page.md", "Daily log/2026-07-22.md", "Daily log/2026-07-29.md"], "scores": [1.258409025483045, 1.0367019566103592, 0.7034258676005932], "refused": false}
+{"id": "H3-042", "cited": ["Daily log/2026-07-22.md", "Handbook/Status page.md", "Handbook/Mobile release criteria.md"], "scores": [1.213292760100972, 0.9885616248851546, 0.6909449716289241], "refused": false}
+{"id": "H3-043", "cited": ["Handbook/Access reviews.md", "Handbook/Analyst data access.md", "Handbook/Database for new services (old).md"], "scores": [1.2531657734446306, 1.1579168815464713, 0.9521431544660861], "refused": false}
+{"id": "H3-044", "cited": ["Handbook/Access reviews.md", "Handbook/Analyst data access.md", "Handbook/Repository ownership.md"], "scores": [1.119590871438918, 1.078923374860197, 1.0], "refused": false}
+{"id": "H3-045", "cited": ["Handbook/Price changes.md", "Daily log/2026-07-29.md", "Daily log/2026-07-08.md"], "scores": [1.2342008120826315, 0.6867259255722595, 0.6825920045956764], "refused": false}
+{"id": "H3-046", "cited": ["Handbook/Price changes.md", "Daily log/2026-08-05.md", "Daily log/2026-07-08.md"], "scores": [1.2503500563855405, 1.0711620957169168, 0.6766189139040488], "refused": false}
+{"id": "H3-047", "cited": ["Daily log/2026-08-05.md", "Handbook/A/B tests.md", "Handbook/Bug bounty.md"], "scores": [1.1719421020254452, 1.1277825870114835, 0.7230220762596914], "refused": false}
+{"id": "H3-048", "cited": ["Handbook/A/B tests.md", "Handbook/Hackathon.md", "Handbook/Interview process.md"], "scores": [1.1838704791672237, 0.9246566918873964, 0.7455620683059531], "refused": false}
+{"id": "H3-049", "cited": ["Handbook/Design handoff.md", "Handbook/Browser support.md", "Handbook/Support hours.md"], "scores": [1.1742936503937158, 1.0515000456728445, 1.045924170562689], "refused": false}
+{"id": "H3-050", "cited": ["Handbook/Feature requests (old).md", "Handbook/Support hours.md", "Handbook/Support escalation.md"], "scores": [1.1789190186525256, 0.8184856670846797, 0.797000586575347], "refused": false}
+{"id": "H3-051", "cited": ["Handbook/Language for code.md", "Handbook/Design handoff.md", "团队手册/代码托管（旧）.md"], "scores": [1.2447587737198782, 0.7022390209959155, 0.620445331369778], "refused": false}
+{"id": "H3-052", "cited": ["Handbook/Language for code.md", "Handbook/Interview process.md", "Handbook/Repository ownership.md"], "scores": [1.2378178458001492, 0.6874718162674667, 0.665066470524269], "refused": false}
+{"id": "H3-053", "cited": ["Handbook/Interview process.md", "Handbook/Analyst data access.md", "Handbook/Customer refunds (old).md"], "scores": [1.0, 0.92193955949433, 0.8456422236407839], "refused": false}
+{"id": "H3-054", "cited": ["Handbook/Analyst data access.md", "Handbook/Access reviews.md", "Handbook/Repository ownership.md"], "scores": [1.240801277648634, 0.7044973532531077, 0.658855823533671], "refused": false}
+{"id": "H3-055", "cited": ["Handbook/Hackathon.md", "Daily log/2026-07-22.md", "Daily log/2026-07-29.md"], "scores": [1.2584720683206938, 0.9646891490592792, 0.6148552796494684], "refused": false}
+{"id": "H3-056", "cited": ["Handbook/Hackathon.md", "Daily log/2026-07-22.md", "团队手册/代码托管（旧）.md"], "scores": [1.2360482249730331, 0.9416844513803225, 0.5716844061025181], "refused": false}
+{"id": "H3-057", "cited": ["Handbook/Cloud cost alerts.md", "Daily log/2026-07-29.md", "Handbook/Cloud infrastructure changes.md"], "scores": [1.2628732659484934, 0.7207848149041803, 0.7058710690115614], "refused": false}
+{"id": "H3-058", "cited": ["Handbook/Cloud cost alerts.md", "Daily log/2026-07-08.md", "Handbook/Price changes.md"], "scores": [1.2219454534872198, 0.6945515131709481, 0.6155885634932403], "refused": false}
+{"id": "H3-059", "cited": ["团队手册/图片资源.md", "Handbook/Browser support.md", "Handbook/Customer refunds (old).md"], "scores": [1.1769162593457714, 1.0468874486940765, 0.9785658184769634], "refused": false}
+{"id": "H3-060", "cited": ["Handbook/Browser support.md", "Handbook/Support escalation (old).md", "Handbook/Feature requests.md"], "scores": [1.2387951136903133, 1.1645429007829775, 1.143516112360627], "refused": false}
+{"id": "H3-061", "cited": ["工作日志/2026-08-06.md", "工作日志/2026-07-30.md", "工作日志/2026-06-04.md"], "scores": [0.7948883825297344, 0.7673605266309078, 0.7582404646221317], "refused": false}
+{"id": "H3-062", "cited": ["工作日志/2026-08-06.md", "工作日志/2026-06-04.md", "工作日志/2026-06-18.md"], "scores": [0.7772592596342918, 0.7595074334662897, 0.7589773168154448], "refused": false}
+{"id": "H3-063", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "工作日志/2026-06-11.md"], "scores": [0.7750898604795804, 0.7550261264034344, 0.7502513091735903], "refused": false}
+{"id": "H3-064", "cited": ["团队手册/消息队列.md", "工作日志/2026-06-04.md", "团队手册/开源许可证.md"], "scores": [1.2360658890507445, 0.6736107905974151, 0.6606204838743377], "refused": false}
+{"id": "H3-065", "cited": ["团队手册/绩效评估.md", "团队手册/客户投诉.md", "工作日志/2026-07-23.md"], "scores": [0.7499986598561872, 0.7493524670883698, 0.7359763322863397], "refused": false}
+{"id": "H3-066", "cited": ["工作日志/2026-08-06.md", "工作日志/2026-07-30.md", "团队手册/设备申领.md"], "scores": [0.7504879992742826, 0.7332365684319182, 0.7270825320625942], "refused": false}
+{"id": "H3-067", "cited": ["团队手册/软件采购.md", "团队手册/绩效评估.md", "团队手册/客户投诉（旧）.md"], "scores": [0.7297378596180533, 0.722066417477917, 0.7168152252592606], "refused": false}
+{"id": "H3-068", "cited": ["团队手册/客户投诉.md", "团队手册/软件采购.md", "团队手册/数据标注.md"], "scores": [0.7443235887756412, 0.7132669372123175, 0.709755823972257], "refused": false}
+{"id": "H3-069", "cited": ["团队手册/出差标准.md", "团队手册/出差标准（旧）.md", "工作日志/2026-06-11.md"], "scores": [0.7548550820692697, 0.7448896874516322, 0.7195380167021312], "refused": false}
+{"id": "H3-070", "cited": ["团队手册/出差标准（旧）.md", "团队手册/出差标准.md", "工作日志/2026-06-11.md"], "scores": [0.7320126495431207, 0.7247675878669622, 0.724740124908287], "refused": false}
+{"id": "H3-071", "cited": ["团队手册/发布说明（旧）.md", "团队手册/App 系统版本.md", "团队手册/App 系统版本（旧）.md"], "scores": [0.7525191956356139, 0.7466992016305749, 0.729632896823091], "refused": false}
+{"id": "H3-072", "cited": ["团队手册/发布说明.md", "团队手册/发布说明（旧）.md", "工作日志/2026-07-16.md"], "scores": [0.7796189372245124, 0.762959096386636, 0.7588023582937851], "refused": false}
+{"id": "H3-073", "cited": ["工作日志/2026-06-18.md", "工作日志/2026-07-23.md", "团队手册/权限申请（旧）.md"], "scores": [0.728796192166909, 0.7264965351245092, 0.7256747745848244], "refused": false}
+{"id": "H3-074", "cited": ["团队手册/软件采购.md", "团队手册/绩效评估.md", "团队手册/客户投诉（旧）.md"], "scores": [0.7233012064275499, 0.7139219088157613, 0.7110512697469726], "refused": false}
+{"id": "H3-075", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "工作日志/2026-06-11.md"], "scores": [0.7736278476031373, 0.7516369589611429, 0.7477633525905656], "refused": false}
+{"id": "H3-076", "cited": ["工作日志/2026-07-16.md", "团队手册/绩效评估.md", "团队手册/客户投诉.md"], "scores": [0.7277936067379596, 0.7216142432546064, 0.7207751641234381], "refused": false}
+{"id": "H3-077", "cited": ["工作日志/2026-06-25.md", "团队手册/发布说明（旧）.md", "团队手册/App 系统版本（旧）.md"], "scores": [1.2244367310612148, 1.1100578498092581, 1.009429320249227], "refused": false}
+{"id": "H3-078", "cited": ["团队手册/App 系统版本.md", "团队手册/App 系统版本（旧）.md", "团队手册/发布说明（旧）.md"], "scores": [0.7917840116428749, 0.7692611716411033, 0.7630746507798687], "refused": false}
+{"id": "H3-079", "cited": ["团队手册/服务拆分.md", "团队手册/技术分享.md", "团队手册/绩效评估.md"], "scores": [0.7271820450154944, 0.7248504548988262, 0.717994675234662], "refused": false}
+{"id": "H3-080", "cited": ["团队手册/服务拆分.md", "团队手册/技术分享.md", "团队手册/服务拆分（旧）.md"], "scores": [0.7823761467361408, 0.7731752287643019, 0.7657721964062301], "refused": false}
+{"id": "H3-081", "cited": ["团队手册/节假日安排.md", "工作日志/2026-07-02.md", "工作日志/2026-07-23.md"], "scores": [0.7645056591920092, 0.7569499294205837, 0.7471061828084586], "refused": false}
+{"id": "H3-082", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-08-06.md", "工作日志/2026-07-02.md"], "scores": [0.7825746047544442, 0.7649497280034936, 0.7556417917751741], "refused": false}
+{"id": "H3-083", "cited": ["团队手册/短信通道（旧）.md", "团队手册/短信通道.md", "工作日志/2026-07-16.md"], "scores": [0.7861341359683944, 0.7669409999421912, 0.7539473289327177], "refused": false}
+{"id": "H3-084", "cited": ["团队手册/短信通道.md", "工作日志/2026-08-06.md", "工作日志/2026-07-16.md"], "scores": [0.738543967235314, 0.7349850558006708, 0.7193759917951876], "refused": false}
+{"id": "H3-085", "cited": ["团队手册/代码托管.md", "团队手册/代码托管（旧）.md", "团队手册/数据标注.md"], "scores": [0.7494764816479957, 0.7438555485831824, 0.7286213628650824], "refused": false}
+{"id": "H3-086", "cited": ["工作日志/2026-08-06.md", "工作日志/2026-07-30.md", "工作日志/2026-06-04.md"], "scores": [0.7603724715625457, 0.7221880785178012, 0.7217448518041021], "refused": false}
+{"id": "H3-087", "cited": ["工作日志/2026-07-16.md", "团队手册/数据共享（旧）.md", "团队手册/技术方案模板.md"], "scores": [0.7285345858745682, 0.708466310419082, 0.7082540882445283], "refused": false}
+{"id": "H3-088", "cited": ["工作日志/2026-07-16.md", "团队手册/发布说明.md", "团队手册/数据共享.md"], "scores": [0.7702411379644882, 0.7450742611472378, 0.744022797575667], "refused": false}
+{"id": "H3-089", "cited": ["团队手册/绩效评估.md", "团队手册/软件采购.md", "团队手册/客户投诉（旧）.md"], "scores": [0.7039091763994918, 0.7038389028148231, 0.6875002751503132], "refused": false}
+{"id": "H3-090", "cited": ["团队手册/服务拆分.md", "团队手册/技术分享.md", "团队手册/技术分享（旧）.md"], "scores": [0.7777597635645179, 0.7655131129408517, 0.7615308956322888], "refused": false}
+{"id": "H3-091", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "工作日志/2026-08-06.md"], "scores": [0.7332417057702241, 0.7236168193903723, 0.7222398807942039], "refused": false}
+{"id": "H3-092", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-06-04.md", "工作日志/2026-07-16.md"], "scores": [0.7482036555752245, 0.7240179019254285, 0.7226336155793813], "refused": false}
+{"id": "H3-093", "cited": ["团队手册/服务拆分.md", "团队手册/技术方案模板.md", "团队手册/技术分享.md"], "scores": [0.7766786103457477, 0.7681797772621319, 0.7495737223608199], "refused": false}
+{"id": "H3-094", "cited": ["工作日志/2026-07-23.md", "团队手册/技术方案模板.md", "工作日志/2026-07-16.md"], "scores": [0.7457648400668813, 0.7431707560851848, 0.7371004437844704], "refused": false}
+{"id": "H3-095", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-08-06.md", "工作日志/2026-07-16.md"], "scores": [0.7293382786291431, 0.7184061251644422, 0.7096932873830539], "refused": false}
+{"id": "H3-096", "cited": ["工作日志/2026-07-16.md", "工作日志/2026-07-23.md", "工作日志/2026-06-04.md"], "scores": [0.7314658207687259, 0.7270603813569707, 0.7251442360081182], "refused": false}
+{"id": "H3-097", "cited": ["团队手册/App 系统版本（旧）.md", "团队手册/App 系统版本.md", "团队手册/意见反馈.md"], "scores": [1.2237358272388172, 1.1594351479069176, 1.0663676549183705], "refused": false}
+{"id": "H3-098", "cited": ["团队手册/服务拆分.md", "团队手册/服务拆分（旧）.md", "团队手册/技术分享.md"], "scores": [0.7729667839414969, 0.7561391028506179, 0.7502951179380641], "refused": false}
+{"id": "H3-099", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "工作日志/2026-06-11.md"], "scores": [0.7679131757629349, 0.7474961482402573, 0.7442934110500641], "refused": false}
+{"id": "H3-100", "cited": ["团队手册/绩效评估（旧）.md", "工作日志/2026-07-16.md", "团队手册/绩效评估.md"], "scores": [0.7466328883091862, 0.7361549674723165, 0.7268861389061883], "refused": false}
+{"id": "H3-101", "cited": ["团队手册/办公网络.md", "团队手册/数据分级.md", "团队手册/服务拆分.md"], "scores": [0.7081545512124574, 0.6893930077447976, 0.6835904121224985], "refused": false}
+{"id": "H3-102", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-30.md", "工作日志/2026-07-02.md"], "scores": [0.7347869683095993, 0.7341432813591222, 0.7285914140746694], "refused": false}
+{"id": "H3-103", "cited": ["团队手册/客户投诉（旧）.md", "团队手册/客户投诉.md", "团队手册/软件采购.md"], "scores": [0.7397023757077061, 0.7330617823936034, 0.7312373193323936], "refused": false}
+{"id": "H3-104", "cited": ["团队手册/办公网络.md", "工作日志/2026-07-02.md", "工作日志/2026-07-23.md"], "scores": [0.7276901145751182, 0.7187242054985727, 0.7081403888005298], "refused": false}
+{"id": "H3-105", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "工作日志/2026-06-11.md"], "scores": [0.7756987224660108, 0.7544526694528528, 0.7501730756983989], "refused": false}
+{"id": "H3-106", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "团队手册/数据标注（旧）.md"], "scores": [0.742320379742722, 0.7113756973944998, 0.7023581962054024], "refused": false}
+{"id": "H3-107", "cited": ["团队手册/接口文档.md", "团队手册/技术方案模板.md", "团队手册/客户投诉.md"], "scores": [0.7567428905085478, 0.7381903706932178, 0.7168218640537063], "refused": false}
+{"id": "H3-108", "cited": ["团队手册/接口文档.md", "团队手册/权限申请.md", "团队手册/权限申请（旧）.md"], "scores": [0.7682927940655233, 0.7188153079978417, 0.7125520164246222], "refused": false}
+{"id": "H3-109", "cited": ["团队手册/Go 代码规范.md", "团队手册/代码托管（旧）.md", "团队手册/代码托管.md"], "scores": [1.2311805065866792, 0.7273614306998013, 0.7196343433056924], "refused": false}
+{"id": "H3-110", "cited": ["团队手册/Go 代码规范.md", "Daily log/2026-06-10.md", "工作日志/2026-06-04.md"], "scores": [1.238195197398636, 0.7095538595869317, 0.6659407688394179], "refused": false}
+{"id": "H3-111", "cited": ["工作日志/2026-07-02.md", "工作日志/2026-07-16.md", "工作日志/2026-07-30.md"], "scores": [0.7776338158752747, 0.7770153643579487, 0.7729154109432486], "refused": false}
+{"id": "H3-112", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "工作日志/2026-07-30.md"], "scores": [0.7602044594225106, 0.7505102305850482, 0.7249639456785815], "refused": false}
+{"id": "H3-113", "cited": ["团队手册/软件采购.md", "团队手册/绩效评估.md", "团队手册/客户投诉（旧）.md"], "scores": [0.7110031472565321, 0.7105066900353165, 0.6949010014660058], "refused": false}
+{"id": "H3-114", "cited": ["团队手册/绩效评估.md", "团队手册/客户投诉.md", "工作日志/2026-07-23.md"], "scores": [0.7499986598561872, 0.7493524670883698, 0.7359763322863397], "refused": false}
+{"id": "H3-115", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-08-06.md", "工作日志/2026-07-02.md"], "scores": [0.7793635481211822, 0.7607030411819533, 0.7505260613692268], "refused": false}
+{"id": "H3-116", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-08-06.md", "工作日志/2026-07-02.md"], "scores": [0.7527662926778973, 0.7502348798962384, 0.739410411385478], "refused": false}
+{"id": "H3-117", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-16.md", "工作日志/2026-06-04.md"], "scores": [0.7437718396014201, 0.7223175751523456, 0.7215941400689871], "refused": false}
+{"id": "H3-118", "cited": ["团队手册/开源许可证.md", "团队手册/代码托管.md", "工作日志/2026-07-09.md"], "scores": [1.2253907877426626, 0.6952559202485915, 0.6779715633365537], "refused": false}
+{"id": "H3-119", "cited": ["工作日志/2026-08-06.md", "工作日志/2026-06-04.md", "工作日志/2026-07-23.md"], "scores": [0.7929030313924841, 0.7750995745490172, 0.770616585989556], "refused": false}
+{"id": "H3-120", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-06-11.md", "团队手册/绩效评估.md"], "scores": [0.738966925465256, 0.7322319665207075, 0.7271089531998722], "refused": false}
+{"id": "H3-121", "cited": ["Handbook/Analyst data access.md", "Daily log/2026-06-03.md", "Handbook/Database for new services.md"], "scores": [1.1827982517289712, 1.101487261480473, 1.0], "refused": false}
+{"id": "H3-122", "cited": ["Handbook/Analyst data access.md", "Handbook/Analytics queries.md", "Handbook/Customer data deletion (old).md"], "scores": [1.1739923374762384, 1.0323915159556134, 0.7003398332158337], "refused": false}
+{"id": "H3-123", "cited": ["Handbook/Feature requests (old).md", "Handbook/Feature requests.md", "Daily log/2026-06-10.md"], "scores": [1.211265872172158, 0.9817005472482994, 0.8495375399051237], "refused": false}
+{"id": "H3-124", "cited": ["Handbook/Model deployment (old).md", "Handbook/Access reviews.md", "Handbook/Mobile release criteria.md"], "scores": [1.2010505430007223, 1.1023161686635634, 1.050433551039926], "refused": false}
+{"id": "H3-125", "cited": ["Handbook/GPU usage.md", "Handbook/Model deployment.md", "Handbook/API deprecation.md"], "scores": [1.169739250747765, 0.7665111779659158, 0.763768073721566], "refused": false}
+{"id": "H3-126", "cited": ["Handbook/Feature requests (old).md", "Handbook/Customer interview notes.md", "Handbook/Feature requests.md"], "scores": [1.192081536384283, 1.0202847072877452, 0.9532739648652712], "refused": false}
+{"id": "H3-127", "cited": ["Handbook/Model deployment (old).md", "Handbook/Cloud infrastructure changes (old).md", "Handbook/Cloud cost alerts.md"], "scores": [1.184311370575338, 1.1561535927994655, 1.057717286655689], "refused": false}
+{"id": "H3-128", "cited": ["Handbook/Third-party scripts (old).md", "Handbook/Cloud infrastructure changes.md", "Daily log/2026-06-24.md"], "scores": [1.0, 0.9380750716692214, 0.9238877994870023], "refused": false}
+{"id": "H3-129", "cited": ["Handbook/Status page.md", "Handbook/Support escalation (old).md", "Handbook/Support escalation.md"], "scores": [1.1706068785808719, 1.1582091862307775, 1.0066291224543895], "refused": false}
+{"id": "H3-130", "cited": ["Daily log/2026-06-17.md", "Handbook/Interview process.md", "Handbook/Interview process (old).md"], "scores": [1.0, 0.8884634546526123, 0.886035201352708], "refused": false}
+{"id": "H3-131", "cited": ["Handbook/Interview process.md", "Handbook/Interview process (old).md", "Handbook/Customer interview notes.md"], "scores": [0.6565714429438128, 0.6347609963736431, 0.5553663206456392], "refused": false}
+{"id": "H3-132", "cited": ["团队手册/App 系统版本（旧）.md", "团队手册/App 系统版本.md", "Handbook/Mobile release criteria (old).md"], "scores": [1.20627359003176, 1.138245298622057, 1.0747448975490237], "refused": false}
+{"id": "H3-133", "cited": ["Handbook/Third-party scripts.md", "Daily log/2026-06-17.md", "Handbook/Interview process.md"], "scores": [1.0, 0.9559707928901257, 0.7070244531678579], "refused": false}
+{"id": "H3-134", "cited": ["Handbook/Database for new services (old).md", "Daily log/2026-06-10.md", "Handbook/Database for new services.md"], "scores": [1.2111692577617965, 1.0080802875055515, 0.9599597146071063], "refused": false}
+{"id": "H3-135", "cited": ["Handbook/Database for new services (old).md", "Handbook/Customer data deletion (old).md", "Daily log/2026-07-22.md"], "scores": [1.005695870425815, 1.000359360208582, 1.0], "refused": false}
+{"id": "H3-136", "cited": ["Handbook/Product search (old).md", "Handbook/Product search.md"], "scores": [1.1712687299099342, 0.9161127249631108], "refused": false}
+{"id": "H3-137", "cited": ["Handbook/Model deployment (old).md", "Daily log/2026-06-10.md", "Handbook/Model deployment.md"], "scores": [1.183630150670797, 1.0224653035229265, 0.9468910339950987], "refused": false}
+{"id": "H3-138", "cited": ["Handbook/On-site days (old).md", "Handbook/Interview process.md", "Handbook/API deprecation.md"], "scores": [1.0808532902961436, 1.0, 0.8528180809793338], "refused": false}
+{"id": "H3-139", "cited": ["Handbook/On-site days (old).md", "Daily log/2026-07-08.md", "Handbook/On-site days.md"], "scores": [1.1990312482235737, 1.1557094162667203, 0.9948416730587202], "refused": false}
+{"id": "H3-140", "cited": ["Daily log/2026-07-08.md", "Handbook/Customer refunds.md", "Handbook/Customer refunds (old).md"], "scores": [0.6723805122111894, 0.6672884136569266, 0.6607920889721228], "refused": false}
+{"id": "H3-141", "cited": ["Handbook/Product search.md", "Daily log/2026-07-08.md", "Handbook/Feature requests.md"], "scores": [1.0, 0.5683775895829442, 0.5566968294416892], "refused": false}
+{"id": "H3-142", "cited": ["工作日志/2026-07-09.md", "Handbook/Feature requests (old).md", "工作日志/2026-06-25.md"], "scores": [0.6230165649514969, 0.5990644237224938, 0.5874428378802161], "refused": false}
+{"id": "H3-143", "cited": ["Handbook/Repository ownership.md", "Handbook/Cloud infrastructure changes (old).md", "Handbook/Price changes.md"], "scores": [1.189807257798487, 0.7633116100194584, 0.7585717972822861], "refused": false}
+{"id": "H3-144", "cited": ["Handbook/Design handoff.md", "Handbook/Customer interview notes.md", "Handbook/On-site days (old).md"], "scores": [1.195908867798713, 1.1687671866639229, 0.8122607867877802], "refused": false}
+{"id": "H3-145", "cited": ["Handbook/A/B tests.md", "团队手册/数据标注（旧）.md", "团队手册/技术方案模板.md"], "scores": [1.0, 0.6322503568194389, 0.6321107411554792], "refused": false}
+{"id": "H3-146", "cited": ["Handbook/API deprecation.md", "Handbook/Browser support.md", "Handbook/Model deployment.md"], "scores": [1.1191555849441137, 1.0, 0.7808887062337742], "refused": false}
+{"id": "H3-147", "cited": ["Handbook/GPU usage.md", "Daily log/2026-08-05.md", "Handbook/Support escalation.md"], "scores": [1.1947871366204106, 0.7950277556224323, 0.5973899260008735], "refused": false}
+{"id": "H3-148", "cited": ["Handbook/Bug bounty.md", "Daily log/2026-07-29.md", "Handbook/Support escalation.md"], "scores": [1.2338223793624246, 1.047999030993039, 0.7442383182658963], "refused": false}
+{"id": "H3-149", "cited": ["Handbook/Status page.md", "Daily log/2026-07-22.md", "Handbook/Design handoff.md"], "scores": [1.2103396987180426, 1.03964133389738, 0.7272275110086631], "refused": false}
+{"id": "H3-150", "cited": ["Handbook/Access reviews.md", "Handbook/Third-party scripts.md", "工作日志/2026-07-16.md"], "scores": [1.2081328423976287, 0.6084800266680688, 0.6071260831469019], "refused": false}
+{"id": "H3-151", "cited": ["Daily log/2026-07-08.md", "Handbook/Customer refunds (old).md", "Handbook/Customer refunds.md"], "scores": [0.5946345148822658, 0.5863248539412709, 0.5847736475949556], "refused": false}
+{"id": "H3-152", "cited": ["Handbook/A/B tests.md", "Handbook/Analyst data access.md", "Handbook/Interview process.md"], "scores": [1.2338724675917072, 0.7029260759503144, 0.6658840714372577], "refused": false}
+{"id": "H3-153", "cited": ["Handbook/Browser support.md", "Handbook/Support escalation (old).md", "Handbook/Feature requests.md"], "scores": [1.173964703995947, 1.1682153323116309, 1.1547196529072203], "refused": false}
+{"id": "H3-154", "cited": ["Daily log/2026-08-05.md", "Handbook/Design handoff.md", "Handbook/Price changes.md"], "scores": [1.19382677316518, 1.0775017071649484, 1.012996742122999], "refused": false}
+{"id": "H3-155", "cited": ["Handbook/Language for code.md", "Daily log/2026-07-22.md", "团队手册/Go 代码规范.md"], "scores": [1.2088792052783588, 1.1102820466061485, 1.0948080512415117], "refused": false}
+{"id": "H3-156", "cited": ["Handbook/Analyst data access.md", "Handbook/Analytics queries.md", "Handbook/Analytics queries (old).md"], "scores": [1.1862519884043308, 0.6090194106452316, 0.5946328511607799], "refused": false}
+{"id": "H3-157", "cited": ["Handbook/Hackathon.md", "Daily log/2026-07-22.md", "Handbook/Analyst data access.md"], "scores": [1.2163483235037185, 0.933293800726077, 0.5550531883098984], "refused": false}
+{"id": "H3-158", "cited": ["Handbook/Cloud infrastructure changes (old).md", "Handbook/Cloud cost alerts.md", "Daily log/2026-07-29.md"], "scores": [1.1766505207163271, 1.139963535965883, 1.0756314163042118], "refused": false}
+{"id": "H3-159", "cited": ["Handbook/Browser support.md", "Daily log/2026-06-24.md", "Handbook/Third-party scripts.md"], "scores": [1.1403413030915535, 1.0886936974041423, 1.0], "refused": false}
+{"id": "H3-160", "cited": ["Handbook/Browser support.md", "团队手册/图片资源.md", "团队手册/App 系统版本（旧）.md"], "scores": [1.2015601579154833, 0.8708717786341306, 0.7963473445939614], "refused": false}
+{"id": "H3-161", "cited": ["团队手册/代码托管.md", "团队手册/代码托管（旧）.md", "团队手册/数据看板.md"], "scores": [0.7620603742660261, 0.7466630125188374, 0.7417098431686782], "refused": false}
+{"id": "H3-162", "cited": ["工作日志/2026-07-23.md", "团队手册/数据标注.md", "团队手册/绩效评估.md"], "scores": [0.7298441602370485, 0.7152263665307697, 0.7116275217744725], "refused": false}
+{"id": "H3-163", "cited": ["团队手册/消息队列.md", "工作日志/2026-06-04.md", "工作日志/2026-07-02.md"], "scores": [1.2424719079387665, 0.7267057156208363, 0.6912360575135992], "refused": false}
+{"id": "H3-164", "cited": ["团队手册/节假日安排.md", "工作日志/2026-07-23.md", "工作日志/2026-07-16.md"], "scores": [0.7334133863144086, 0.7076951679132844, 0.6993373613804579], "refused": false}
+{"id": "H3-165", "cited": ["工作日志/2026-07-23.md", "团队手册/客户投诉.md", "工作日志/2026-06-04.md"], "scores": [0.7469488063654737, 0.7253725306816179, 0.7235326587697397], "refused": false}
+{"id": "H3-166", "cited": ["团队手册/节假日安排.md", "工作日志/2026-07-16.md", "工作日志/2026-07-23.md"], "scores": [0.7049703378756931, 0.6945411241972508, 0.6919038555716508], "refused": false}
+{"id": "H3-167", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-06-04.md", "工作日志/2026-07-16.md"], "scores": [0.7489460718519734, 0.726604617298575, 0.7247491024835124], "refused": false}
+{"id": "H3-168", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "工作日志/2026-06-11.md"], "scores": [0.7750898604795804, 0.7550261264034344, 0.7502513091735903], "refused": false}
+{"id": "H3-169", "cited": ["团队手册/出差标准.md", "工作日志/2026-06-11.md", "团队手册/出差标准（旧）.md"], "scores": [0.7026316684367586, 0.6986556849599026, 0.6885652095403412], "refused": false}
+{"id": "H3-170", "cited": ["工作日志/2026-06-11.md", "团队手册/出差标准.md", "团队手册/出差标准（旧）.md"], "scores": [0.7123992877428051, 0.70585210195466, 0.6994001717874294], "refused": false}
+{"id": "H3-171", "cited": ["工作日志/2026-07-16.md", "团队手册/发布说明（旧）.md", "团队手册/发布说明.md"], "scores": [0.7328590564681701, 0.7229055051433004, 0.7204518274851903], "refused": false}
+{"id": "H3-172", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-06-04.md", "团队手册/客户投诉.md"], "scores": [0.7481448156229771, 0.7261209908238992, 0.7256801608244814], "refused": false}
+{"id": "H3-173", "cited": ["工作日志/2026-07-23.md", "团队手册/客户投诉.md", "工作日志/2026-06-11.md"], "scores": [0.7351984681995969, 0.7324596522489042, 0.7292641604135426], "refused": false}
+{"id": "H3-174", "cited": ["团队手册/App 系统版本（旧）.md", "团队手册/App 系统版本.md", "团队手册/意见反馈.md"], "scores": [1.2187162091713275, 1.1538616148496574, 1.0545932783163194], "refused": false}
+{"id": "H3-175", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "工作日志/2026-06-11.md"], "scores": [0.774239047119913, 0.7521910795279538, 0.7463999804750117], "refused": false}
+{"id": "H3-176", "cited": ["团队手册/服务拆分.md", "团队手册/技术分享.md", "团队手册/服务拆分（旧）.md"], "scores": [0.7352114810149555, 0.727863880467849, 0.7180118641456499], "refused": false}
+{"id": "H3-177", "cited": ["工作日志/2026-07-02.md", "团队手册/节假日安排.md", "团队手册/绩效评估.md"], "scores": [0.7465911357393153, 0.7459348210312964, 0.7424534800493756], "refused": false}
+{"id": "H3-178", "cited": ["团队手册/短信通道.md", "团队手册/短信通道（旧）.md", "工作日志/2026-07-16.md"], "scores": [0.7407756887457637, 0.7388158251777597, 0.7360141430305873], "refused": false}
+{"id": "H3-179", "cited": ["团队手册/服务拆分.md", "团队手册/技术分享.md", "团队手册/绩效评估.md"], "scores": [0.7603020712840287, 0.7374982677574735, 0.7048549471400065], "refused": false}
+{"id": "H3-180", "cited": ["工作日志/2026-07-16.md", "团队手册/数据共享（旧）.md", "团队手册/数据看板.md"], "scores": [0.6836606779248697, 0.6785910581228336, 0.6709391113148353], "refused": false}
+{"id": "H3-181", "cited": ["工作日志/2026-07-16.md", "工作日志/2026-07-23.md", "团队手册/绩效评估（旧）.md"], "scores": [0.7448241596475054, 0.7424774780847372, 0.7420846424109868], "refused": false}
+{"id": "H3-182", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "工作日志/2026-06-11.md"], "scores": [0.7781664948338403, 0.7584534936617544, 0.7537503094569455], "refused": false}
+{"id": "H3-183", "cited": ["团队手册/技术方案模板.md", "团队手册/客户投诉.md", "团队手册/客户投诉（旧）.md"], "scores": [0.8140866390314425, 0.7607528914356223, 0.7582643786087075], "refused": false}
+{"id": "H3-184", "cited": ["团队手册/绩效评估.md", "工作日志/2026-06-18.md", "团队手册/权限申请.md"], "scores": [0.7252728208315471, 0.7218263943405514, 0.7194808289048336], "refused": false}
+{"id": "H3-185", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-06-04.md", "工作日志/2026-07-16.md"], "scores": [0.7482036555752245, 0.7240179019254285, 0.7226336155793813], "refused": false}
+{"id": "H3-186", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-06-04.md", "工作日志/2026-07-16.md"], "scores": [0.7489460718519734, 0.726604617298575, 0.7247491024835124], "refused": false}
+{"id": "H3-187", "cited": ["团队手册/数据标注（旧）.md", "团队手册/数据标注.md", "工作日志/2026-07-16.md"], "scores": [0.7200634605895857, 0.7179269888052726, 0.7129059974394067], "refused": false}
+{"id": "H3-188", "cited": ["团队手册/办公网络.md", "团队手册/图片资源.md", "工作日志/2026-07-16.md"], "scores": [1.2439518761383084, 0.7126235530792826, 0.6939294009734951], "refused": false}
+{"id": "H3-189", "cited": ["团队手册/客户投诉.md", "团队手册/绩效评估.md", "团队手册/权限申请.md"], "scores": [0.7392187625631532, 0.7375284119838668, 0.7271516646665912], "refused": false}
+{"id": "H3-190", "cited": ["团队手册/技术方案模板.md", "团队手册/客户投诉（旧）.md", "团队手册/客户投诉.md"], "scores": [0.731014054336697, 0.7266284171911916, 0.7248088018457661], "refused": false}
+{"id": "H3-191", "cited": ["团队手册/代码托管.md", "团队手册/代码托管（旧）.md", "团队手册/Go 代码规范.md"], "scores": [0.7229525818406444, 0.7221445804233824, 0.6752935470336681], "refused": false}
+{"id": "H3-192", "cited": ["团队手册/节假日安排.md", "团队手册/绩效评估.md", "团队手册/软件采购.md"], "scores": [0.6654943937968412, 0.6633829659710653, 0.6588241096828753], "refused": false}
+{"id": "H3-193", "cited": ["工作日志/2026-07-02.md", "团队手册/客户投诉.md", "团队手册/软件采购.md"], "scores": [0.7143960572920989, 0.7102844587845976, 0.705158257411794], "refused": false}
+{"id": "H3-194", "cited": ["工作日志/2026-07-02.md", "团队手册/技术分享.md", "工作日志/2026-08-06.md"], "scores": [0.7866442637366031, 0.753234448830808, 0.7503082598180963], "refused": false}
+{"id": "H3-195", "cited": ["团队手册/办公网络.md", "团队手册/客户投诉.md", "团队手册/绩效评估.md"], "scores": [0.7476100767428715, 0.6903194868646096, 0.6895370276481501], "refused": false}
+{"id": "H3-196", "cited": ["团队手册/客户投诉.md", "工作日志/2026-06-11.md", "工作日志/2026-07-16.md"], "scores": [0.7479752792218548, 0.7341744433610984, 0.7253645351227487], "refused": false}
+{"id": "H3-197", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-07-02.md", "工作日志/2026-06-11.md"], "scores": [0.7756987224660108, 0.7544526694528528, 0.7501730756983989], "refused": false}
+{"id": "H3-198", "cited": ["工作日志/2026-07-23.md", "工作日志/2026-06-04.md", "工作日志/2026-07-16.md"], "scores": [0.7464580052431256, 0.7246478198694302, 0.7221599095581706], "refused": false}
+{"id": "H3-199", "cited": ["团队手册/客户投诉.md", "团队手册/绩效评估.md", "工作日志/2026-07-23.md"], "scores": [0.7567922370324407, 0.7553190872551436, 0.739963314386813], "refused": false}
+{"id": "H3-200", "cited": ["团队手册/客户投诉.md", "团队手册/绩效评估.md", "工作日志/2026-07-23.md"], "scores": [0.7405396324855769, 0.7369560674178217, 0.7311135909235258], "refused": false}

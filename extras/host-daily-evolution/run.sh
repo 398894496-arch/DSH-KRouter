@@ -1,5 +1,5 @@
 #!/bin/sh
-# Self-evolution writer + nightly upkeep. Timer is on by default.
+# Self-evolution writer + nightly upkeep, run by the nightly job once it is installed (the one-line install asks first).
 # Key = vault page *_API_KEY or an already-logged-in local CLI. No extra env file.
 set -eu
 
@@ -30,7 +30,7 @@ fi
 rc=0
 python3 "$RESOLVE" --exec || rc=$?
 
-# Nightly upkeep after the seal. On by default; KROUTER_NIGHTLY=0 turns it off.
+# Nightly upkeep after the seal. Runs with the job; KROUTER_NIGHTLY=0 turns it off.
 # nightly.py runs the five steps (each independent; none changes the seal's exit code) and writes each
 # one's outcome to 90 系统文件/自动化/夜间维护.md and the health page, where `status` reads it.
 # Model steps use the writer's lane: *_API_KEY first, then the CLI the writer would pick.
