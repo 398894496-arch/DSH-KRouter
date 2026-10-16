@@ -28,16 +28,15 @@ def test_status_version_is_the_shipped_version():
         assert re.search(r"v(\d+\.\d+\.\d+)", text).group(1) == version, f"docs/STATUS{lang}.md names another version"
 
 
-def test_status_numbers_are_what_the_bench_gives_now():
+def test_status_numbers_are_what_the_bench_gives_now(monkeypatch):
     """The numbers in the block are recomputed: a ranking change or a new stored result must update the block."""
     import importlib.util
     import json
-    import os
 
     spec = importlib.util.spec_from_file_location("mh_bench_status", ROOT / "bench/memory_honesty/run.py")
     bench = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(bench)
-    os.environ["KROUTER_DENSE"] = "0"
+    monkeypatch.setenv("KROUTER_DENSE", "0")  # 测试结束自动恢复，不影响同一进程里后面的测试
     rows = bench.questions("heldout3")
 
     def nums(answers: list[dict]) -> tuple[int, int, int]:
