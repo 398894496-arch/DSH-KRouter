@@ -175,3 +175,66 @@ A candidate is run on heldout3 once, at the default it would ship with.
 | 2026-10-14 | **basic-memory 0.23.2 on heldout3** (as registered above; one run, aggregates only, no `--reveal`; a mechanical check found every cited path is a vault3 file). Default: 77.5% wrong citations (155 / 200) [71.5, 83.5], 0 / 80 neighbours refused, 45 / 120 right (16 corrections, 29 current). With the two rules (floor 1.225 picked on dev3): 18.5% (5 / 27) [4.2, 33.3], 76 / 80 refused, 22 / 120 right. KRouter 1.0.3 minus basic-memory default, paired: wrong rate [−58.5, −43.4] points, right [+43, +72], refused [+35, +58]. On dev (vault1) 0.23.2 scored 18 / 29 wrong against 0.22.1's 11 / 28. |
 | 2026-10-14 | **claude-mem on heldout3, registered before the run** (not a candidate). The latest claude-mem from its marketplace, at its defaults (observer `claude-haiku-4-5`), in an isolated HOME with `CLAUDE_MEM_CLAUDE_CONFIG_DIR` set so it cannot reach the host's keychain login (C50). It learns vault3 as in the first bench: Claude Code sessions (model haiku) in a copy of vault3 read every page, one Read per page, one session per top folder, with a neutral prompt (read and list each page's rule or entry); then each question goes to its `/api/search`, top 3, mapped to pages through `files_read`. A question counts as refused only when nothing maps to a page. Default only (it gives no score, so no floor). Aggregates only, `--ci`; no `--reveal`, and the adapter's per-question output is not read. |
 | 2026-10-14 | **claude-mem 13.39.0 on heldout3** (as registered above; one run, aggregates only, no `--reveal`). Four haiku sessions read all 110 pages (45 + 45 + 10 + 10 Read calls, no errors); its observer, signed in through the environment token only (the keychain lookup went to the isolated service name and found nothing), stored 85 observations covering 85 of the 110 pages and skipped 18 reads as noise; queue drained before any question. Every cited path is a vault3 file. Default: 64.0% wrong citations (128 / 200) [57.5, 71.0], 0 / 80 neighbours refused, 72 / 120 right (34 corrections, 38 current). KRouter 1.0.3 minus claude-mem, paired: wrong rate [−45.0, −29.9] points, right [+17, +44], refused [+35, +58]. The isolated directory was deleted afterwards. |
+
+## Held-out set 5: real questions from the maintainer's own agents (registered 2026-10-16, before any run)
+
+**Where the questions come from.** Everything the maintainer typed to seven agents between 2026-06-09 and 2026-10-16,
+read from each agent's local store by `bench/real_questions/extract_asks.py`: Claude Code (session files and the
+prompt history), Codex (current and restored archives), Cursor agent transcripts, DeepSeek Harness (personal and
+company), Grok and Hermes. Human messages only (no injected context, tool output, subagents, headless or automation
+runs), redacted, de-duplicated: 11 853. A rule prefilter kept 5 369 question-like ones. Grok 4.7 (high reasoning,
+through the maintainer's CLIProxyAPI) labelled each: 393 ask about something the maintainer or their agents had
+decided, set up or done (`classify_asks.py`). One more Grok 4.7 call over all 393 marked 332 as understandable without
+their conversation and grouped them by intent into 208 things (`group_asks.py`). The frozen set is the earliest ask of
+each group: **208 questions**, all Chinese (74 from June, 15 July, 63 August, 44 September, 12 October), SHA-256
+`ed2efd001e9a32d6a522fbb0d9a8cf39e769917f3e67b8651de981f22152c61f`. Groups asked on two or more days give **38 pairs**
+(earliest and latest ask) for the learning bench, SHA-256 `e2a8cb06c727d7a7161ab2460a58a79ac113b823d70bb44b8a20e121bdb0b84f`.
+The questions are the maintainer's private messages: they stay on the machine and are never committed; only
+aggregates are published. They were never used to tune KRouter (the 92 router queries of VERIFY.md layer 4 are a
+different source). One known overlap: the alias table's 26 seed rows (2026-08-21) were written from 25 of the
+maintainer's earlier questions, so some questions may hit an alias; hit modes are reported separately (below).
+
+**Snapshot.** The maintainer's vault at its own git commit `57b6019` (2026-10-15), exported with `git archive`
+(uncommitted edits are not used). 531 pages.
+
+**Systems.** (a) KRouter on main `bf476ae` as an agent calls it: `route_knowledge.py search <question>` (alias lock,
+then ranked recall), cited pages read off the receipt (`run_real.py`). (b) BM25 over character pairs and words,
+superseded pages skipped, refusal floor picked on dev3. (c) Dense candidate 1 (`feature/dense` at `4412acd`, local
+embeddings on, balanced tier). The SessionStart fix in #52 does not touch retrieval.
+
+**Two configurations.** *As used*: the snapshot unchanged. *Without learning*: the snapshot minus
+`90 系统文件/自动化/下意识触发词-自学习.psv` (6 learned lines); the alias table is kept, because all of its 167 aliases are
+the 2026-08-21 seed (checked against the alias ledger: none added since). **The pass lines below use only *without
+learning*.**
+
+**Hit mode,** recorded per question and system: `canonical_match` (the alias lock), `learned trigger` (KRouter's
+cited pages differ between the two configurations), `recall`, or `none` (refused). Reported separately.
+
+**Valid citations.** A cited page counts only if it existed before the question was asked and does not come from the
+question's own session or a later one. Evidence that a page existed: it is in the newest vault backup taken before the
+ask (backups exist for 2026-08-18, 08-19 and 08-22), or its own date (frontmatter `created` / `date`, or a dated file
+name) is earlier than the ask's day. Session excerpts and time logs dated on the ask's day or later never count. A
+page with no such evidence counts as not having existed (score 0): 288 of the 531 pages carry no date, which weighs
+most on asks before 2026-08-18; scores are also reported by month.
+
+**Judging.** Grok 4.7, high reasoning (not a Claude model: KRouter was built and tuned with Claude). Per question the
+judge sees the question, its date, and each system's output rendered the same way (each valid cited page's path,
+date, status and first 400 characters; or "refused"). First it decides, from a candidate pool (all systems' cited
+pages plus each system's top 5 without its refusal gate, each with date and status), whether the snapshot holds a
+page that answered the question before it was asked. If it does, a refusal scores 0. If it does not, a refusal scores
+2 and any citation 0. Otherwise each output scores 0 (useless), 1 (relevant, the agent still has to dig) or 2 (answers
+it). Pairs are judged twice, the second time with X and Y swapped; a question's score is the mean.
+
+**Agreement.** The maintainer labels 40 to 50 of the questions (a random sample, seed 20261016) without seeing the
+systems' names; the report gives Grok's agreement with them (same score, and within one point).
+
+**Pass lines** (*without learning*). "KRouter answers real questions better than BM25 with the two rules" may be said
+only if the paired bootstrap 95% interval (10 000 resamples, seed 0) of KRouter minus BM25's mean score is entirely
+above zero. For the dense candidate, this counts as the second piece of evidence for shipping it as an opt-in (with the
+real-traffic blind judge registered above) if its mean is at most 0.05 below KRouter's.
+
+**What any claim says.** One person's questions, on one vault, over four months and seven agents; that person is the
+maintainer.
+
+**Not in this run.** The cross-system injection comparison (step 3) waits until #52's two regressions are fixed and
+reviewed.
