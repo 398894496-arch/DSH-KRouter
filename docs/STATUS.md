@@ -9,6 +9,8 @@
 >   layer 4): not run yet; it waits for 50 new queries.
 > - **Who wrote the held-out questions:** Claude Opus in separate claude.ai sessions, not a person. A person-written
 >   set is planned.
+> - **Stable line:** 1.1.x takes fixes only until 2026-11-12, at most one patch a week. Smallest install, nothing in the
+>   background: `bootstrap.py --vault <vault> --no-timer --no-import`.
 > - **Nightly job:** the one-line install asks before installing it; the manual `install.sh` installs it
 >   (`KROUTER_NO_TIMER=1` skips). Queries never leave the machine.
 > - **Nightly writer lanes:** an API key runs nothing locally; grok (kernel sandbox) and claude (tool allow-list) are

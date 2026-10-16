@@ -1,5 +1,9 @@
 # Changelog
 
+**1.1.x is the stable line.** Until 2026-11-12 it takes fixes only: no new features, no format changes, at most one
+patch release a week (security fixes excepted). New features wait on branches for 1.2.0. The early weeks shipped many
+versions a day; that pace was development, not a support promise.
+
 Minor releases (new features) at most once a week; patch releases (fixes, docs, benchmark updates) when ready. 1.0.0 to
 1.0.2 went out on one day: 1.0.0 at the maintainer's call, 1.0.1 and 1.0.2 as fixes from outside reviews. From 1.0.0 the version follows
 semantic versioning; what counts as the stable surface is listed in [`docs/DETAILS.md`](docs/DETAILS.md#stability-and-versions). Each entry starts with what you will
@@ -7,7 +11,9 @@ notice, then the details.
 
 ## Unreleased
 
-Nothing yet.
+- Docs: 1.1.x is the stable line (fixes only until 2026-11-12, at most one patch a week); DETAILS lists what the
+  stability promise covers (core) and what is best-effort (extras); FOR-AGENTS and the status block name the smallest
+  install, router only with nothing in the background.
 
 ## 1.1.1 — 2026-10-15
 

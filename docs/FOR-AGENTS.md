@@ -12,6 +12,8 @@
 >   layer 4): not run yet; it waits for 50 new queries.
 > - **Who wrote the held-out questions:** Claude Opus in separate claude.ai sessions, not a person. A person-written
 >   set is planned.
+> - **Stable line:** 1.1.x takes fixes only until 2026-11-12, at most one patch a week. Smallest install, nothing in the
+>   background: `bootstrap.py --vault <vault> --no-timer --no-import`.
 > - **Nightly job:** the one-line install asks before installing it; the manual `install.sh` installs it
 >   (`KROUTER_NO_TIMER=1` skips). Queries never leave the machine.
 > - **Nightly writer lanes:** an API key runs nothing locally; grok (kernel sandbox) and claude (tool allow-list) are
@@ -48,6 +50,14 @@ claude-mem can stay. KRouter imports its memory read-only (run end to end agains
 each project's decisions as one page to confirm) and can sort decisions into in force and replaced. The Claude Code plugin records
 each session when it ends and puts this repository's confirmed decisions and corrections, with their pages, into
 the next session. Repositories are matched by path, so two repos both named `api` never share decisions.
+
+## Maturity and footprint
+
+Young: one maintainer, first release 2026-08-21, and the early weeks shipped many versions a day. Since 1.1.1 the line
+is held still: **1.1.x takes fixes only until 2026-11-12**, at most one patch a week. Pin a release (`KROUTER_TAG`).
+What the stability promise covers and what is best-effort: [`DETAILS.md` → Core and extras](DETAILS.md#core-and-extras).
+For a cautious host, the smallest install is router only, nothing in the background:
+`bootstrap.py --vault <vault> --no-timer --no-import` (no nightly job, no session import, no model call, no hook).
 
 ## What to know before installing
 
