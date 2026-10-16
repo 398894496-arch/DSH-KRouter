@@ -56,8 +56,23 @@ def route_answers(repo: Path, rows: list[dict], vault: Path, cache: Path, route:
         elif not re.search(r"(?m)^recall: none", text) and "\nrecall:\n" in text:
             block = text.split("\nrecall:\n", 1)[1]
             cited = [m.group(1) for m in re.finditer(r"(?m)^- (.+?\.md) tier=", block)][:3]
-        out.append({"id": it["id"], "cited": cited, "refused": not cited})
+        mode = "canonical_match" if re.search(r"(?m)^canonical_match: true", text) else ("recall" if cited else "none")
+        out.append({"id": it["id"], "cited": cited, "refused": not cited, "mode": mode})
     return out
+
+
+def pool_of(bench, system: str, rows: list[dict], vault: Path, cache: Path, repo: Path) -> dict[str, list[str]]:
+    """Each question's top 5 pages without the refusal gate: the judge's candidate pool for "was there an answer"."""
+    if system == "bm25-floor":
+        scored = bench.bm25_scored(rows, skip_superseded=True, vault_src=vault, cjk=True)
+        return {qid: [p for p, _ in hits[:5]] for qid, hits in scored}
+    import sys
+
+    sys.path.insert(0, str(repo / "skill/krouter-obsidian/scripts"))
+    os.environ["KROUTER_CACHE_DIR"] = str(cache)
+    import recall_index as ri
+
+    return {it["id"]: [h["rel"] for h in ri.recall(vault, it["q"], limit=5, gate=False)["hits"]] for it in rows}
 
 
 def snapshot(vault: Path, commit: str, dest: Path) -> None:
@@ -74,6 +89,10 @@ def main() -> int:
     ap.add_argument("--system", choices=["krouter", "bm25-floor"], required=True)
     ap.add_argument("--repo", default=str(HERE.parents[1]))
     ap.add_argument("--name", default="")
+    ap.add_argument("--prebuild-dense", action="store_true",
+                    help="build the snapshot's page vectors first (the dense candidate; needs its venv and config)")
+    ap.add_argument("--without-learning", action="store_true",
+                    help="remove the learned triggers from the snapshot (90 系统文件/自动化/下意识触发词-自学习.psv)")
     args = ap.parse_args()
     os.environ["KROUTER_NO_QUERY_LOG"] = "1"
     bench = bench_from(Path(args.repo))
@@ -82,6 +101,17 @@ def main() -> int:
     try:
         vault = tmp / "vault"
         snapshot(Path(args.vault), args.vault_commit, vault)
+        if args.without_learning:
+            for f in vault.rglob("*自学习*.psv"):
+                f.unlink()
+        if args.prebuild_dense:  # 不先建好向量，第一次查询会退回纯字面，测不出向量的效果
+            env = {**os.environ, "OBSIDIAN_VAULT": str(vault), "KROUTER_CACHE_DIR": str(tmp / "cache"),
+                   "KROUTER_NO_QUERY_LOG": "1"}
+            res = subprocess.run(["python3", str(Path(args.repo) / "skill/krouter-obsidian/scripts/dense.py"), "--build",
+                                  "--vault", str(vault)], env=env, capture_output=True, text=True, timeout=7200)
+            print(json.dumps({"dense_build": (res.stdout.strip().splitlines() or [""])[-1][:200],
+                              "rc": res.returncode}))
+        pool = pool_of(bench, args.system, rows, vault, tmp / "pool-cache", Path(args.repo))
         if args.system == "krouter":
             answers = route_answers(Path(args.repo), rows, vault, tmp / "cache")
         else:
@@ -89,12 +119,14 @@ def main() -> int:
             floor = bench.pick_floor(bench.questions("dev3"), bench.bm25_scored(
                 bench.questions("dev3"), skip_superseded=True, vault_src=bench.vault_of("dev3"), cjk=True))
             answers = bench.floor_answers(scored, floor)
-        name = args.name or args.system
+        name = (args.name or args.system) + (".no-learning" if args.without_learning else "")
         out = STATE / f"outputs.{name}.jsonl"
         with out.open("w", encoding="utf-8") as fh:
             for a in answers:
                 fh.write(json.dumps({"id": a["id"], "system": name, "cited": (a.get("cited") or [])[:3],
-                                     "refused": bool(a.get("refused") or not a.get("cited"))}, ensure_ascii=False) + "\n")
+                                     "refused": bool(a.get("refused") or not a.get("cited")),
+                                     "mode": a.get("mode", ""), "pool": pool.get(a["id"], [])},
+                                    ensure_ascii=False) + "\n")
         os.chmod(out, 0o600)
         refused = sum(1 for a in answers if a.get("refused") or not a.get("cited"))
         print(json.dumps({"system": name, "questions": len(rows), "refused": refused, "vault_commit": args.vault_commit,
