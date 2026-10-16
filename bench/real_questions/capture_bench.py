@@ -52,6 +52,16 @@ VERIFY = """下面是一个人和他的编程 agent 某一天的一段会话摘�
 只输出 JSON：{"keep": {"P1": true 或 false, ...}, "missing": ["...", ...]}
 
 """
+CLASSIFY = """下面是一段会话摘录，"标准答案"里这一段定下的事（编号 G），和某个系统提炼出的条目（编号 S）。给每条 S 归一类：
+- match：和某条 G 说的是同一件事（颗粒度不同、一件事拆成了两条、两件事合成了一条，都算），写出对应的 G 编号；
+- fabricated：摘录里根本没有这回事；
+- procedure：摘录里有，但只是操作步骤、排查过程或讨论，不是一个决定；
+- unconfirmed：是一个决定，但它是 agent 提出来的，这个人没有明确表态同意（只回了一句含糊的话也算这一类）；
+- missing_from_reference：确实是这个人说出或明确同意的决定，标准答案漏了。
+每条再给 turn：依据的是哪一轮（摘录里提问后面括号里的时间，如 "14:05"；找不到就写 ""）。
+只输出 JSON：{"S1": {"cat": "...", "g": "G2 或空", "turn": "14:05"}, ...}
+
+"""
 MATCH = """下面是一段会话里"真正定下来的事"（标准答案，编号 G），和某个系统从同一段会话里提炼出的条目（编号 S）。
 判断对应关系：一条 S 和一条 G 说的是同一件事、方向也一致（改主意的，改之前和改之后都要对），才算对上。
 只输出 JSON：{"matches": [["G1","S2"], ...]}；一条 G 最多对一条 S，一条 S 最多对一条 G。
@@ -206,6 +216,112 @@ def sheet() -> int:
     return 0
 
 
+def gold_of(unit: str, props: list[str], ans: dict) -> list[str]:
+    gold = [p for n, p in enumerate(props, 1) if ans.get(f"{unit}|P{n}") == "yes"]
+    return gold + [ln.strip() for ln in (ans.get(f"{unit}|missing") or "").splitlines() if ln.strip()]
+
+
+def classify(args) -> int:
+    """Why did a distilled line not match? One category per line, with the turn it rests on (for a human check)."""
+    ans = json.loads(Path(args.answers).read_text(encoding="utf-8"))
+    proposed = {r["unit"]: r["proposed"] for r in map(json.loads, open(STATE / "proposed.jsonl", encoding="utf-8"))}
+    distilled = {r["unit"]: r["lines"] for r in map(json.loads, open(STATE / "distilled.jsonl", encoding="utf-8"))}
+    rows = []
+    for u in units():
+        lines = distilled.get(u["unit"], [])
+        if not lines:
+            continue
+        gold = gold_of(u["unit"], proposed.get(u["unit"], []), ans)
+        prompt = (CLASSIFY + "标准答案：\n" + ("\n".join(f"G{i}. {g}" for i, g in enumerate(gold, 1)) or "（无）")
+                  + "\n\n系统条目：\n" + "\n".join(f"S{i}. {s}" for i, s in enumerate(lines, 1))
+                  + "\n\n摘录：\n" + u["excerpt"])
+        m = re.search(r"\{.*\}", call(args, prompt), re.S)
+        try:
+            v = json.loads(m.group(0)) if m else {}
+        except ValueError:
+            v = {}
+        for i, s in enumerate(lines, 1):
+            got = v.get(f"S{i}") or {}
+            rows.append({"unit": u["unit"], "line": s, "cat": got.get("cat", "unparsed"), "g": got.get("g", ""),
+                         "turn": str(got.get("turn") or "")})
+    out = STATE / "classified.jsonl"
+    out.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+    os.chmod(out, 0o600)
+    from collections import Counter
+    print(json.dumps({"lines": len(rows), "by_category": dict(Counter(r["cat"] for r in rows))}, ensure_ascii=False))
+    return 0
+
+
+TURN = re.compile(r"(?m)^- \*\*问\*\*（(\d{2}:\d{2}|--:--)）：")
+
+
+def turns_of(excerpt: str) -> list[tuple[str, str]]:
+    """[(HH:MM, the turn's text: question and closing answer)] from an excerpt."""
+    marks = list(TURN.finditer(excerpt))
+    return [(m.group(1), excerpt[m.start(): marks[i + 1].start() if i + 1 < len(marks) else len(excerpt)].strip())
+            for i, m in enumerate(marks)]
+
+
+def locate(excerpt: str, text: str, hint: str = "") -> str:
+    """The turn a line rests on: the one at its (HH:MM) if given, else the one sharing most words; with the turn before."""
+    import recall_index as ri
+
+    ts = turns_of(excerpt)
+    if not ts:
+        return excerpt[:1500]
+    hint = hint or (re.search(r"[（(](\d{2}:\d{2})[)）]", text).group(1) if re.search(r"[（(](\d{2}:\d{2})[)）]", text) else "")
+    idx = next((i for i, (t, _) in enumerate(ts) if t == hint), None)
+    if idx is None:
+        want = set(ri.tokens(text))
+        idx = max(range(len(ts)), key=lambda i: len(want & set(ri.tokens(ts[i][1]))))
+    return "\n\n".join(b[:1800] for _, b in ts[max(0, idx - 1): idx + 1])
+
+
+REVIEW = SHEET.replace("会话决定核对（__N__ 段）", "抽检：这是不是你定下的事（__N__ 条）").replace(
+    "每段会话下面是模型列出的候选决定。对的勾「对」，错的或不是你认可的勾「不对」。漏掉的、你确实定了的事，写在下面的框里，一行一条（改主意的写成「原来 A → 改成 B」）。可以展开看会话摘录。",
+    "每条下面附着它依据的那一轮对话原文。不用回忆，看原文判断就行。").replace("krouter-capture-sheet-v1", "krouter-capture-review-v1").replace(
+    "capture_sheet_answers.json", "capture_review_answers.json")
+CHOICES = [("decision", "我说了或明确同意了（算决定）"), ("unconfirmed", "agent 提的，我没明确表态"),
+           ("absent", "原文里没这回事"), ("procedure", "只是操作或讨论，不算决定"), ("unsure", "说不清")]
+
+
+def review(args) -> int:
+    """A human check beside the source: 20 unmatched distilled lines (stratified by category) and 10 reference items."""
+    ans = json.loads(Path(args.answers).read_text(encoding="utf-8"))
+    proposed = {r["unit"]: r["proposed"] for r in map(json.loads, open(STATE / "proposed.jsonl", encoding="utf-8"))}
+    cls = [json.loads(x) for x in open(STATE / "classified.jsonl", encoding="utf-8")]
+    ex = {u["unit"]: u["excerpt"] for u in units()}
+    rng = random.Random(20261016)
+    by: dict[str, list[dict]] = {}
+    for r in cls:
+        if r["cat"] != "match":
+            by.setdefault(r["cat"], []).append(r)
+    picks: list[dict] = []
+    while len(picks) < 20 and any(by.values()):
+        for cat in sorted(by):
+            if by[cat] and len(picks) < 20:
+                picks.append({"kind": "krouter", **by[cat].pop(rng.randrange(len(by[cat])))})
+    gold = [{"kind": "reference", "unit": u, "line": g, "turn": "", "cat": ""}
+            for u, props in proposed.items() for g in gold_of(u, props, ans)]
+    picks += [{**g} for g in rng.sample(gold, min(10, len(gold)))]
+    rng.shuffle(picks)
+    items, key = [], {}
+    for n, p in enumerate(picks, 1):
+        k = f"R{n:02d}"
+        key[k] = {"kind": p["kind"], "unit": p["unit"], "line": p["line"], "model_cat": p.get("cat", "")}
+        radios = " ".join(f'<label><input type="radio" name="{k}" value="{v}"> {html.escape(t)}</label>' for v, t in CHOICES)
+        items.append(f'<section><div class="item" data-k="{k}"><b>{k}</b>　{html.escape(p["line"])}</div>'
+                     f'<details open><summary>原文</summary><pre>{html.escape(locate(ex[p["unit"]], p["line"], p.get("turn", "")))}</pre></details>'
+                     f'<div class="item" data-k="{k}">{radios}</div></section>')
+    out = STATE / "capture_review.html"
+    out.write_text(REVIEW.replace("__N__", str(len(items))).replace("__ITEMS__", "\n".join(items)), encoding="utf-8")
+    (STATE / "capture_review.key.json").write_text(json.dumps(key, ensure_ascii=False, indent=1), encoding="utf-8")
+    for f in (out, STATE / "capture_review.key.json"):
+        os.chmod(f, 0o600)
+    print(json.dumps({"sheet": str(out), "items": len(items), "krouter_lines": sum(p["kind"] == "krouter" for p in picks)}))
+    return 0
+
+
 def score(args) -> int:
     ans = json.loads(Path(args.answers).read_text(encoding="utf-8"))
     proposed = {r["unit"]: r["proposed"] for r in map(json.loads, open(STATE / "proposed.jsonl", encoding="utf-8"))}
@@ -247,7 +363,7 @@ def score(args) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=["pick", "distill", "propose", "verify", "sheet", "score"])
+    ap.add_argument("step", choices=["pick", "distill", "propose", "verify", "sheet", "score", "classify", "review"])
     ap.add_argument("--cli", default="")
     ap.add_argument("--openai-base", default="")
     ap.add_argument("--model", default="")
@@ -255,7 +371,7 @@ def main() -> int:
     ap.add_argument("--answers", default="")
     args = ap.parse_args()
     return {"pick": lambda: pick(), "distill": lambda: distill(args), "propose": lambda: propose(args),
-            "verify": lambda: verify(args),
+            "verify": lambda: verify(args), "classify": lambda: classify(args), "review": lambda: review(args),
             "sheet": lambda: sheet(), "score": lambda: score(args)}[args.step]()
 
 
