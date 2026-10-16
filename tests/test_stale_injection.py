@@ -118,3 +118,22 @@ def test_the_same_value_on_another_subject_stays(world):
     ctx = inject()
     assert "缓存过期 10 分钟" in ctx and "改成 15 分钟" in ctx
     assert "- 会议时长 10 分钟（10:05）" not in ctx
+
+
+def test_another_subject_with_shared_words_is_kept_and_flagged(world):
+    """An outside review's probe: "测试环境 API 端口用 8080" shares "API 端口 8080" with a correction about the *local*
+    port. Different subject (测试环境 vs 本地): kept, with a note to check, never silently dropped."""
+    page, inject = world
+    page("s1", 9, ["测试环境 API 端口用 8080（10:00）", "本地 API 端口用 8080（10:05）"])
+    page("s2", 2, ["原来本地 API 端口 8080 → 改成 9090（14:00）"])
+    ctx = inject()
+    assert "测试环境 API 端口用 8080" in ctx and "可能已被" in ctx.split("测试环境 API 端口用 8080", 1)[1].split("\n", 1)[0]
+    assert "- 本地 API 端口用 8080" not in ctx
+
+
+def test_a_one_word_old_side(world):
+    page, inject = world
+    page("s1", 5, ["包管理用 npm（09:00）"])
+    page("s2", 1, ["原来包管理用 npm → 改成 pnpm（16:00）"])
+    ctx = inject()
+    assert "改成 pnpm" in ctx and "- 包管理用 npm（09:00）" not in ctx

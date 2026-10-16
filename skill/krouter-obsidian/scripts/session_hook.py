@@ -109,14 +109,17 @@ def holds(value: set[str], line: set[str], share: float = 1.0) -> bool:
     return bool(value) and len(value & line) >= share * len(value)
 
 
-def stale_lines(found: list[tuple[str, str, str, bool]]) -> set[int]:
+def stale_lines(found: list[tuple[str, str, str, bool]]) -> tuple[set[int], set[int]]:
     """Indices of recorded lines a later correction replaced. Order is the page date, then the line's (HH:MM), then its
     place on the page; a correction only replaces what came before it.
 
     A plain line is replaced when it still holds the value a later correction replaced (all of it: "端口用 8080" holds
     "8080"; "端口文档放在 README" does not) and does not already hold the new one; it comes back when an even later
     correction restores its value (same-day revert). A correction is replaced when a later one starts from its new
-    value on the same subject (30 → 10, then 10 → 5)."""
+    value on the same subject (30 → 10, then 10 → 5).
+
+    Returns (replaced, unsure): a line that holds the replaced value but only part of the correction's subject
+    ("测试环境 API 端口用 8080" against "本地 API 端口 8080 → 9090") is not dropped; it is marked for the agent to check."""
     keyed = []
     for n, (day, line, _, _) in enumerate(found):
         m = TIME.search(line)
@@ -124,7 +127,7 @@ def stale_lines(found: list[tuple[str, str, str, bool]]) -> set[int]:
     order = sorted(range(len(found)), key=lambda i: keyed[i][0])
     pos = {i: k for k, i in enumerate(order)}
     fixes = [(i, *sides(found[i][1])) for i in order if sides(found[i][1])]
-    out = set()
+    out, unsure = set(), set()
     for i, (_, line, _, _) in enumerate(found):
         mine = terms(line)
         after = [(j, old, new) for j, old, new in fixes if pos[j] > pos[i]]
@@ -135,9 +138,12 @@ def stale_lines(found: list[tuple[str, str, str, bool]]) -> set[int]:
                 subject = (old - new) - specific(old - new)
                 if holds(gone, mine) and not holds(came, mine, 0.5) and (not subject or subject & mine):
                     back = [(o2, n2) for _, o2, n2 in after[k + 1:] if holds(changed(o2, n2)[1], mine)]
-                    if not back:
+                    if back:
+                        continue
+                    if not subject or subject <= mine:
                         out.add(i)
                         break
+                    unsure.add(i)  # 值对得上、主语只对上一部分：别的环境、别的服务，不删，提醒核对
         else:
             old1, new1 = sides(line)
             came1 = changed(old1, new1)[1]
@@ -146,10 +152,11 @@ def stale_lines(found: list[tuple[str, str, str, bool]]) -> set[int]:
                 if holds(came1, old2) and (not subject1 or subject1 & old2):
                     out.add(i)
                     break
-    return out
+    return out, unsure - out
 
 
 CONFIRMED = {"active", "confirmed", "adopted"}
+MAYBE_CHANGED = {"zh": "（可能已被上面的「→」改过，先核对）", "en": " (may have been changed by a \"→\" line above; check)"}
 CJK = re.compile(r"[\u3400-\u9fff]")
 
 
@@ -184,8 +191,9 @@ def project_lines(vault: Path, root: str, everything: bool = False) -> list[tupl
                     found.append((meta.get("date") or "9999", line, rel, ok))
     found.sort(key=lambda x: x[0], reverse=True)
     # 后来改过主意的：旧决定不再当现行决定带进新会话（纠错那一行本身就写着「原来 A → 改成 B」）
-    gone = stale_lines(found)
-    found = [f for n, f in enumerate(found) if n not in gone]
+    gone, unsure = stale_lines(found)
+    found = [(d, line + (MAYBE_CHANGED["zh" if CJK.search(line) else "en"] if n in unsure else ""), rel, ok)
+             for n, (d, line, rel, ok) in enumerate(found) if n not in gone]
     seen, out = set(), []
     for _, line, rel, ok in sorted(found, key=lambda x: "→" not in x[1]):  # 稳定排序：纠错在前，其余仍按新到旧
         if line not in seen:
