@@ -14,7 +14,8 @@
 > - **Nightly job:** the one-line install asks before installing it; the manual `install.sh` installs it
 >   (`KROUTER_NO_TIMER=1` skips). Queries never leave the machine.
 > - **Nightly writer lanes:** an API key runs nothing locally; grok (kernel sandbox) and claude (tool allow-list) are
->   limited to the vault; Codex can read the whole account and writes only the vault; other CLIs are unconfined.
+>   limited to the vault; Codex can read the whole account and writes only the vault; other CLIs are unconfined and
+>   are never picked unless you set `KROUTER_ALLOW_UNCONFINED=1`.
 >   [SECURITY.md](https://github.com/398894496-arch/KRouter/blob/main/SECURITY.md) has the table.
 <!-- krouter-status:end -->
 
@@ -71,7 +72,8 @@ python3 scripts/bootstrap.py --dry-run    # what the install would do here, chan
 ## What has been measured
 
 The third memory honesty bench: 200 held-out questions (English and Chinese, 80 of them about something the vault
-does not hold) on a 110-page vault with 20 daily logs as distractors, written by an outside reviewer, never used for
+does not hold) on a 110-page vault with 20 daily logs as distractors, written by an outside reviewer (Claude Opus in a
+separate claude.ai chat session, not a human; see HELDOUT.md), never used for
 tuning. Every system at its defaults, 95% intervals in brackets (docs/BENCHMARK.md, bench/memory_honesty/HELDOUT.md):
 
 | System | wrong citations | refused, of 80 unanswerable | right, of 60 changed decisions | right, of 60 current |
@@ -107,8 +109,9 @@ is flat. Quote them that way.
 - Queries are local. Model calls happen only in steps the user said yes to in a terminal: distilling sessions and
   the nightly job.
 - The nightly writer's reach depends on the lane (SECURITY.md has the table). The API-key lane runs nothing on the
-  machine; grok runs in a kernel sandbox limited to the vault; claude is limited by a tool allow-list; Codex and
-  other CLIs can read the whole account. A user who turns the nightly job on and has untrusted text in the vault
+  machine; grok runs in a kernel sandbox limited to the vault; claude is limited by a tool allow-list; Codex can read the whole account but writes only the
+  vault. CLIs KRouter cannot confine (opencode, kimi, …) are never picked unless the user sets
+  `KROUTER_ALLOW_UNCONFINED=1`. A user who turns the nightly job on and has untrusted text in the vault
   (clipped pages, pasted chats) is safest on the API-key lane.
 - The install writes outside the vault: the router under `~/.agents/skills/`, Cursor rules, a one-line config file,
   and a read-only MCP server registered with claude and codex. `bootstrap.py --dry-run` lists all of it first.

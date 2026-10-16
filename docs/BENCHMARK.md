@@ -14,7 +14,8 @@
 > - **Nightly job:** the one-line install asks before installing it; the manual `install.sh` installs it
 >   (`KROUTER_NO_TIMER=1` skips). Queries never leave the machine.
 > - **Nightly writer lanes:** an API key runs nothing locally; grok (kernel sandbox) and claude (tool allow-list) are
->   limited to the vault; Codex can read the whole account and writes only the vault; other CLIs are unconfined.
+>   limited to the vault; Codex can read the whole account and writes only the vault; other CLIs are unconfined and
+>   are never picked unless you set `KROUTER_ALLOW_UNCONFINED=1`.
 >   [SECURITY.md](https://github.com/398894496-arch/KRouter/blob/main/SECURITY.md) has the table.
 <!-- krouter-status:end -->
 
@@ -145,6 +146,12 @@ needs an LLM and a vector store configured, and has no default to compare agains
 |---|---|---|---|---|
 | KRouter 0.12.1 (first run, before any change) | 22% (4 / 18) | 7 / 10 | 5 / 10 | 9 / 10 |
 | KRouter 0.13.0 to 1.0.1 | 0% (0 / 17) | 10 / 10 | 8 / 10 | 9 / 10 |
+
+**Who the "outside reviewer" is.** Every held-out set here, and the outside reviews in `CHANGELOG.md`, come from
+Claude Opus in claude.ai chat sessions that the maintainer starts and relays: not a human, and not the Claude Code
+sessions that change KRouter, but the same model family. "Outside" means a separate session that did not write the
+code it reviews; it does not mean independent of Anthropic's models, so question wording may share that family's
+habits. A set written by a person is planned and will be logged here before it is run.
 
 **Held-out, on questions KRouter was never tuned on.** An outside reviewer wrote 25 new questions for the same 30-page vault: 15 answerable ones phrased differently, and 10 neighbour questions. They were written independently of any tuning. KRouter 1.0: 25% wrong citations (3 / 12), 8 / 10 neighbours refused, 9 / 15 answerable right. Plain BM25 that always answers: 61%, 1 / 10. The questions are in [`bench/memory_honesty/heldout.jsonl`](../bench/memory_honesty/heldout.jsonl), frozen at 1.0.1; the rules for using them (aggregates only, no tuning toward them, what burns the set) and a log of who has seen what are in [`bench/memory_honesty/HELDOUT.md`](../bench/memory_honesty/HELDOUT.md). CI pins the questions and the vault and checks only a sanity guard against plain full-text search, never a floor. Quote this figure, or the 0.12.1 row (22%), as KRouter's wrong-citation rate, not the 0% above. The three wrong citations: a git branch-name format question cited the date-format page (both say "format"); a release-tag naming question and a checkout-page load-budget question each cited a neighbouring page.
 

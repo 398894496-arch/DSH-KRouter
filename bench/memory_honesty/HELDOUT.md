@@ -8,6 +8,12 @@ questions nobody shaped it for, so the number is worth something only as long as
 
 ## Where the questions come from
 
+**Who the "outside reviewer" is.** Every held-out set here, and the outside reviews in `CHANGELOG.md`, come from
+Claude Opus in claude.ai chat sessions that the maintainer starts and relays: not a human, and not the Claude Code
+sessions that change KRouter, but the same model family. "Outside" means a separate session that did not write the
+code it reviews; it does not mean independent of Anthropic's models, so question wording may share that family's
+habits. A set written by a person is planned and will be logged here before it is run.
+
 - Written on 2026-10-11 (Pacific) by Claude, an AI reviewer working for the maintainer in an outside review session,
   against the bench vault as of KRouter 1.0.0 (`c555de1`).
 - Before writing them the reviewer had read the vault pages and the 30 development questions (to avoid duplicates).

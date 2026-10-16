@@ -11,6 +11,10 @@ the provider's flagship from its live catalog, else the table's default. With no
 logged-in CLI the writer would pick (grok, official Codex, claude, cursor-agent, opencode, kimi, pi,
 vibe, antigravity; `KROUTER_WRITER` pins one). A host that sets `KROUTER_LEARN_CLI` (or passes
 `--cli`) has picked a CLI on purpose; it goes first.
+
+Only grok, Codex and claude are used without asking: KRouter can confine those (a kernel sandbox, a write sandbox, a
+tool allow-list). The others run with no confinement KRouter can set, so a logged-in one is skipped unless the host
+opts in with `KROUTER_ALLOW_UNCONFINED=1` (environment or keys file); it then shows as `<kind>:unconfined`.
 """
 
 from __future__ import annotations
@@ -201,18 +205,43 @@ def writer_kind(result: str) -> str:
     return result.split(":", 1)[0] if ":" in result else result
 
 
+CONFINED_KINDS = frozenset({"grok", "codex", "claude"})  # KRouter 能给这三家加约束：沙箱、只写库、工具白名单
+UNCONFINED_FLAG = "KROUTER_ALLOW_UNCONFINED"
+
+
+def allow_unconfined() -> bool:
+    """The host's explicit yes to a CLI KRouter cannot confine: `KROUTER_ALLOW_UNCONFINED=1`, env or keys file."""
+    if os.environ.get(UNCONFINED_FLAG, "").strip() == "1":
+        return True
+    path = keys_file()
+    if path.is_file():
+        return _parse(path.read_text(encoding="utf-8", errors="replace")).get(UNCONFINED_FLAG, "").strip() == "1"
+    return False
+
+
+def gate(result: str) -> str:
+    """A logged-in CLI outside CONFINED_KINDS counts only with the opt-in; otherwise `<kind>:unconfined`."""
+    if writer_ok(result) and writer_kind(result) not in CONFINED_KINDS and not allow_unconfined():
+        return f"{writer_kind(result)}:unconfined"
+    return result
+
+
 def detect_writer(pinned: str = "") -> tuple[str, str]:
-    """Return (path, probe_result). Prefer a pinned absolute binary, else first logged-in CLI."""
+    """Return (path, probe_result). Prefer a pinned absolute binary, else first logged-in CLI KRouter may use."""
     if pinned.strip():
-        return pinned.strip(), probe_writer(pinned.strip())
+        return pinned.strip(), gate(probe_writer(pinned.strip()))
     first_existing = ""
     first_existing_result = "unset"
     for path in detect_candidates():
         result = probe_writer(str(path))
         if result == "path-agent":
             continue
+        result = gate(result)
         if writer_ok(result):
             return str(path), result
+        if result.endswith(":unconfined") and not first_existing_result.endswith(":unconfined"):
+            first_existing, first_existing_result = str(path), result  # 记下来，好告诉宿主为什么没用它
+            continue
         if path.is_file() and os.access(path, os.X_OK) and not first_existing:
             first_existing = str(path)
             first_existing_result = result
@@ -561,6 +590,8 @@ def plan(vault: Path | None = None) -> list[tuple[str, str]]:
     keys = collect_keys(vault)
     steps: list[tuple[str, str]] = []
     explicit = os.environ.get("KROUTER_LEARN_CLI", "")
+    if explicit and writer_probe_argv(explicit)[0] not in CONFINED_KINDS and not allow_unconfined():
+        explicit = ""  # 点名的 CLI 也一样：KRouter 管不住的，没有宿主的明确同意就不用
     if explicit and Path(explicit).is_file() and os.access(explicit, os.X_OK):
         # the host named a CLI on purpose (e.g. a subscription model): honor it before any key
         steps.append(("cli", explicit))

@@ -83,6 +83,7 @@ probe_writer = _lane.probe_writer
 writer_ok = _lane.writer_ok
 writer_kind = _lane.writer_kind
 detect_writer = _lane.detect_writer
+gate = _lane.gate
 
 
 def vault_root() -> Path:
@@ -439,7 +440,7 @@ def status_payload(detect: bool, probe: bool) -> dict[str, str]:
     if detect:
         writer, wr = detect_writer(pinned)
     elif pinned:
-        writer, wr = pinned, probe_writer(pinned) if probe else "skipped"
+        writer, wr = pinned, gate(probe_writer(pinned)) if probe else "skipped"
     cli_ok = writer_ok(wr) and not wr.startswith("api-writer")
     writer_field = writer_field_of(writer, wr)
     if cli_ok:
@@ -578,6 +579,9 @@ def exec_distill(probe: bool) -> int:
     if writer_ok(probe_result) and not probe_result.startswith("api-writer") and writer:
         return run_cli_writer(writer, vault, router)
     notify.send(notify.NO_WRITER, kind="no-writer")
+    if probe_result.endswith(":unconfined"):
+        print(f"KRouter: {writer_kind(probe_result)} is logged in but not used: it runs with no confinement KRouter "
+              f"can set. Set KROUTER_ALLOW_UNCONFINED=1 in the keys file to use it anyway.", file=sys.stderr)
     print(
         f"KRouter: timer on; distill skipped. "
         f"Put *_API_KEY on {payload.get('key_page', 'the vault key page')} "

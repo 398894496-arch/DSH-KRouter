@@ -12,6 +12,15 @@ notice, then the details.
   that BM25 with the two rules is level, that the real-traffic blind test has not run, who wrote the questions, how the
   nightly job is installed and what each writer lane can reach. One source (`docs/STATUS.md`, `docs/STATUS.zh.md`),
   copied by `scripts/sync_status.py`; a test fails when a copy drifts.
+- Docs: who the "outside reviewer" is, said plainly in HELDOUT.md, BENCHMARK.md and FOR-AGENTS.md: Claude Opus in
+  claude.ai chat sessions the maintainer starts, not a human, same model family as the coding sessions. A set written
+  by a person is planned.
+- **CLIs KRouter cannot confine are no longer picked on their own.** The nightly writer and the model steps use grok,
+  Codex and claude without asking (a kernel sandbox, a write sandbox, a tool allow-list). opencode, kimi, pi, vibe,
+  antigravity and cursor-agent run with no confinement KRouter can set, so a logged-in one is now skipped, and a
+  confined CLI further down the list is used instead, unless you set `KROUTER_ALLOW_UNCONFINED=1` (environment or
+  keys file). A pinned `KROUTER_WRITER` or `KROUTER_LEARN_CLI` follows the same rule; the writer and `host_action` say
+  why one was skipped.
 - Docs: one story for the nightly job everywhere. `PROTOCOL.md`, `first_run.sh`, `install.sh` and the nightly writer's
   files said "timer on by default"; the one-line install asks first, and only the manual `install.sh` installs it.
 - Docs: the comparison with claude-mem and basic-memory says up front that neither can refuse, so their 0 of 80 is
