@@ -45,6 +45,13 @@ PROPOSE = """下面是一个人和他的编程 agent 某一天的一段会话摘
 摘录：
 
 """
+VERIFY = """下面是一个人和他的编程 agent 某一天的一段会话摘录（他的提问和 agent 每轮最后的回答），以及另一个模型从中列出的"定下来的事"候选（编号 P）。
+你来核对，标准写死：
+- 一条候选算数，必须在摘录里看得到这个人自己说出来、或者明确同意了（"好""就这样""按这个来"、接着照做等）。agent 自己提议、他没表态的，不算；纯操作步骤、临时排查、一次性的事，不算。
+- 再找出候选漏掉的、符合同样标准的决定和改主意（改主意写成「原来 A → 改成 B」），每条不超过 40 个字，用这个人的说法。
+只输出 JSON：{"keep": {"P1": true 或 false, ...}, "missing": ["...", ...]}
+
+"""
 MATCH = """下面是一段会话里"真正定下来的事"（标准答案，编号 G），和某个系统从同一段会话里提炼出的条目（编号 S）。
 判断对应关系：一条 S 和一条 G 说的是同一件事、方向也一致（改主意的，改之前和改之后都要对），才算对上。
 只输出 JSON：{"matches": [["G1","S2"], ...]}；一条 G 最多对一条 S，一条 S 最多对一条 G。
@@ -153,6 +160,31 @@ count();
 </script></body></html>"""
 
 
+def verify(args) -> int:
+    """A model check of the proposed reference, in the sheet's answer format (for when the host cannot recall)."""
+    proposed = {r["unit"]: r["proposed"] for r in map(json.loads, open(STATE / "proposed.jsonl", encoding="utf-8"))}
+    answers: dict[str, str] = {}
+    for u in units():
+        props = proposed.get(u["unit"], [])
+        listing = "\n".join(f"P{n}. {p}" for n, p in enumerate(props, 1)) or "（候选为空）"
+        text = call(args, VERIFY + "候选：\n" + listing + "\n\n摘录：\n" + u["excerpt"])
+        m = re.search(r"\{.*\}", text, re.S)
+        try:
+            v = json.loads(m.group(0)) if m else {}
+        except ValueError:
+            v = {}
+        for n in range(1, len(props) + 1):
+            answers[f"{u['unit']}|P{n}"] = "yes" if (v.get("keep") or {}).get(f"P{n}") is True else "no"
+        answers[f"{u['unit']}|missing"] = "\n".join(str(x)[:80] for x in v.get("missing") or [])
+    out = STATE / "verified_by_model.json"
+    out.write_text(json.dumps(answers, ensure_ascii=False, indent=1), encoding="utf-8")
+    os.chmod(out, 0o600)
+    kept = sum(1 for k, x in answers.items() if not k.endswith("|missing") and x == "yes")
+    added = sum(len([l for l in x.splitlines() if l.strip()]) for k, x in answers.items() if k.endswith("|missing"))
+    print(json.dumps({"proposed": sum(len(p) for p in proposed.values()), "kept": kept, "added": added, "out": str(out)}))
+    return 0
+
+
 def sheet() -> int:
     proposed = {r["unit"]: r["proposed"] for r in map(json.loads, open(STATE / "proposed.jsonl", encoding="utf-8"))}
     items = []
@@ -215,7 +247,7 @@ def score(args) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=["pick", "distill", "propose", "sheet", "score"])
+    ap.add_argument("step", choices=["pick", "distill", "propose", "verify", "sheet", "score"])
     ap.add_argument("--cli", default="")
     ap.add_argument("--openai-base", default="")
     ap.add_argument("--model", default="")
@@ -223,6 +255,7 @@ def main() -> int:
     ap.add_argument("--answers", default="")
     args = ap.parse_args()
     return {"pick": lambda: pick(), "distill": lambda: distill(args), "propose": lambda: propose(args),
+            "verify": lambda: verify(args),
             "sheet": lambda: sheet(), "score": lambda: score(args)}[args.step]()
 
 

@@ -270,3 +270,11 @@ KRouter stands, with the bias named (the same model family proposes the referenc
 maintainer's corrections are the check on that).
 
 `bench/real_questions/capture_bench.py` (pick, distill, propose, sheet, score).
+
+**Amendment, 2026-10-16, before the reference was checked or anything scored.** The maintainer could not recall most
+of the sessions and asked for the check to be done by a model. The reference is therefore verified by GPT-5.5 (high
+reasoning, through the maintainer's CLIProxyAPI): for each session-day it reads the same excerpt, keeps or rejects
+each Grok item (kept only if the excerpt shows the maintainer stating or accepting it), and adds what was missed. GPT
+also does the pairing in place of Grok. A third model family on purpose: Claude distilled, Grok proposed, GPT checks
+and pairs. Any claim says the reference was model-verified, not confirmed by the maintainer. Items the maintainer does
+mark on the sheet are compared with GPT's verdicts and reported as a spot check.
