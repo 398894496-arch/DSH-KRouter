@@ -140,8 +140,13 @@ def main() -> int:
     ap.add_argument("--model", default="")
     ap.add_argument("--effort", default="high")
     ap.add_argument("--batch", type=int, default=8)
+    ap.add_argument("--ids", default="", help="judge only these question ids (a JSON list), e.g. the agreement sample")
+    ap.add_argument("--tag", default="", help="suffix for the output file, e.g. claude for a second judge")
     args = ap.parse_args()
     questions = [json.loads(x) for x in open(STATE / "frozen.jsonl", encoding="utf-8")]
+    if args.ids:
+        keep = set(json.loads(Path(args.ids).read_text(encoding="utf-8")))
+        questions = [q for q in questions if q["id"] in keep]
     outs = {k: load(k) for k in {args.a, args.b, *filter(None, args.pool_from.split(","))}}
     tmp = Path(tempfile.mkdtemp(prefix="krouter-judge-"))
     snapshot(Path(args.vault), args.vault_commit, tmp / "vault")
@@ -194,7 +199,7 @@ def main() -> int:
                     results[q["id"]].append({"system": s["name"], "score": score, "exists": exists, "swap": swap})
             print(json.dumps({"pass": 2 if swap else 1, "batch": start // args.batch + 1, "judged": len(verdicts)}),
                   flush=True)
-    out = STATE / f"judge.{args.a}__vs__{args.b}.jsonl"
+    out = STATE / f"judge.{args.a}__vs__{args.b}{'.' + args.tag if args.tag else ''}.jsonl"
     with out.open("w", encoding="utf-8") as fh:
         for qid, rs in results.items():
             fh.write(json.dumps({"id": qid, "results": rs}, ensure_ascii=False) + "\n")
