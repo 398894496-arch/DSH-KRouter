@@ -87,3 +87,34 @@ def test_english_lines(world):
     page("s2", 1, ["was releases ship from any branch → now releases ship from main only, tagged by CI (16:40)"])
     ctx = inject()
     assert "main only" in ctx and "- Releases ship from any branch, tagged by hand" not in ctx
+
+
+def test_same_day_revert_keeps_the_reverted_decision(world):
+    """10:00 decide A, 11:00 change A → B, 15:00 change back B → A: the session starts from A, not from B."""
+    page, inject = world
+    page("s1", 1, ["本地 API 端口用 8080（10:00）", "原来本地 API 端口 8080 → 改成 9090（11:00）",
+                   "原来本地 API 端口 9090 → 改回 8080（15:00）"])
+    ctx = inject()
+    assert "改回 8080" in ctx
+    assert "改成 9090（11:00）" not in ctx  # 被当天更晚的回退推翻了
+
+
+def test_a_shared_subject_word_does_not_drop_another_decision(world):
+    """A correction about the API port must not drop other API decisions that only share words like 本地 API."""
+    page, inject = world
+    page("s1", 9, ["本地 API 端口文档放在 README（10:00）", "本地 API 用 JWT 鉴权（10:10）",
+                   "Local API docs live in README (10:20)"])
+    page("s2", 2, ["原来本地 API 端口 8080 → 改成 9090（14:00）", "was local API port 8080 → now 9090 (14:05)"])
+    ctx = inject()
+    for keep in ("本地 API 端口文档放在 README", "本地 API 用 JWT 鉴权", "Local API docs live in README"):
+        assert keep in ctx, keep
+
+
+def test_the_same_value_on_another_subject_stays(world):
+    """"会议时长 10 分钟 → 15 分钟" must not drop "缓存过期 10 分钟": same value, different subject."""
+    page, inject = world
+    page("s1", 9, ["缓存过期 10 分钟（10:00）", "会议时长 10 分钟（10:05）"])
+    page("s2", 2, ["原来会议时长 10 分钟 → 改成 15 分钟（14:00）"])
+    ctx = inject()
+    assert "缓存过期 10 分钟" in ctx and "改成 15 分钟" in ctx
+    assert "- 会议时长 10 分钟（10:05）" not in ctx

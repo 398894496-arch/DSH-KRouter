@@ -19,9 +19,12 @@ notice, then the details.
   version numbers).
 - **A new session no longer starts from an answer you already changed.** The SessionStart hook injected a
   decision next to the later correction that replaced it ("本地 API 端口用 8080" beside "原来 8080 → 改成 9090"), so
-  the agent saw both. A line whose subject matches the old side of a later (or same-day) correction, and that does not
-  restate the new value, is now left out; chains (A → B, then B → C) keep only the newest; unrelated decisions stay.
-  Found while designing the injection bench. `tests/test_stale_injection.py`.
+  the agent saw both. Lines are ordered by page date, then their (HH:MM), then their place on the page; a line is left
+  out when a later correction replaced the value it still holds ("8080", not just the shared words "本地 API") on the
+  same subject, unless an even later correction restores it (same-day revert); chains (30 → 10, then 10 → 5) keep only
+  the newest; unrelated decisions, and the same value on another subject, stay. Found while designing the injection
+  bench; an outside review caught two regressions in the first version (same-day revert, shared words), now tests.
+  `tests/test_stale_injection.py`.
 - Docs: 1.1.x is the stable line (fixes only until 2026-11-12, at most one patch a week); DETAILS lists what the
   stability promise covers (core) and what is best-effort (extras); FOR-AGENTS and the status block name the smallest
   install, router only with nothing in the background.
