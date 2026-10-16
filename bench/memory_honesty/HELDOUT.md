@@ -278,3 +278,10 @@ each Grok item (kept only if the excerpt shows the maintainer stating or accepti
 also does the pairing in place of Grok. A third model family on purpose: Claude distilled, Grok proposed, GPT checks
 and pairs. Any claim says the reference was model-verified, not confirmed by the maintainer. Items the maintainer does
 mark on the sheet are compared with GPT's verdicts and reported as a spot check.
+
+### Log, set 6
+
+| Date | Event |
+|---|---|
+| 2026-10-16 | Registered; amended (model-verified reference) before checking or scoring. |
+| 2026-10-16 | **Run.** KRouter distilled 143 lines over 22 session-days (`claude` CLI). Grok proposed 94 items; GPT-5.5 kept 91 and added 32: a reference of 123. GPT-5.5 paired 60. **Missed rate 51%, wrong rate 58%; of 19 changes of mind, 12 captured.** Why: 5 session-days hold more than 8 reference decisions (27, 26, 19, 9, 9), so the 8-line cap alone forces at least 50 of the 63 misses; and KRouter fills its 8 lines whether or not much was decided (27 lines on the 4 session-days where the reference holds nothing; 7 or 8 lines where it holds 1 to 3). The maintainer did not confirm the reference (amendment above). These 22 session-days are a measurement set: changes to the distill step are tuned on other sessions and re-measured here. |
