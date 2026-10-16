@@ -17,6 +17,11 @@ notice, then the details.
   is an optional fast path that needs no upkeep. FOR-AGENTS gains "Common misreadings" (no alias upkeep, rewording,
   what leaves the machine, the earlier names Runtime36 and DSH-KRouter and what pages about them describe, stale
   version numbers).
+- **A new session no longer starts from an answer you already changed.** The SessionStart hook injected a
+  decision next to the later correction that replaced it ("本地 API 端口用 8080" beside "原来 8080 → 改成 9090"), so
+  the agent saw both. A line whose subject matches the old side of a later (or same-day) correction, and that does not
+  restate the new value, is now left out; chains (A → B, then B → C) keep only the newest; unrelated decisions stay.
+  Found while designing the injection bench. `tests/test_stale_injection.py`.
 - Docs: 1.1.x is the stable line (fixes only until 2026-11-12, at most one patch a week); DETAILS lists what the
   stability promise covers (core) and what is best-effort (extras); FOR-AGENTS and the status block name the smallest
   install, router only with nothing in the background.

@@ -10,7 +10,8 @@ happens before you said yes to importing (`import_sessions.py --consent`, or the
 
 `session_hook.py start` (SessionStart): prints, as context for the new session, up to 8 decisions recorded for this
 repository (matched by its git top level, never by folder name) in the last 30 days, each naming its page,
-corrections first. By default that is every line of pages you confirmed and only the corrections from the rest, marked
+corrections first. A decision that a later correction replaced ("原来 A → 改成 B") is left out, so the new session
+does not start from the old answer. By default that is every line of pages you confirmed and only the corrections from the rest, marked
 unconfirmed; `KROUTER_INJECT=all` brings every line, `KROUTER_INJECT=0` nothing. Nothing is printed when the vault
 has none or the import was never turned on. In English unless the lines are Chinese. Reads only the vault; sends
 nothing; well under a second.
@@ -38,6 +39,9 @@ DAYS = 30
 MAX_LINES = 8
 MAX_CHARS = 1600
 DIGEST_HEADS = ("## 定了什么、改了什么（模型提炼，待你确认）", "## 现在有效的、被取代的（模型整理，待你确认）")
+OLD_SIDE = re.compile(r"^(原来|以前|之前|起初|最初|was|from|before|previously)\s*[:：]?\s*", re.I)
+NEW_SIDE = re.compile(r"^(改成|改为|换成|变成|现在|now|to|became)\s*[:：]?\s*", re.I)
+STALE_COVER = 0.6  # 旧行要包含纠错「旧的一侧」这么大比例的实词，才算被它推翻
 
 
 def consented() -> bool:
@@ -70,6 +74,34 @@ def digest_lines(text: str) -> list[str]:
             return [ln.strip() for ln in block.splitlines() if ln.strip().startswith(("-", "*"))
                     and "没有定下来的事" not in ln]
     return []
+
+
+def terms(text: str) -> set[str]:
+    """Content words of a decision line (time stamps and function words dropped), for matching a line to the old
+    side of a later correction."""
+    import recall_index as ri
+
+    text = re.sub(r"[（(]\s*\d{1,2}:\d{2}\s*[)）]", " ", text)
+    return {t for t in ri.question_terms(text) if t not in ri.EN_FUNCTION}
+
+
+def sides(line: str) -> tuple[set[str], set[str]] | None:
+    """(old side, new side) of a correction line "原来 A → 改成 B"; None for a plain decision."""
+    if "→" not in line:
+        return None
+    old, new = line.split("→", 1)
+    return terms(OLD_SIDE.sub("", old.strip())), terms(NEW_SIDE.sub("", new.strip()))
+
+
+def replaced(mine: set[str], by: list[tuple[set[str], set[str]]]) -> bool:
+    """A line is replaced when a correction's old side is (mostly) in it and its new value is not:
+    "端口用 8080" is replaced by "8080 → 9090"; "端口用 9090" restates the new decision and stays."""
+    for old, new in by:
+        fresh = new - old  # 新决定里新出现的词：旧行里大多都有，就是在重申新决定
+        restates = fresh and len(fresh & mine) >= 0.5 * len(fresh)
+        if old and len(old & mine) >= max(2, STALE_COVER * len(old)) and not restates:
+            return True
+    return False
 
 
 CONFIRMED = {"active", "confirmed", "adopted"}
@@ -106,6 +138,16 @@ def project_lines(vault: Path, root: str, everything: bool = False) -> list[tupl
                 if ok or everything or "→" in line:
                     found.append((meta.get("date") or "9999", line, rel, ok))
     found.sort(key=lambda x: x[0], reverse=True)
+    # 后来改过主意的：旧决定不再当现行决定带进新会话（纠错那一行本身就写着「原来 A → 改成 B」）
+    kept = []
+    for day, line, rel, ok in found:
+        # 同一天或更晚的纠错（同一页里先定 A、后改 B 也算）
+        later = [s for d, ln, _, _ in found if d >= day and ln != line and (s := sides(ln))]
+        # 纠错本身也会过时：A → B 之后又 B → C。比整行，因为「改成 10 分钟」这一侧常常不带主语
+        stale = replaced(terms(line), later)
+        if not stale:
+            kept.append((day, line, rel, ok))
+    found = kept
     seen, out = set(), []
     for _, line, rel, ok in sorted(found, key=lambda x: "→" not in x[1]):  # 稳定排序：纠错在前，其余仍按新到旧
         if line not in seen:
