@@ -20,7 +20,7 @@ A change to a scoring constant (`SCORE_MIN`, `TITLE_HIT`, `TOPIC_*`, `CARD_MIN`,
 
 Tests and evaluation runs must not write the host's query log (`~/.local/state/krouter/queries.jsonl`): it is what the nightly learning reads, so test questions in it become learned triggers, and held-out questions in it stop being held out. `tests/conftest.py` points `KROUTER_STATE_DIR` and `KROUTER_CACHE_DIR` at a temp dir; evaluation scripts set `KROUTER_NO_QUERY_LOG=1`.
 
-`main` takes reviewed changes; hosts should pin a release tag. Release cadence: a minor release (new features) at most once a week; a patch release (fixes, docs, benchmark updates) when it is ready. Each changelog entry starts with a "what you will notice" summary.
+`main` takes reviewed changes; hosts should pin a release tag. Release cadence: a minor release (new features) at most once a week; a patch release (fixes, docs, benchmark updates) at most once a week, security fixes excepted. **Until 2026-11-12, 1.1.x takes fixes only**; feature PRs stay open for 1.2.0. Each changelog entry starts with a "what you will notice" summary.
 
 ## Good first issues
 

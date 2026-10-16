@@ -12,6 +12,8 @@
 >   layer 4): not run yet; it waits for 50 new queries.
 > - **Who wrote the held-out questions:** Claude Opus in separate claude.ai sessions, not a person. A person-written
 >   set is planned.
+> - **Stable line:** 1.1.x takes fixes only until 2026-11-12, at most one patch a week. Smallest install, nothing in the
+>   background: `bootstrap.py --vault <vault> --no-timer --no-import`.
 > - **Nightly job:** the one-line install asks before installing it; the manual `install.sh` installs it
 >   (`KROUTER_NO_TIMER=1` skips). Queries never leave the machine.
 > - **Nightly writer lanes:** an API key runs nothing locally; grok (kernel sandbox) and claude (tool allow-list) are
@@ -75,7 +77,31 @@ Details, methods and what still fails: [`docs/VERIFY.md`](VERIFY.md).
 
 ## Stability and versions
 
+**1.1.x is the stable line.** Until 2026-11-12 it takes fixes only: no new features, no format changes, at most one
+patch release a week (security fixes excepted). New features wait on branches for 1.2.0. The early weeks shipped many
+versions a day; that pace was development, not a support promise.
+
+
 1.x follows semantic versioning. Stable — changed only in a major release, with a migration: the vault layout and zone file, the alias table format, the receipt fields agents read (`retrieval_status`, `canonical_match`, `canonical_source`, `recall:`, `how`, `host_action`), the routes, the MCP tools `krouter_ask` / `krouter_status`, the `KROUTER_*` variables, and the page markers the importers write (`source: krouter-import`, `source: krouter-claude-mem`). Minor releases may add steps and options, and may retune scoring; every scoring change ships with before / after numbers on the public benches ([`CONTRIBUTING.md`](../CONTRIBUTING.md)). Minor releases at most weekly, patch releases when ready. The one-line install fetches the latest **release**, never `main`; to stay on one, run `curl … | KROUTER_TAG=v1.1.1 sh` (Windows: `$env:KROUTER_TAG="v1.1.1"` first). [`CHANGELOG.md`](../CHANGELOG.md) says what changed and why, including what an outside review found.
+
+## Core and extras
+
+What the stability promise covers (**core**), and what is kept working on a best-effort basis (**extras**: may lag a
+release, may be removed in a minor release with a CHANGELOG note).
+
+| Core | Extras |
+|---|---|
+| The router (`route_knowledge`, exact match and ranked recall, zones, redaction, receipts) and the read-only MCP server | `extras/hooks/exec-gate.py` (a Cursor accident guard, not a security boundary) |
+| Session import (Claude Code, Codex, Cursor agent) and the claude-mem import | CLI writer lanes KRouter cannot confine (opencode, kimi, pi, vibe, antigravity, cursor-agent; off unless `KROUTER_ALLOW_UNCONFINED=1`) |
+| The nightly job: distill, learning, topic files, answer cards, checkup; the API-key, grok, claude and Codex lanes | The benchmark adapters for other tools (`bench/memory_honesty/adapters/`) |
+| The Claude Code plugin (skill, MCP, session hooks), the Codex and Cursor rules, the DeepSeek Harness plugin | |
+
+## Smallest footprint
+
+Router only, nothing in the background: `python3 scripts/bootstrap.py --vault <your vault> --no-timer --no-import`.
+That installs the router, the agent rules and the MCP server (which the agent starts when it queries and which runs
+nothing else; `KROUTER_NO_MCP=1` skips it too). No nightly job, no session import, no model call, no hook unless you
+add the Claude Code plugin. Queries stay on the machine. Everything else can be turned on later, one step at a time.
 
 ## Your agent forgets. This writes it down.
 
