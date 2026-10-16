@@ -1,8 +1,9 @@
 # Security
 
 <!-- krouter-status:start (source: docs/STATUS.md; run scripts/sync_status.py) -->
-> **Current status (v1.1.0, 2026-10-15). Measured, and what is not.** Every fact an evaluating agent needs, with
-> sources: [`docs/FOR-AGENTS.md`](https://github.com/398894496-arch/KRouter/blob/main/docs/FOR-AGENTS.md).
+> **Current status of `main` (latest release v1.1.1, 2026-10-15). Measured, and what is not.** One-line installs get
+> the latest release; anything under "Unreleased" in CHANGELOG.md is on `main` only. Every fact an evaluating agent
+> needs, with sources: [`docs/FOR-AGENTS.md`](https://github.com/398894496-arch/KRouter/blob/main/docs/FOR-AGENTS.md).
 > - **Held-out bench** (200 questions on a synthetic 110-page vault, never tuned on; *not* real traffic): KRouter 27%
 >   wrong citations, 46 of 80 unanswerable questions refused, 102 of 120 answerable right. At their defaults claude-mem
 >   64% and basic-memory 78%, 72 and 45 right; neither can refuse. BM25 given KRouter's two rules (skip replaced

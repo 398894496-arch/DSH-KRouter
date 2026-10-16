@@ -56,3 +56,16 @@ def test_status_numbers_are_what_the_bench_gives_now(monkeypatch):
         flat = " ".join(text.replace(">", " ").split())
         for phrase in want[lang]:
             assert " ".join(phrase.replace(">", " ").split()) in flat, f"docs/STATUS{lang}.md: expected {phrase!r}"
+
+
+def test_status_plugin_and_changelog_name_the_same_release():
+    """The block names the latest release; so do plugin.json and the newest released heading in CHANGELOG.md.
+    What main has beyond it lives under "Unreleased", which the block's first line points to."""
+    import json
+    import re
+
+    version = json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"]
+    released = re.findall(r"(?m)^## (\d+\.\d+\.\d+) — ", (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
+    assert released and released[0] == version, "plugin.json and the newest CHANGELOG release disagree"
+    for lang, text in _status_texts().items():
+        assert "Unreleased" in text, f"docs/STATUS{lang}.md must say that main may be ahead of the release"
