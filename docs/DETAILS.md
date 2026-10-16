@@ -1,5 +1,23 @@
 # KRouter in detail
 
+<!-- krouter-status:start (source: docs/STATUS.md; run scripts/sync_status.py) -->
+> **Current status (v1.1.0, 2026-10-15). Measured, and what is not.** Every fact an evaluating agent needs, with
+> sources: [`docs/FOR-AGENTS.md`](https://github.com/398894496-arch/KRouter/blob/main/docs/FOR-AGENTS.md).
+> - **Held-out bench** (200 questions on a synthetic 110-page vault, never tuned on; *not* real traffic): KRouter 27%
+>   wrong citations, 46 of 80 unanswerable questions refused, 102 of 120 answerable right. At their defaults claude-mem
+>   64% and basic-memory 78%, 72 and 45 right; neither can refuse. BM25 given KRouter's two rules (skip replaced
+>   pages, refuse a weak match) is level with KRouter: the lead is those rules being on by default, not the ranker.
+> - **Real-traffic blind test on fresh queries** ([VERIFY.md](https://github.com/398894496-arch/KRouter/blob/main/docs/VERIFY.md)
+>   layer 4): not run yet; it waits for 50 new queries.
+> - **Who wrote the held-out questions:** Claude Opus in separate claude.ai sessions, not a person. A person-written
+>   set is planned.
+> - **Nightly job:** the one-line install asks before installing it; the manual `install.sh` installs it
+>   (`KROUTER_NO_TIMER=1` skips). Queries never leave the machine.
+> - **Nightly writer lanes:** an API key runs nothing locally; grok (kernel sandbox) and claude (tool allow-list) are
+>   limited to the vault; Codex can read the whole account and writes only the vault; other CLIs are unconfined.
+>   [SECURITY.md](https://github.com/398894496-arch/KRouter/blob/main/SECURITY.md) has the table.
+<!-- krouter-status:end -->
+
 Everything the front page leaves out: install options, what leaves the machine, the evidence, versions, how the nightly writer works, the four mounts, and the comparison with typical agent memory. Back to the [front page](../README.md).
 
 ## Importing what you already have

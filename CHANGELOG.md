@@ -7,6 +7,11 @@ notice, then the details.
 
 ## Unreleased
 
+- Docs: every entry file an agent may read on its own (PROTOCOL, SECURITY, VERIFY, ARCHITECTURE, BENCHMARK, DETAILS,
+  FOR-AGENTS) now opens with the same current-status block: the held-out numbers and that they are not real traffic,
+  that BM25 with the two rules is level, that the real-traffic blind test has not run, who wrote the questions, how the
+  nightly job is installed and what each writer lane can reach. One source (`docs/STATUS.md`, `docs/STATUS.zh.md`),
+  copied by `scripts/sync_status.py`; a test fails when a copy drifts.
 - Docs: one story for the nightly job everywhere. `PROTOCOL.md`, `first_run.sh`, `install.sh` and the nightly writer's
   files said "timer on by default"; the one-line install asks first, and only the manual `install.sh` installs it.
 - Docs: the comparison with claude-mem and basic-memory says up front that neither can refuse, so their 0 of 80 is
