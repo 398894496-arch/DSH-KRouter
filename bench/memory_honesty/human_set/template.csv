@@ -1,0 +1,3 @@
+intent,kind,week1,week2,page,evidence,absent
+EXAMPLE-1,current,"How much notice do we give before dropping a public API field?","If I want to remove a field from the public API, how long do I have to warn people?",Handbook/API deprecation.md,"A public API field is deprecated with at least six months' notice in the changelog and a Sunset header.",
+EXAMPLE-2,neighbour,"How much notice do we give before dropping a field from the internal admin API?","Is there a waiting period for removing internal admin API fields?",,,internal admin API
