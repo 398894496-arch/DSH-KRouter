@@ -22,6 +22,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: The tag, the version files and the changelog agree
+        # 发出去的包、状态块和更新日志说的必须是同一个版本；Unreleased 里还有东西就说明有改动没写进这个版本
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python3 - <<'CHECK'
+          import json, os, re, sys
+          tag = os.environ["TAG"].lstrip("v")
+          versions = {f: json.load(open(f))["version"] for f in ("package.json", ".claude-plugin/plugin.json", "extras/dsh/package.json")}
+          log = open("CHANGELOG.md", encoding="utf-8").read()
+          unreleased = log.split("## Unreleased", 1)[1].split("\n## ", 1)[0].strip()
+          problems = [f"{f} says {v}" for f, v in versions.items() if v != tag]
+          problems += [] if re.search(rf"(?m)^## {re.escape(tag)} — ", log) else [f"CHANGELOG.md has no '## {tag} — ' heading"]
+          problems += [] if unreleased in ("", "Nothing yet.") else ["CHANGELOG.md still lists changes under Unreleased"]
+          problems += [] if f"v{tag}" in open("docs/STATUS.md", encoding="utf-8").read() else [f"docs/STATUS.md does not name v{tag}"]
+          if problems:
+              sys.exit("release v" + tag + " refused: " + "; ".join(problems))
+          print("release v" + tag + ": versions, changelog and status block agree")
+          CHECK
       - name: Pack and checksum
         run: |
           npm pack

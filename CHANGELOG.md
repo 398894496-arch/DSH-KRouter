@@ -7,6 +7,25 @@ notice, then the details.
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.1.1 — 2026-10-15
+
+**What you will notice**
+- **The nightly learner stops making recall worse.** Up to 1.1.0 it could learn a question onto a page that only
+  shares its subject; on the dev sets one night of that raised wrong citations (2 → 5, 7 → 9). It now has to copy the
+  sentence that answers the question, and learns only when that sentence is on the page and is about the question.
+  Triggers it learned before stay; look at `90 系统文件/自动化/下意识触发词-自学习.psv` if your recall got worse.
+- **CLIs KRouter cannot confine are no longer used without your yes.** If your only logged-in CLI is opencode, kimi,
+  pi, vibe, antigravity or cursor-agent, the nightly job and model steps now skip it and say why; set
+  `KROUTER_ALLOW_UNCONFINED=1` in `~/.dsh-krouter-keys.env` to keep using it. grok, Codex, claude and API keys are
+  unchanged.
+- **Every page an agent may land on tells the same, current story**, checked in CI against the bench and the version.
+
+**Details**
+- Release: the release workflow refuses to pack when the tag, `package.json`, `plugin.json`, `extras/dsh/package.json`,
+  the newest CHANGELOG heading and the status block do not name the same version, or when changes are still listed
+  under "Unreleased". The status block now says it describes `main` and names the latest release.
 - Docs: every entry file an agent may read on its own (PROTOCOL, SECURITY, VERIFY, ARCHITECTURE, BENCHMARK, DETAILS,
   FOR-AGENTS) now opens with the same current-status block: the held-out numbers and that they are not real traffic,
   that BM25 with the two rules is level, that the real-traffic blind test has not run, who wrote the questions, how the
