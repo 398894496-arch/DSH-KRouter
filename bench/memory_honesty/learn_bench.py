@@ -14,7 +14,8 @@ Pairs: JSONL (optionally gzipped), one row per wording: {id, intent, week (1 or 
 (`human_set/check_human_set.py` writes them). `--set` names the bench set whose vault and BM25 floor are used
 (`heldout3` → vault3, the default; `dev3` → vault2). Everything runs on a copy of the vault with its own state and
 cache; the host's query log, learned triggers and caches are never touched. The learner's model call is the only
-thing that leaves the machine: week 1's questions and candidate page paths, redacted, to `--cli` (or the model lane).
+thing that leaves the machine: week 1's questions the router did not answer well, with up to 4 candidate pages each
+(path and first 600 characters, redacted; never secret pages), to `--cli` (or the model lane).
 Prints aggregates only.
 """
 

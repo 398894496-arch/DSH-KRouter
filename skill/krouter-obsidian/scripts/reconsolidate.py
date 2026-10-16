@@ -3,8 +3,11 @@
 
 Reads queries the router could not answer well (literal fallback, or low-confidence recall), shows
 a model the top recall candidates for each with the start of each page, and asks which page answers it — or none —
-and to copy the sentence on that page that answers it. A pick is learned only if that sentence is really on the page:
-a page that is merely about the same subject (a neighbour) has no such sentence. Accepted pairs are appended to
+and to copy the sentence on that page that answers it. A pick is learned only if that quote is on the page, is a real
+sentence (at least QUOTE_TOKENS words) and shares a content word with the query. That stops a made-up quote and an
+unrelated or fragmentary one; telling a neighbour page (same subject, does not answer) from the answer is still the
+model's judgement, which the prompt asks for. Inputs pages (`03 资料与证据`: clipped and pasted text, which may carry
+instructions) are never candidates; `Clippings/` is not indexed at all. Accepted pairs are appended to
 `下意识触发词-自学习.psv` as `rel|original query`: recall-only, never a lock, no paraphrase invented. Half of real
 router calls repeat an earlier question, so one fix pays again. Pages marked secret are never shown to the model.
 """
@@ -36,7 +39,8 @@ PROMPT = """下面是一个个人知识库路由器没答好的查询。每条�
 """
 CANDS = 4          # 每条查询给模型看几个候选
 EXCERPT = 600      # 每个候选给看多少字的正文
-QUOTE_MIN = 8      # 引用至少这么长才算一句话
+QUOTE_TOKENS = 4   # 引用至少这么多个词（英文单词 / 中文双字）才算一句话：挡住 "stored in" 这类碎片
+UNTRUSTED = ("03 资料与证据/",)  # 剪藏、粘贴进来的资料：可能夹带指令，不当学习候选
 
 
 def state_dir() -> Path:
@@ -82,15 +86,21 @@ def page_text(vault: Path, rel: str) -> str | None:
     return re.sub(r"\s+", " ", body).strip()
 
 
-def grounded(pick, cands: dict[str, str]) -> str:
-    """The page a verdict names, if its quote is on that page; "" otherwise (a bare path no longer counts)."""
+def grounded(pick, cands: dict[str, str], query: str) -> str:
+    """The page a verdict names, if its quote is on that page, is a sentence and shares a content word with the
+    query; "" otherwise (a bare path no longer counts)."""
     if not isinstance(pick, dict):
         return ""
     rel, quote = str(pick.get("page") or "").strip(), re.sub(r"\s+", " ", str(pick.get("quote") or "")).strip()
     body = cands.get(rel)
-    if not body or len(quote) < QUOTE_MIN:
+    quote = quote.strip("。.\"'「」 ")
+    if not body or quote not in body:
         return ""
-    return rel if quote.strip("。.\"'「」 ") in body else ""
+    words = set(ri.tokens(quote))
+    content = {t for t in ri.question_terms(query) if t not in ri.EN_FUNCTION}  # 去掉 where / the / for 这类虚词
+    if len(words) < QUOTE_TOKENS or not words & content:
+        return ""  # 碎片，或者跟问题一个实词都不沾：页面上确实有，但不是在回答这个问题
+    return rel
 
 
 def ask(vault: Path, prompt: str) -> dict:
@@ -129,7 +139,8 @@ def main() -> int:
         res = ri.recall(vault, row["q"], limit=8, gate=False)
         cands = {}
         for h in res["hits"]:
-            body = page_text(vault, h["rel"]) if h["tier"] != "dead" else None
+            trusted = h["tier"] != "dead" and not ri.zones.canon(vault, h["rel"]).startswith(UNTRUSTED)
+            body = page_text(vault, h["rel"]) if trusted else None
             if body and len(cands) < CANDS:
                 cands[h["rel"]] = body
         if cands and not any((rel, row["q"]) in have for rel in cands):
@@ -153,7 +164,7 @@ def main() -> int:
             return 0
         new_lines = []
         for it in items:
-            pick = grounded(verdict.get(it["id"]), it["cands"])
+            pick = grounded(verdict.get(it["id"]), it["cands"], it["q"])
             if pick:
                 new_lines.append(f"{pick}|{it['q'].replace('|', '／').replace(';', '，')}")
                 report["learned"] += 1

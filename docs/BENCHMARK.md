@@ -262,10 +262,16 @@ a question about screen readers onto "Accessibility").
 | vault2, learner ≤ 1.1.0 | 2 | 2 | 7 → 9 | 13 → 11 of 20 |
 | vault2, learner with proof | 0 | 0 | 7 → 7 | 13 → 13 |
 
-The fix: the learner now sees the start of each candidate page and must copy the sentence that answers the question;
-a pick whose sentence is not on the page is not learned (a neighbour page has no such sentence). Right answers did not
-change in either version, because the dev pairs are two different questions about one page, not one question asked
-twice. Measuring the gain needs one intent in two wordings, written by a person: `bench/memory_honesty/human_set/`.
+The fix: the learner now sees the start of each candidate page and must copy the sentence that answers the question.
+A pick is learned only if the quote is on the page, is a sentence (at least four words) and shares a content word with
+the question. That check stops made-up, fragmentary and unrelated quotes; it does not by itself tell a neighbour page
+from the answer (a neighbour can hold a sentence that shares a word), which is left to the model's judgement as the
+prompt asks. Inputs pages (`03 资料与证据`, clipped and pasted text) are never candidates.
+
+Read the result for what it is: **it no longer learns wrong triggers, and it learns few** (3 on vault1, 0 on vault2).
+Right answers did not change in either version, because the dev pairs are two different questions about one page,
+not one question asked twice. Whether learning *helps* needs one intent in two wordings, written by a person:
+`bench/memory_honesty/human_set/`.
 
 ## Run it
 
