@@ -109,7 +109,7 @@ Chat is not memory. People do not share a brain, so **no second brain ships some
 
 **Remembering means: seal the day, distill, write it into the vault.** It does not mean the next turn gets a vector dump. When five gates pass, a `provisional` method is written **the same day**, no ask. Formal `active` still asks you on the next similar task.
 
-Retrieval is a lock first: one short noun → that page + dual SHA-256. When no noun matches, ranked recall answers instead — rule pages first, a precomputed one-line `answer (generated):` for the question, or `recall: none` when nothing in the vault covers it. No vector database to run. If the agent cannot hit the page, the evolution did not happen.
+Retrieval tries an optional alias lock first (one short noun → that page + dual SHA-256); most questions miss it, and ranked recall answers instead. The alias table needs no upkeep: a sample ships, and a row is worth adding only to pin a short noun to one page. Ranked recall answers — rule pages first, a precomputed one-line `answer (generated):` for the question, or `recall: none` when nothing in the vault covers it. No vector database to run. If the agent cannot hit the page, the evolution did not happen.
 
 ```mermaid
 flowchart LR
@@ -137,7 +137,7 @@ Do not merge. Full split: [`docs/VERIFY.md`](VERIFY.md).
 
 Exhaustive on this clone’s `template/` map: **25/25** topics, **39/39** aliases, **0** conflicts. That is a full check of the table, not a sample, and not “the ranker is smart.”
 
-Rewrite invariants: **25/25** paraphrases miss (no AND over a whole sentence); **25/25** listed nouns hit the gold page. That is implementation correctness. **This is not five fresh LLM sessions.** `template/` is a clean minimum sample — a floor, not the dirty live vault.
+Rewrite invariants of the alias lock alone: **25/25** whole-sentence paraphrases do not fire the lock (by design: no AND over a sentence); **25/25** listed nouns hit the gold page. A paraphrase that misses the lock goes on to ranked recall; on the 200-question held-out set recall gets 102 of 120 answerable questions right, most worded differently from their page. That is implementation correctness. **This is not five fresh LLM sessions.** `template/` is a clean minimum sample — a floor, not the dirty live vault.
 
 ```bash
 python3 tests/fixtures/clone_25/run.py
@@ -242,9 +242,9 @@ Subscription lane if a CLI is already logged in: grok in the kernel sandbox prof
 
 ## When not to install this
 
-- You need **semantic** retrieval (paraphrase understood by embeddings). The lock is a short noun plus `canonical_sources.psv`; L1 recall is lexical and covers paraphrase only through trigger phrases.
-- Your notes are mostly English and you will not replace the CJK sample nouns. Folder names are configurable: a `krouter-zones.psv` at the vault root maps the default layout onto yours (`90 系统文件|System`, `Agent第二大脑.md|Home.md`). The DSH bridge still assumes the default names.
-- You want chat auto-injected into the next prompt, or a hosted memory API.
+- You need **semantic** retrieval (meaning matched by embeddings). Recall is lexical (words, Chinese character pairs, trigger phrases): it finds many rewordings and still misses some (102 of 120 answerable held-out questions right). Local embeddings exist on a branch only.
+- Your notes are mostly English and you want the sample alias nouns in English too (recall itself works in English; the sample nouns are Chinese and optional). Folder names are configurable: a `krouter-zones.psv` at the vault root maps the default layout onto yours (`90 系统文件|System`, `Agent第二大脑.md|Home.md`). The DSH bridge still assumes the default names.
+- You want the whole previous chat injected into the next prompt (with the Claude Code plugin, a new session gets up to 8 recorded decisions for that repository, not the chat), or a hosted memory API.
 
 ## Four mounts, one vault
 
@@ -284,7 +284,7 @@ After the daily seal the bundled timer runs `nightly.py`: `compile_subconscious.
 | What clone contains | Protocol + skeleton + router + writer | Empty store too |
 | After a good day | Distill; five gates → auto `provisional`; next time ask → maybe `active` | Compress the session and inject the next prompt |
 | After a correction | Edit the canonical page. Next call must open it | Re-embed and hope the old chunk decays |
-| How it finds the page | Your short noun + alias table; on a miss, ranked lexical recall that refuses weak overlap | Semantic nearest neighbor |
+| How it finds the page | Ranked lexical recall that refuses weak overlap; an optional alias lock pins short nouns | Semantic nearest neighbor |
 | A topic that recurs for weeks | Merged overnight into one cited dossier | Chunks scattered across sessions |
 | A question asked again | The same page and `how` line, deterministically; a checked precomputed card when one fits | Re-retrieved and re-read |
 | What you maintain | Your nouns and topic list. No vector DB | Indexes, sync, injection, expiry |

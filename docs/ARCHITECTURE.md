@@ -40,7 +40,7 @@ flowchart TB
     L3["L3 Promotion<br/>auto provisional → ask → active"]
     L1 --> L2 --> L3
   end
-  L4["L4 Retrieval<br/>short noun + alias table + SHA receipt"]
+  L4["L4 Retrieval<br/>ranked recall + optional alias lock + SHA receipt"]
   L3 --> L4
   L1 -.-> L4
   L2 -.-> L4
@@ -145,7 +145,7 @@ A formal method may become a Skill candidate only after **at least three** verif
 
 ## L4 Retrieval
 
-The agent does not dump the vault into context. It sends a short noun, or a short question. No vector store, no service: one Python process and a rebuildable SQLite FTS5 cache (`~/.cache/krouter/`, stdlib).
+The agent does not dump the vault into context. It sends a short question (or a short noun, which the optional alias lock can pin to a page); ranked recall answers most of them. No vector store, no service: one Python process and a rebuildable SQLite FTS5 cache (`~/.cache/krouter/`, stdlib).
 
 ### Routes
 
@@ -268,7 +268,7 @@ The questions the author’s agents actually sent the router (92 de-duplicated q
 | Execution gate | Passed. Pre-action recall in effect; Clippings mutate/move/delete and Obsidian restart are hard-blocked |
 | Host daily evolution | Running. Writer is a pinned local CLI |
 
-**Retrieval:** one short noun, one page, dual SHA receipt. The agent must cite `canonical_source`. Experience is retrieved. The 25/25 row above is layer 3 (self-report). Layer 1 is [`VERIFY.md`](VERIFY.md). Layer 2 is [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md).
+**Retrieval:** a short question, ranked recall (or the optional alias lock), cited pages, dual SHA receipt. The agent must cite `canonical_source`. Experience is retrieved. The 25/25 row above is layer 3 (self-report). Layer 1 is [`VERIFY.md`](VERIFY.md). Layer 2 is [`LOCK_VS_NEIGHBOR.md`](LOCK_VS_NEIGHBOR.md).
 
 **Corrections:** written to canonical pages (`supersedes` / quasi-correction → formal correction). The next similar task hits the new page through L4. Old wording is not current rule. Provisional methods become `active` after adopt + accept. The vault gets sharper; the agent gets steadier.
 

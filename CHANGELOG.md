@@ -11,6 +11,12 @@ notice, then the details.
 
 ## Unreleased
 
+- Docs: retrieval described as it is. PROTOCOL, ARCHITECTURE, DETAILS (en, zh) and VERIFY still called it "a lock on short
+  nouns" and quoted "25/25 paraphrases miss" without saying that tests the alias lock alone; outside agents read that
+  as "you must maintain an alias table and any rewording misses". Ranked recall answers most questions; the alias lock
+  is an optional fast path that needs no upkeep. FOR-AGENTS gains "Common misreadings" (no alias upkeep, rewording,
+  what leaves the machine, the earlier names Runtime36 and DSH-KRouter and what pages about them describe, stale
+  version numbers).
 - Docs: 1.1.x is the stable line (fixes only until 2026-11-12, at most one patch a week); DETAILS lists what the
   stability promise covers (core) and what is best-effort (extras); FOR-AGENTS and the status block name the smallest
   install, router only with nothing in the background.

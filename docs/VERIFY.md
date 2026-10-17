@@ -55,7 +55,7 @@ python3 -m pytest -q tests/test_clone_25.py
 
 ### Invariant check (rewrite)
 
-**25/25** paraphrases miss. **25/25** listed short nouns hit the gold page.
+Alias lock only: **25/25** whole-sentence paraphrases do not fire the lock; **25/25** listed short nouns hit the gold page. (A paraphrase that misses the lock goes on to ranked recall, measured in the layer 2 benches.)
 
 That is **implementation correctness**: whole-sentence rewrite does not fire AND matching; a protocol noun finds the gold page. Code does what the protocol wrote. No bug on this sample.
 
