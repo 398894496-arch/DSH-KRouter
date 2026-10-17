@@ -175,3 +175,117 @@ A candidate is run on heldout3 once, at the default it would ship with.
 | 2026-10-14 | **basic-memory 0.23.2 on heldout3** (as registered above; one run, aggregates only, no `--reveal`; a mechanical check found every cited path is a vault3 file). Default: 77.5% wrong citations (155 / 200) [71.5, 83.5], 0 / 80 neighbours refused, 45 / 120 right (16 corrections, 29 current). With the two rules (floor 1.225 picked on dev3): 18.5% (5 / 27) [4.2, 33.3], 76 / 80 refused, 22 / 120 right. KRouter 1.0.3 minus basic-memory default, paired: wrong rate [−58.5, −43.4] points, right [+43, +72], refused [+35, +58]. On dev (vault1) 0.23.2 scored 18 / 29 wrong against 0.22.1's 11 / 28. |
 | 2026-10-14 | **claude-mem on heldout3, registered before the run** (not a candidate). The latest claude-mem from its marketplace, at its defaults (observer `claude-haiku-4-5`), in an isolated HOME with `CLAUDE_MEM_CLAUDE_CONFIG_DIR` set so it cannot reach the host's keychain login (C50). It learns vault3 as in the first bench: Claude Code sessions (model haiku) in a copy of vault3 read every page, one Read per page, one session per top folder, with a neutral prompt (read and list each page's rule or entry); then each question goes to its `/api/search`, top 3, mapped to pages through `files_read`. A question counts as refused only when nothing maps to a page. Default only (it gives no score, so no floor). Aggregates only, `--ci`; no `--reveal`, and the adapter's per-question output is not read. |
 | 2026-10-14 | **claude-mem 13.39.0 on heldout3** (as registered above; one run, aggregates only, no `--reveal`). Four haiku sessions read all 110 pages (45 + 45 + 10 + 10 Read calls, no errors); its observer, signed in through the environment token only (the keychain lookup went to the isolated service name and found nothing), stored 85 observations covering 85 of the 110 pages and skipped 18 reads as noise; queue drained before any question. Every cited path is a vault3 file. Default: 64.0% wrong citations (128 / 200) [57.5, 71.0], 0 / 80 neighbours refused, 72 / 120 right (34 corrections, 38 current). KRouter 1.0.3 minus claude-mem, paired: wrong rate [−45.0, −29.9] points, right [+17, +44], refused [+35, +58]. The isolated directory was deleted afterwards. |
+
+## Held-out set 5: real questions from the maintainer's own agents (registered 2026-10-16, before any run)
+
+**Where the questions come from.** Everything the maintainer typed to seven agents between 2026-06-09 and 2026-10-16,
+read from each agent's local store by `bench/real_questions/extract_asks.py`: Claude Code (session files and the
+prompt history), Codex (current and restored archives), Cursor agent transcripts, DeepSeek Harness (personal and
+company), Grok and Hermes. Human messages only (no injected context, tool output, subagents, headless or automation
+runs), redacted, de-duplicated: 11 853. A rule prefilter kept 5 369 question-like ones. Grok 4.7 (high reasoning,
+through the maintainer's CLIProxyAPI) labelled each: 393 ask about something the maintainer or their agents had
+decided, set up or done (`classify_asks.py`). One more Grok 4.7 call over all 393 marked 332 as understandable without
+their conversation and grouped them by intent into 208 things (`group_asks.py`). The frozen set is the earliest ask of
+each group: **208 questions**, all Chinese (74 from June, 15 July, 63 August, 44 September, 12 October), SHA-256
+`ed2efd001e9a32d6a522fbb0d9a8cf39e769917f3e67b8651de981f22152c61f`. Groups asked on two or more days give **38 pairs**
+(earliest and latest ask) for the learning bench, SHA-256 `e2a8cb06c727d7a7161ab2460a58a79ac113b823d70bb44b8a20e121bdb0b84f`.
+The questions are the maintainer's private messages: they stay on the machine and are never committed; only
+aggregates are published. They were never used to tune KRouter (the 92 router queries of VERIFY.md layer 4 are a
+different source). One known overlap: the alias table's 26 seed rows (2026-08-21) were written from 25 of the
+maintainer's earlier questions, so some questions may hit an alias; hit modes are reported separately (below).
+
+**Snapshot.** The maintainer's vault at its own git commit `57b6019` (2026-10-15), exported with `git archive`
+(uncommitted edits are not used). 531 pages.
+
+**Systems.** (a) KRouter on main `bf476ae` as an agent calls it: `route_knowledge.py search <question>` (alias lock,
+then ranked recall), cited pages read off the receipt (`run_real.py`). (b) BM25 over character pairs and words,
+superseded pages skipped, refusal floor picked on dev3. (c) Dense candidate 1 (`feature/dense` at `4412acd`, local
+embeddings on, balanced tier). The SessionStart fix in #52 does not touch retrieval.
+
+**Two configurations.** *As used*: the snapshot unchanged. *Without learning*: the snapshot minus
+`90 系统文件/自动化/下意识触发词-自学习.psv` (6 learned lines); the alias table is kept, because all of its 167 aliases are
+the 2026-08-21 seed (checked against the alias ledger: none added since). **The pass lines below use only *without
+learning*.**
+
+**Hit mode,** recorded per question and system: `canonical_match` (the alias lock), `learned trigger` (KRouter's
+cited pages differ between the two configurations), `recall`, or `none` (refused). Reported separately.
+
+**Valid citations.** A cited page counts only if it existed before the question was asked and does not come from the
+question's own session or a later one. Evidence that a page existed: it is in the newest vault backup taken before the
+ask (backups exist for 2026-08-18, 08-19 and 08-22), or its own date (frontmatter `created` / `date`, or a dated file
+name) is earlier than the ask's day. Session excerpts and time logs dated on the ask's day or later never count. A
+page with no such evidence counts as not having existed (score 0): 288 of the 531 pages carry no date, which weighs
+most on asks before 2026-08-18; scores are also reported by month.
+
+**Judging.** Grok 4.7, high reasoning (not a Claude model: KRouter was built and tuned with Claude). Per question the
+judge sees the question, its date, and each system's output rendered the same way (each valid cited page's path,
+date, status and first 400 characters; or "refused"). First it decides, from a candidate pool (all systems' cited
+pages plus each system's top 5 without its refusal gate, each with date and status), whether the snapshot holds a
+page that answered the question before it was asked. If it does, a refusal scores 0. If it does not, a refusal scores
+2 and any citation 0. Otherwise each output scores 0 (useless), 1 (relevant, the agent still has to dig) or 2 (answers
+it). Pairs are judged twice, the second time with X and Y swapped; a question's score is the mean.
+
+**Agreement.** The maintainer labels 40 to 50 of the questions (a random sample, seed 20261016) without seeing the
+systems' names; the report gives Grok's agreement with them (same score, and within one point).
+
+**Pass lines** (*without learning*). "KRouter answers real questions better than BM25 with the two rules" may be said
+only if the paired bootstrap 95% interval (10 000 resamples, seed 0) of KRouter minus BM25's mean score is entirely
+above zero. For the dense candidate, this counts as the second piece of evidence for shipping it as an opt-in (with the
+real-traffic blind judge registered above) if its mean is at most 0.05 below KRouter's.
+
+**What any claim says.** One person's questions, on one vault, over four months and seven agents; that person is the
+maintainer.
+
+**Not in this run.** The cross-system injection comparison (step 3) waits until #52's two regressions are fixed and
+reviewed.
+
+### Log, set 5
+
+| Date | Event |
+|---|---|
+| 2026-10-16 | Registered (commit on `bench/real-questions`, before any run). |
+| 2026-10-16 | **Run, as registered.** Snapshot `57b6019`. KRouter (main `bf476ae`) answered 173 of 208 and refused 35; *as used* and *without learning* gave identical results (the 6 learned triggers changed no answer; no question hit the alias lock). BM25 + two rules answered 186, refused 22. Dense candidate 1 (`4412acd`, 1 216 page vectors) answered 81, refused 127. Valid-citation rule: of KRouter's 173 answers, 82 cite at least one page that provably existed before the ask (June 1 of 59, July 0 of 13, August 41 of 53, September 30 of 38, October 10 of 10); BM25 99 of 186. |
+| 2026-10-16 | **Judged** (Grok 4.7 high, 26 batches × 2 passes per pair, X/Y swapped, no failed batch). KRouter minus BM25 + two rules: 0.363 vs 0.252, paired 95% interval [−0.019, +0.243]: **the "better on real questions" line is not met.** Dense candidate minus KRouter: 1.231 vs 0.370, [+0.726, +0.995]: **its registered line (at most 0.05 below KRouter) is met**. How to read both: the judge found a pre-ask answer page for only about 5% of the questions (11 of 208 in pair 1, 10 in pair 2), so scores are dominated by the refusal rule (refusing scores 2 when nothing answered the question yet); the dense candidate refuses most. On the 8 questions where both passes found an existing answer: KRouter 0.75, BM25 1.12; dense 1.0, KRouter 1.0 (too few to tell apart). The main finding is not about ranking: when the maintainer asked about past decisions, the vault mostly did not hold the answer yet. Maintainer agreement sample (45, seed 20261016): pending. |
+| 2026-10-16 | **Re-read after an outside review (no new judge calls).** A system that refuses everything would score 1.909 on all 208 (1.838 on the 117 asked from 2026-08-19, when vault backups start): higher than every system. Under this scoring the judged results are not evidence of retrieval quality, and the dense candidate's met line is **not** shipping evidence. On the 117 questions from 2026-08-19 the judge found a pre-ask answer for 7–8%; KRouter 0.338, BM25 + two rules 0.329, KRouter minus BM25 [−0.179, +0.197]. Why the share is low cannot be told apart from why it cannot be shown: pages without a date that were created between the 2026-08-22 backup and the start of the vault's git history (2026-10-10) count as not having existed, and the vault's git history cannot date older pages (every page's first commit is the 2026-10-10 baseline). No complete vault copy older than 2026-08-18 exists (cold storage holds only governance extracts). The earlier reading "decisions were not written down in time" is **withdrawn**: session import shipped on 2026-10-12 (0.13.0), and only 4 frozen questions were asked after that, too few to test timeliness. |
+| 2026-10-16 | **Agreement sample: not labelled by the maintainer.** At the maintainer's request the 45 sampled questions (seed 20261016) were judged a second time by Claude Opus (the `claude` CLI, no tools, the same prompt, X/Y swapped) in place of the registered human labels, so this is a cross-model check, **not** the registered human check, which stays undone. Grok and Claude agree on "a pre-ask answer existed" for 41 of 45 (Grok yes on 4, Claude on 2), and on scores for 84 of 90 question × system pairs (87 of 90 within one point). Both judges saw the same candidate pool, already narrowed by the valid-citation rule, so the agreement says the judging is stable, not that undated pages did not exist. |
+
+## Set 6: does KRouter write down what was decided? (offline replay, registered 2026-10-16, before any run)
+
+**Sessions.** 10 of the maintainer's recorded sessions, drawn at seed 20261016 from those with 8 to 60 turns, at least
+70% of turns answered, and not KRouter's own development sessions: 4 Claude Code, 3 Cursor, 3 Codex (first days
+2026-07-31 to 10-13). Cut by day as the importer pages them: 22 session-days, about 136 000 characters of excerpt
+(the maintainer's questions and each turn's closing answer, redacted). Private; aggregates only.
+
+**System.** KRouter's own import and distill (`import_sessions.render` then `import_sessions.distill`, main `bf476ae`),
+on the maintainer's nightly lane (the `claude` CLI); up to 8 lines per session-day, as shipped.
+
+**Reference.** Grok 4.7 (high reasoning) lists, from the same excerpt, what was decided and what changed. The
+maintainer marks each listed item right or wrong and adds what was missed; the confirmed list is the reference. A
+different model family proposes the reference than the one that distills.
+
+**Scoring.** Grok 4.7 pairs reference items with distilled lines (same decision, same direction; for a change, both
+before and after right; one-to-one). Reported: missed rate = 1 − matched / reference items; wrong rate = 1 − matched /
+distilled lines; and of the reference's changes ("A → B"), how many were captured. No pass line: this measures where
+KRouter stands, with the bias named (the same model family proposes the reference and pairs the lines; the
+maintainer's corrections are the check on that).
+
+`bench/real_questions/capture_bench.py` (pick, distill, propose, sheet, score).
+
+**Amendment, 2026-10-16, before the reference was checked or anything scored.** The maintainer could not recall most
+of the sessions and asked for the check to be done by a model. The reference is therefore verified by GPT-5.5 (high
+reasoning, through the maintainer's CLIProxyAPI): for each session-day it reads the same excerpt, keeps or rejects
+each Grok item (kept only if the excerpt shows the maintainer stating or accepting it), and adds what was missed. GPT
+also does the pairing in place of Grok. A third model family on purpose: Claude distilled, Grok proposed, GPT checks
+and pairs. Any claim says the reference was model-verified, not confirmed by the maintainer. Items the maintainer does
+mark on the sheet are compared with GPT's verdicts and reported as a spot check.
+
+### Log, set 6
+
+| Date | Event |
+|---|---|
+| 2026-10-16 | Registered; amended (model-verified reference) before checking or scoring. |
+| 2026-10-16 | **Run.** KRouter distilled 143 lines over 22 session-days (`claude` CLI). Grok proposed 94 items; GPT-5.5 kept 91 and added 32: a reference of 123. GPT-5.5 paired 60. **Missed rate 51%, wrong rate 58%; of 19 changes of mind, 12 captured.** Why: 5 session-days hold more than 8 reference decisions (27, 26, 19, 9, 9), so the 8-line cap alone forces at least 50 of the 63 misses; and KRouter fills its 8 lines whether or not much was decided (27 lines on the 4 session-days where the reference holds nothing; 7 or 8 lines where it holds 1 to 3). The maintainer did not confirm the reference (amendment above). These 22 session-days are a measurement set: changes to the distill step are tuned on other sessions and re-measured here. |
+| 2026-10-16 | **Why lines did not match** (GPT-5.5, each of the 143 lines against the excerpt and the reference; 7 lines of one session-day unparsed): 62 match the reference (granularity differences included), 40 are decisions the agent proposed without an explicit yes, 30 are steps or discussion rather than decisions, 3 are real decisions the reference missed, 1 has no basis in the excerpt. **The maintainer's own check:** shown the source turns of 30 sampled items, the maintainer said most of them were things they had agreed to, and declined to label further; so "the agent proposed it and the maintainer went along" counts as a decision. Re-scored on that definition (not item-by-item human labels): wrong rate 23% (31 of 136: steps and discussion, plus 1 fabricated), missed about 37% (most of it the 8-line cap); changes of mind captured 12 of 19, unchanged and the measure to watch. |
+| 2026-10-16 | **Re-measurement registered, before it runs.** Candidate: the distill on `feat/distill-capture` at `adfdc9b` (segments of about 6 000 characters, a change-of-mind pass over the whole excerpt, near-duplicates merged, changes first, up to 24 lines), tuned on ten other sessions (`tune_capture.py`, seed 20261017; these 22 session-days were not used). Baseline: the shipped distill's 143 lines already recorded above. Both scored the same way: a reference rebuilt under the maintainer's definition (Grok's same 94 proposals, re-checked by GPT-5.4 with "what the maintainer said, or went along with when the agent proposed it"; GPT-5.5 is out of quota), pairing by GPT-5.4, and each line classified by GPT-5.4 (steps or discussion, fabricated, and so on). The candidate is better if it captures at least as many changes of mind as the baseline, misses fewer reference decisions, and its steps-or-fabricated share is no more than 5 points above the baseline's; fabricated lines are reported on their own. |
+| 2026-10-16 | **Amendment before scoring the re-measurement.** The reference was rebuilt as registered (GPT-5.4 kept 83 of Grok's 94 proposals and added 48: 131) and the candidate distilled the 22 session-days (252 lines), but every GPT model then returned HTTP 402 (the proxy's OpenAI quota ran out), so pairing and classification did not run. They are done by Grok 4.7 instead, for baseline and candidate alike. Grok also proposed the reference items, so absolute rates may read better than with GPT; the comparison between baseline and candidate, scored by the same judge on the same reference, is what the registered criteria use. |
+| 2026-10-16 | **Re-measurement, scored** (Grok 4.7 pairing and classification, both versions, same 131-item reference under the maintainer's definition). Baseline (shipped): 143 lines, missed 51.9%, changes of mind 11 of 24, steps-or-fabricated 21.7% (30 steps, 1 fabricated). Candidate (`feat/distill-capture` `adfdc9b`): 252 lines, missed 40.5%, changes 15 of 24, steps-or-fabricated 17.1% (43 steps, 0 fabricated). **All three registered criteria met.** One-to-one "wrong rate" rises (55.9% → 69.0%) only because 252 lines are paired against 131 items; by category the share of steps and fabrications falls. The judge is the model that proposed the reference items (amendment above), so the absolute numbers are not quoted; the comparison is. |
