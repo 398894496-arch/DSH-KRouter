@@ -25,8 +25,10 @@ def world(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
     subprocess.run(["git", "init", "-q", str(repo)], check=True)
-    root = subprocess.run(["git", "-C", str(repo), "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                          check=True).stdout.strip()
+    sys.path.insert(0, str(REPO / "skill/krouter-obsidian/scripts"))
+    from krouter_home import project_root
+
+    root = project_root(str(repo))  # 和 hook 用同一个函数：Windows 上 git 输出的路径写法和它解析出的不一样
     vault = tmp_path / "vault"
     (vault / "05 时间日志/会话摘录").mkdir(parents=True)
     state = tmp_path / "state"
