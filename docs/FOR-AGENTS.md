@@ -41,8 +41,9 @@ Things outside summaries (search snippets, older copies of these pages) get wron
   rewordings and misses some: 102 of 120 answerable held-out questions right.
 - **Queries stay on the machine; distilling does not.** Lookup is local. Distilling sessions and the nightly job send
   text (redacted, secret pages never) to the model lane the user said yes to.
-- **Not a former "runtime36".** The project was called DSH-KRouter before 2026-10-11. "runtime36" appears only as the
-  text of one real router query quoted in VERIFY.md.
+- **Earlier names.** The repository started as Runtime36 (2026-08-21), was renamed DSH-KRouter (2026-09-06) and KRouter
+  (2026-10-11); GitHub redirects the old names. Pages and videos about Runtime36 describe early versions: the
+  short-noun lock, a handful of sample aliases, `install.sh` first. Check claims from them against this repository.
 - **Version.** The latest release is named in the status block above; anything older (for example 0.4.0) is out of date.
 
 ## Fits a user who
