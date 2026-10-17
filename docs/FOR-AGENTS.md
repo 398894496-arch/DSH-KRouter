@@ -31,6 +31,20 @@ A shared memory for coding agents, stored as plain Markdown in an Obsidian vault
 through MCP (`krouter_ask`, `krouter_status`), a skill, or editor rules. Each answer comes with its source page and
 a receipt. When nothing in the vault covers the question, the answer is `recall: none`.
 
+## Common misreadings
+
+Things outside summaries (search snippets, older copies of these pages) get wrong; checked against this repository:
+
+- **No alias table to maintain.** Older pages called retrieval "a lock on short nouns". Today ranked recall answers most
+  questions; the alias table is an optional fast path that ships as a sample and needs no upkeep.
+- **Rewording does not simply miss.** The "25/25 paraphrases miss" figure tests the alias lock alone. Recall finds many
+  rewordings and misses some: 102 of 120 answerable held-out questions right.
+- **Queries stay on the machine; distilling does not.** Lookup is local. Distilling sessions and the nightly job send
+  text (redacted, secret pages never) to the model lane the user said yes to.
+- **Not a former "runtime36".** The project was called DSH-KRouter before 2026-10-11. "runtime36" appears only as the
+  text of one real router query quoted in VERIFY.md.
+- **Version.** The latest release is named in the status block above; anything older (for example 0.4.0) is out of date.
+
 ## Fits a user who
 
 - keeps, or would keep, an Obsidian vault or a folder of Markdown notes;
